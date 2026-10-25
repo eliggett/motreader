@@ -7,6 +7,7 @@
  *
  * Read-only for now; the Python `motreader/dbf.py` also writes it.
  */
+import { latin1 } from "./bytes.js";
 
 /** @typedef {{ name: string, type: string, length: number, decimals: number }} DbfField */
 /**
@@ -15,7 +16,6 @@
  * @typedef {Record<string, string | null> & { __deleted__: boolean }} DbfRecord
  */
 
-const latin1 = (/** @type {Uint8Array} */ b) => String.fromCharCode(...b);
 const le = (/** @type {Uint8Array} */ b, /** @type {number} */ o, /** @type {number} */ n) => {
     let v = 0;
     for (let i = n - 1; i >= 0; i--) v = v * 256 + /** @type {number} */ (b[o + i]);
@@ -89,8 +89,14 @@ export function readDbf(/** @type {Uint8Array} */ data) {
     return { fields, records, lastUpdate };
 }
 
-/** The live (not deleted) record whose FILENAME matches `fileName`, ignoring case. */
-export function findArchiveRecord(/** @type {DbfRecord[]} */ records, /** @type {string} */ fileName) {
+/**
+ * The archive's live (not deleted) record: by FILENAME, ignoring case, else by
+ * the radio's SERIAL (a B file, RSS's previous copy, isn't listed by name).
+ */
+export function findArchiveRecord(/** @type {DbfRecord[]} */ records, /** @type {string} */ fileName, serial = "") {
+    const live = records.filter((r) => !r.__deleted__);
     const want = fileName.toUpperCase();
-    return records.find((r) => !r.__deleted__ && (r.FILENAME ?? "").toUpperCase() === want) ?? null;
+    return live.find((r) => (r.FILENAME ?? "").toUpperCase() === want)
+        ?? (serial ? live.find((r) => r.SERIAL === serial) : undefined)
+        ?? null;
 }

@@ -19,20 +19,21 @@ export function empty(/** @type {string} */ text) {
 
 export const NO_DOC = "Import a codeplug to begin.";
 
-/** A tab whose content arrives in a later milestone. */
-export function placeholder(/** @type {string} */ id, /** @type {string} */ title, /** @type {string} */ coming) {
-    /** @type {Tab} */
-    const tab = {
-        id, title,
-        render(el, doc) {
-            el.replaceChildren(empty(doc ? coming : NO_DOC));
-        },
-    };
-    return tab;
+/** A muted explanatory paragraph. */
+export function note(/** @type {string} */ text) {
+    return h("p", { class: "note" }, text);
 }
 
-/** A two-column table of label/value rows. */
-export function infoTable(/** @type {[string, string | number][]} */ rows) {
+/** A two-column table of label/value rows, with an optional muted note per row. */
+export function infoTable(/** @type {{ label: string, value: string | number, note?: string }[]} */ rows) {
     return h("table", { class: "info" },
-        h("tbody", {}, rows.map(([k, v]) => h("tr", {}, h("th", {}, k), h("td", {}, v)))));
+        h("tbody", {}, rows.map((r) => h("tr", {},
+            h("th", {}, r.label),
+            h("td", {}, String(r.value)),
+            h("td", { class: "row-note" }, r.note ?? "")))));
+}
+
+/** A titled section: heading and content. */
+export function section(/** @type {string} */ title, /** @type {Node[]} */ ...content) {
+    return h("section", { class: "block" }, h("h3", {}, title), ...content);
 }

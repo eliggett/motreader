@@ -9,7 +9,7 @@
  * Decoded records keep the snake_case field names of the Python code, which
  * are also the CSV/YAML column names (`rx_mhz`, `tx_pl`, ...).
  */
-import { be16 } from "./bytes.js";
+import { be16, latin1 } from "./bytes.js";
 import { pyRound } from "./num.js";
 import { slotDecode } from "./tones.js";
 import { findExtBlock, findChbBlock } from "./radiowide.js";
@@ -23,8 +23,6 @@ function at(b, o) {
     if (v === undefined || o < 0) throw new RangeError(`index ${o} out of range (${b.length} bytes)`);
     return v;
 }
-/** @param {Uint8Array} b */
-const latin1 = (b) => String.fromCharCode(...b);
 /** `latin-1` text with trailing spaces/NULs removed. */
 const asciiField = (/** @type {Uint8Array} */ b) => latin1(b).replace(/[ \x00]+$/, "");
 /** Any non-zero byte? */

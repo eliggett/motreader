@@ -5,7 +5,7 @@
  * as the buttons, without file pickers.
  *
  *   await mr.ready
- *   mr.load("A617ASQ1.266", bytesOrBase64)
+ *   mr.load("A617ASQ1.266", bytesOrBase64)   // and mr.loadIndex("SPECTRAM.DBF", ...)
  *   mr.tab("hex"); mr.text()         // visible tab's text
  *   mr.modal(); mr.answer("ok")      // inspect / press the open dialog
  *   mr.log("info")                   // log lines at info and above
@@ -21,6 +21,11 @@ import * as actions from "./actions.js";
 
 /** @type {string[]} */
 const errors = [];
+
+/** Bytes from a Uint8Array, a plain array or base64. */
+function toBytes(/** @type {Uint8Array | number[] | string} */ data) {
+    return typeof data === "string" ? Uint8Array.from(atob(data), (c) => c.charCodeAt(0)) : Uint8Array.from(data);
+}
 
 /** Install `window.mr`; `ready` resolves once the page has finished starting. */
 export function installTestApi(/** @type {Promise<void>} */ ready) {
@@ -44,17 +49,24 @@ export function installTestApi(/** @type {Promise<void>} */ ready) {
         text: () => document.getElementById(`panel-${activeTab()}`)?.innerText ?? "",
         /** Load a codeplug from a Uint8Array, a byte array or base64. */
         load(/** @type {string} */ name, /** @type {Uint8Array | number[] | string} */ data) {
-            const bytes = typeof data === "string"
-                ? Uint8Array.from(atob(data), (c) => c.charCodeAt(0))
-                : Uint8Array.from(data);
-            actions.loadCodeplug(name, bytes);
+            actions.loadCodeplug(name, toBytes(data));
             return api.state();
         },
+        /** Attach a SPECTRAM.DBF (same data forms as load); returns the archive's record or null. */
+        loadIndex: (/** @type {string} */ name, /** @type {Uint8Array | number[] | string} */ data) =>
+            actions.loadIndex(name, toBytes(data)),
         /** A summary of the open document. */
         state() {
             const d = store.get();
-            return d && { fileName: d.fileName, size: d.raw.length };
+            return d && {
+                fileName: d.fileName, model: d.cp.model, serial: d.cp.serial, band: d.cp.band,
+                modes: d.cp.modes.length, zones: d.cp.zones.length, size: d.plain.length,
+                customer: d.index?.record?.CUSTOMER ?? null,
+                trunking: d.trunk.info ? "removable" : d.trunk.unsupported ? "not removable" : null,
+            };
         },
+        /** The open document itself (decoded codeplug, radio-wide values, ...). */
+        doc: () => store.get(),
         /** Log lines at `level` and above (default: everything, debug included). */
         log(/** @type {import("./log.js").Level} */ level = "debug") {
             const min = LEVELS.indexOf(level);

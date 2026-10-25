@@ -16,6 +16,7 @@
  *
  * Options:
  *   --load PATH          load PATH into the app with mr.load() before the expressions
+ *   --index PATH         then attach PATH (a SPECTRAM.DBF) with mr.loadIndex()
  *   --screenshot PATH    save a PNG of the page after the expressions
  *   --size WxH           window size (default 1280x900)
  *   --url URL            use an already-running server instead of starting one
@@ -218,6 +219,10 @@ async function main() {
     if (typeof opt.load === "string") {
         const b64 = readFileSync(opt.load).toString("base64");
         await evaluate(`mr.load(${JSON.stringify(basename(opt.load))}, ${JSON.stringify(b64)})`);
+    }
+    if (typeof opt.index === "string") {
+        const b64 = readFileSync(opt.index).toString("base64");
+        await evaluate(`mr.loadIndex(${JSON.stringify(basename(opt.index))}, ${JSON.stringify(b64)})`);
     }
     for (const e of exprs) {
         try {

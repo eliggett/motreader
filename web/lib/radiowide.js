@@ -303,3 +303,71 @@ export function decode(body, band = null) {
     }
     return out;
 }
+
+/**
+ * How the fields are presented: the app tab, the RSS screen (as a heading)
+ * and each field's label, in RSS order. Units are part of the label.
+ * @typedef {{ tab: "radiowide" | "conventional" | "head", title: string, fields: [string, string][] }} Screen
+ * @type {Screen[]}
+ */
+export const SCREENS = [
+    { tab: "radiowide", title: "Radio-Wide Configuration", fields: [
+        ["zone_operation", "Zone Operation"], ["home_zone", "Home Zone"], ["home_mode", "Home Mode"],
+        ["max_user_modes", "Max User Modes"], ["max_systems", "Max Systems"], ["max_subfleets", "Max Subfleets"],
+        ["mode_names", "Mode Names"], ["time_out_timer", "Time-Out Timer"], ["hub_switch", "HUB Switch"],
+        ["minimum_volume", "Minimum Volume"], ["speaker_b_min_volume", "Speaker B Min Volume"],
+        ["positional_zones", "Positional Zones"],
+    ] },
+    { tab: "radiowide", title: "Radio-Wide Configuration Options", fields: [
+        ["volume_set_tone", "Volume Set Tone"], ["mode_change_tone", "Mode Change Tone"],
+        ["ptt_on_rx_only_mode", "PTT on Rx-Only Mode"], ["ptt_ignition_sense", "PTT Ignition Sense"],
+        ["subsequent_call_alert", "Subsequent Call Alert"], ["horn_time_out_s", "Horn Time-Out (s)"],
+        ["lights_time_out_s", "Lights Time-Out (s)"], ["speaker_b_vip_number", "Speaker B VIP Number"],
+        ["master_adaptive_splatter", "Master Adaptive Splatter"], ["master_audio_compandor", "Master Audio Compandor"],
+    ] },
+    { tab: "radiowide", title: "Radio-Wide Options", fields: [
+        ["siren_pa_options", "Siren/P.A. Options"], ["horn_lights_rearm", "Horn & Lights Rearm"],
+        ["internal_pa", "Internal P.A."], ["speaker_a_b", "Speaker A/B"], ["phone_dtmf_encode", "Phone DTMF Encode"],
+    ] },
+    { tab: "radiowide", title: "Siren / Public Address", fields: [
+        ["pa_option_audio_routing", "P.A. Option Audio Routing"], ["pa_ignition_sense", "P.A. Ignition Sense"],
+        ["pa_ex_rd_ignition_sense", "P.A. Ex-Rd Ignition Sense"], ["pa_default_volume", "P.A. Default Volume"],
+        ["siren_pa_after_reset", "Siren/P.A. After Reset"], ["siren_hilo_airhorn_tones", "Siren Hi-Lo/Airhorn Tones"],
+        ["siren_manual_tone", "Siren Manual Tone"], ["siren_ignition_sense", "Siren Ignition Sense"],
+    ] },
+    { tab: "radiowide", title: "Scan Configuration Options", fields: [
+        ["scan_priority1_activity_tone", "Priority 1 Activity Tone"], ["scan_priority2_activity_tone", "Priority 2 Activity Tone"],
+        ["scan_nuisance_delete", "Nuisance Delete"], ["scan_off_hub", "Scan Off HUB"],
+        ["scan_lookback_cycle_count", "Lookback Cycle Count"],
+        ["scan_conv_rx_hang_time_ms", "Conventional Rx Hang Time (ms)"], ["scan_conv_tx_hang_time_ms", "Conventional Tx Hang Time (ms)"],
+        ["scan_tx_revert_mode", "Tx Revert Mode"], ["scan_dynamic_priority_assignment", "Dynamic Priority Assignment"],
+    ] },
+    { tab: "radiowide", title: "Additional Radio-Wide Options", fields: [
+        ["tx_mic_input_control", "Tx Mic Input Control"], ["filtered_audio_thru_rear", "Filtered Audio Thru Rear"],
+        ["mic_gain", "Mic Gain"],
+    ] },
+    { tab: "conventional", title: "Conventional Configuration", fields: [
+        ["mdc_signalling", "MDC Signalling"], ["emergency", "Emergency"], ["number_of_mpl", "Number of MPL"],
+        ["mdc_unit_id", "MDC Unit ID"], ["mdc_group_id", "MDC Group ID"], ["mdc_fleet_id", "MDC Fleet ID"],
+    ] },
+    { tab: "conventional", title: "MDC Signalling Options", fields: [
+        ["mdc_signalling_type_1200", "1200 Baud Signalling"], ["mdc_system_delay_ms", "System Delay (ms)"],
+        ["mdc_ptt_id_beginning", "PTT ID at Beginning"], ["mdc_ptt_id_ending", "PTT ID at End"],
+        ["mdc_sidetone", "Sidetone"], ["mdc_preamble", "Preamble"], ["mdc_channel_busy_wait_s", "Channel Busy Wait (s)"],
+    ] },
+    { tab: "conventional", title: "DTMF Signalling Options", fields: [
+        ["dtmf_individual_id", "Individual ID"], ["dtmf_end_of_callback", "End of Callback"],
+        ["dtmf_digit_time_ms", "Digit Time (ms)"], ["dtmf_interdigit_time_ms", "Interdigit Time (ms)"],
+        ["dtmf_system_delay_ms", "System Delay (ms)"],
+    ] },
+    { tab: "conventional", title: "Phone List Options", fields: [
+        ["phone_access_code", "Access Code"], ["phone_release_code", "Release Code"],
+        ["phone_digit_time_ms", "Digit Time (ms)"], ["phone_interdigit_time_ms", "Interdigit Time (ms)"],
+        ["phone_system_delay_ms", "System Delay (ms)"],
+    ] },
+    { tab: "head", title: "Control Head Options", fields: [
+        ["control_head_type", "Control Head Type"], ["ch_default_backlight", "Default Backlight"],
+        ["ch_default_dim", "Default Dim"], ["ch_low_backlight", "Low Backlight"],
+        ["ch_medium_backlight", "Medium Backlight"], ["ch_high_backlight", "High Backlight"],
+    ] },
+];

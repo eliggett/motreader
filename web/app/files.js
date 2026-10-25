@@ -1,22 +1,26 @@
 // @ts-check
 /** Reading files the user picks, and handing files back as downloads. */
 
+/** @typedef {{ name: string, bytes: Uint8Array }} PickedFile */
+
 /**
- * Ask the user for a file. Resolves with its name and bytes, or null if the
- * picker is cancelled.
+ * Ask the user for files. Resolves with their names and bytes; an empty list
+ * if the picker is cancelled.
  * @param {string} accept  e.g. ".csv,.yaml,.yml"; "" for any file
- * @returns {Promise<{ name: string, bytes: Uint8Array } | null>}
+ * @param {boolean} multiple
+ * @returns {Promise<PickedFile[]>}
  */
-export function pickFile(accept = "") {
+export function pickFiles(accept = "", multiple = false) {
     return new Promise((resolve) => {
         const input = document.createElement("input");
         input.type = "file";
         input.accept = accept;
+        input.multiple = multiple;
         input.addEventListener("change", async () => {
-            const f = input.files?.[0];
-            resolve(f ? { name: f.name, bytes: new Uint8Array(await f.arrayBuffer()) } : null);
+            const files = [...(input.files ?? [])];
+            resolve(await Promise.all(files.map(async (f) => ({ name: f.name, bytes: new Uint8Array(await f.arrayBuffer()) }))));
         });
-        input.addEventListener("cancel", () => resolve(null));
+        input.addEventListener("cancel", () => resolve([]));
         input.click();
     });
 }

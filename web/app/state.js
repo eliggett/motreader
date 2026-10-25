@@ -3,17 +3,9 @@
  * The open document. Every change goes through `setDocument` / `update`, which
  * notify subscribers, so tabs re-render from one source of truth (and undo can
  * be added here later).
- *
- * Milestone 1 only holds the imported file; the decoded codeplug model comes
- * with the format port.
  */
 
-/**
- * @typedef {{
- *   fileName: string,
- *   raw: Uint8Array,       // the file as imported
- * }} Document
- */
+/** @typedef {import("../lib/document.js").CodeplugDocument} Document */
 
 /** @type {Document | null} */
 let doc = null;

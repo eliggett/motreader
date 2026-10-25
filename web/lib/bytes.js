@@ -86,6 +86,13 @@ export function concat(/** @type {Bytes[]} */ ...parts) {
     return out;
 }
 
+/** Bytes as a latin-1 string: one character per byte, so string offsets are byte offsets. */
+export function latin1(/** @type {Bytes} */ b) {
+    let s = "";
+    for (let i = 0; i < b.length; i += 0x2000) s += String.fromCharCode(...b.subarray(i, i + 0x2000));
+    return s;
+}
+
 /** Lower-case hex, optionally separated: `hex(b, " ")` gives "0a ff 12". */
 export function hex(/** @type {Bytes} */ b, sep = "") {
     return Array.from(b, (x) => x.toString(16).padStart(2, "0")).join(sep);

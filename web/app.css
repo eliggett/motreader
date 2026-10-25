@@ -142,3 +142,18 @@ dialog.modal h2 { margin: 0 0 0.75rem; font-size: 1.1rem; }
   .toolbar { padding: 0.5rem; }
   .panel { padding: 0.75rem; }
 }
+
+/* Sections, info tables, read-only grids */
+.block { margin-bottom: 1.5rem; }
+.block h3 { margin: 0 0 0.5rem; font-size: 0.95rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+table.info td.row-note { font-family: var(--sans); color: var(--muted); padding-left: 1.5rem; font-size: 0.85rem; }
+.table-wrap { overflow: auto; max-height: calc(100vh - var(--log-height) - 11rem); border: 1px solid var(--border); border-radius: 4px; }
+table.grid { border-collapse: collapse; font-size: 13px; white-space: nowrap; }
+table.grid th, table.grid td { padding: 0.25rem 0.6rem; border-bottom: 1px solid var(--border); text-align: left; }
+table.grid thead th { position: sticky; top: 0; background: var(--raised); font-weight: 600; z-index: 1; }
+table.grid tbody tr:hover { background: var(--panel); }
+table.grid .num { text-align: right; font-family: var(--mono); }
+table.grid td.name { font-family: var(--mono); }
+table.grid td.members { white-space: normal; min-width: 30rem; color: var(--muted); }
+.tag { margin-left: 0.5rem; padding: 0 0.4rem; border-radius: 3px; background: var(--accent); color: var(--accent-text); font-size: 0.75rem; font-family: var(--sans); }
+table.grid tr.trunked td:not(.name):not(.num) { color: var(--muted); }
