@@ -8,3 +8,7 @@ __pycache__/
 # Saved third-party web pages (reference only, not ours to redistribute)
 /notes/*.html
 /notes/*_files/
+
+# Dev TLS keys for server/server.py (regenerate with server/gen_keys.sh)
+/server/*.pem
+node_modules/
