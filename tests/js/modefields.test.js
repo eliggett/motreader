@@ -82,3 +82,10 @@ test("A9 name edits carry the head checksum", { skip: !has("a221azn0.035") }, ()
     assert.equal(openDocument(d.fileName, res.bytes).cp.modes[1]?.name, "Lower ok 11");
     assert.ok(res.changed.length > 11, "name bytes and the checksum word");
 });
+
+test("a VHF TX the synthesizer can't hold is refused, not snapped", { skip: !has("A617ASQ1.266") }, () => {
+    const { cp } = open("A617ASQ1.266");
+    assert.throws(() => setModeField(cp, 2, "tx_mhz", "165.75"), /synthesizer/);
+    setModeField(cp, 2, "tx_mhz", "165.0");
+    assert.equal(cp.modes[1]?.tx_mhz, 165.0);
+});

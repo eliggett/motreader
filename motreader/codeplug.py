@@ -522,10 +522,25 @@ def vhf_decode(lo: int, mid: int, coef) -> float:
 
 
 def vhf_encode(freq: float, coef) -> tuple[int, int]:
-    """Best (lo, mid) in 0..255 for freq under the given field coefficients."""
+    """(lo, mid) in 0..255 for freq under the given field coefficients.
+
+    The bytes program a 127/128 dual-modulus synthesizer: N = 127*Np + A with
+    mid = A (the swallow count, at most 127) and lo = Np - A - 256 (8 bits).
+    In field terms the count = 127*lo + 128*mid, which has two encodings, mid
+    and mid+127; RSS writes the smaller mid (all 6818 VHF frequency fields in
+    the RSS saves on hand have mid < 127; TX 162.56 MHz, count 127*256, gets
+    mid = 127, lo = 128). Some TX/TA frequencies above 165.74 MHz have no
+    encoding (lo would pass 255): RSS then stores a wrapped, wrong value
+    (tools/scenario_vhf_band_sweep.py); here they get the nearest storable one,
+    which vhf_storable() tells apart."""
     c0, c1, k = coef
+    count = round((freq - k) / (c1 / 128))
+    for mid in (count % 127, count % 127 + 127):
+        lo, rem = divmod(count - 128 * mid, 127)
+        if not rem and 0 <= lo <= 255 and mid <= 127:
+            return lo, mid
     best = None
-    for mid in range(256):
+    for mid in range(128):
         lo = round((freq - k - c1 * mid) / c0)
         if 0 <= lo <= 255:
             err = abs(c0 * lo + c1 * mid + k - freq)
@@ -534,17 +549,22 @@ def vhf_encode(freq: float, coef) -> tuple[int, int]:
     return (best[1], best[2]) if best else (0, 0)
 
 
-def vhf_tx_band_byte(freq: float) -> int:
-    """VCO band byte for TX/TA by frequency range (display-independent).
+def vhf_storable(freq: float, coef) -> bool:
+    """Can freq be stored exactly (on its field's raster, with mid <= 127)?"""
+    lo, mid = vhf_encode(freq, coef)
+    return abs(vhf_decode(lo, mid, coef) - round(freq, 4)) < 1e-9
 
-    Observed: 144-148 -> 0xA4, 150-155 -> 0x88, 160+ -> 0xA8. Preserve the
-    original byte when only re-saving; this is used only for brand-new values.
-    """
-    if freq < 149.0:
-        return 0xA4
-    if freq < 157.0:
-        return 0x88
-    return 0xA8
+
+def vhf_tx_band_byte(freq: float) -> int:
+    """The TX/TA band byte (view +12 / +16) RSS writes for freq: 6 MHz bands,
+    v = (freq - 126) // 6 clamped to 3..7, stored as 0x80 | v0<<5 | v1<<2 |
+    v2<<3. Swept in RSS on 617ASQ (144-174 MHz, exact boundaries at 150, 156,
+    162 and 168) and seen on 221AZN (142-160): 144-150 0xA4 (also below 144),
+    150-156 0x88, 156-162 0xA8, 162-168 0x8C, 168-174 0xAC. It doesn't change the
+    displayed frequency (most likely the VCO range). An unchanged field keeps
+    its original byte; this is for new values."""
+    v = min(7, max(3, (round(freq * 10000) - 1260000) // 60000))
+    return 0x80 | (v & 1) << 5 | (v >> 1 & 1) << 2 | (v >> 2 & 1) << 3
 
 
 def find_vhf_records(body: bytes) -> list[int]:

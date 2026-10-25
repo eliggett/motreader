@@ -3,6 +3,31 @@
 Snapshot for resuming after context compaction. Read with `notes/FORMAT.md`
 (the format spec) and the module docstrings.
 
+## Web app (2026-10-24) — the JavaScript transition
+
+`web/` is the static web editor (plain JS modules + JSDoc type checking, no
+build; `npm test`, `npm run check`, `npm run serve`). `web/lib/` is a port of
+the Python format code that runs in the browser and in Node; Python stays as
+the reverse-engineering tool and the reference:
+
+- **Decode parity**: `tools/py_reference.py` + `tests/js/parity.test.js` — every
+  sample (ground truth + archives, ~300 files) decodes identically.
+- **Write parity**: `tools/py_edit.py` + `tests/js/edit-parity.test.js` — ~2,400
+  generated edit cases produce byte-identical bodies.
+- **RSS**: web-app exports of 617ASQ (VHF), 604AUN (900) and 221AZN (A9) GET
+  with no warning, show the edits, and re-save byte-identically
+  (`tools/scenario_validate_export.py`, `tools/compare_resave.py`; captures in
+  `notes/ground-truth/vhf_band_rss/`).
+- Milestones done: 1 skeleton, 2 read-only, 3 editing + Export Codeplug. Next:
+  4 CSV/YAML import/export, 5 structural ops (modes/zones add/delete, scan,
+  trunk removal), 6 control head buttons, 7 export-time checks.
+
+Found while validating (fixed in Python too): an unedited rebuild zeroed tone
+slots that aren't tones (six codeplugs); VHF frequencies now use RSS's byte pair
+(smallest swallow count) and RSS's band byte (6 MHz bands; the old rule was
+wrong above 156 MHz); TX/TA above 165.74 MHz that the synthesizer can't hold are
+refused (RSS silently stores a wrong frequency). FORMAT §5a.
+
 ## TL;DR
 
 A working tool that converts Motorola Spectra RSS archive files ↔ CSV (channels)

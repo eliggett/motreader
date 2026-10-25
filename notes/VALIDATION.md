@@ -16,7 +16,7 @@ motreader).
 
 | Field(s) | Rule | Kind |
 |---|---|---|
-| `home_zone`, `home_mode` | The home mode must be a member of the home zone; otherwise F10 is "Key Not Defined" and the screen can't be left. | blocks |
+| `home_zone`, `home_mode` | The home mode must be a member of the home zone; otherwise F10 is "Key Not Defined" and the screen can't be left. A codeplug that arrives with the home mode outside the home zone (GET of a motreader edit) loads without a warning, but RSS's SAVE moves the home mode to the zone's first mode (617ASQ, 2026-10-24). | blocks / side effect |
 | `master_adaptive_splatter`, `master_audio_compandor`, `time_out_timer` | Toggling the master asks "apply to all modes" (F2 CONTINUE) and rewrites the matching per-mode bit in every mode record. motreader flips only the master. | side effect |
 | `mode_names` | Disabling resets every mode name to `MODE n` (also via the confirm dialog). motreader flips only the bit (and its mirror at 0x10B b7). | side effect |
 | `mdc_signalling` | Toggling also rewrites per-mode MDC bits. Read-only in motreader. | side effect |
@@ -46,6 +46,15 @@ motreader).
 |---|---|
 | SAVE is refused with "Codeplug Has Exceeded Radio Memory By N Bytes. Modes And/Or Features Must Be Disabled" when a structural change outgrows the radio (604ATY, 128 modes: SCAN TYPE → Talkgroup was over by 1939 bytes). A UI that adds modes/features needs the radio's memory size. | blocks |
 | A9 head: RSS warns "Bad control head checksum." on GET if the ASCII name block changes without its checksum. motreader keeps it valid. | warns |
+
+## Modes (modes.csv) — frequencies
+
+| Rule | Kind |
+|---|---|
+| RSS refuses a frequency outside the model's range ("Value Outside Range For This Model": 617ASQ takes 144 MHz and up). The owner's rule for the UI: don't validate frequencies, write whatever can be encoded. | blocks (RSS) |
+| VHF TX/TA: above 165.74 MHz some frequencies have no byte encoding (the synthesizer's 8-bit count would overflow; FORMAT §5a). RSS accepts them and **stores a wrong (wrapped) frequency** (165.75 → 84.47 MHz). motreader and the web app refuse them, naming the nearest storable value; 165.0, 170.25, 171.0 are fine. | refused by motreader |
+| VHF: RX on a 5 kHz raster, TX/TA on 2.5 kHz. Other values are stored as the nearest the field holds (the web app says so). | n/a |
+| 900 MHz: 12.5 kHz raster; motreader reads 895–942 MHz as a 900 MHz frequency, so values outside it are refused. Adding T/A to a simplex 900 mode isn't supported yet (clearing T/A to make a mode simplex is). | refused by motreader |
 
 ## Modes (modes.csv) — squelch codes
 

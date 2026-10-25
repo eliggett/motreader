@@ -171,10 +171,50 @@ in the packed integer):
 
 The TX/TA coefficients are exactly **half** the RX ones; the ratio `c1/c0 = 128/127`
 gives 2.5 kHz tuning resolution (5 kHz for RX) via `mid − lo`. The third **band
-byte** (`0xA4` 144–148, `0x88` 150–155, `0xA8` 160 MHz) selects the VCO band and
-has **zero effect on the displayed frequency** — it is preserved on edit and set
-by range only for a brand-new value. Encode picks the best `(lo, mid)`; an
-unchanged field keeps its original bytes for lossless re-encrypt.
+byte** selects the VCO band and has **zero effect on the displayed frequency** —
+it is preserved on edit and set by frequency only for a brand-new value (rule
+below). An unchanged field keeps its original bytes for lossless re-encrypt.
+
+**Encoding = synthesizer counts (2026-10-24, RSS sweep).** Each field is a step
+count `C = 127·lo + 128·mid` (`freq = step·C + k`, step 2.5 kHz TX/TA, 5 kHz RX),
+which fits a 127/128 dual-modulus prescaler: `N = 127·Np + A` with **mid = A, the
+swallow count**, and lo = `Np − A − 256` (8 bits; the TX offset 81.28 MHz =
+32512 steps = 127·256). Most frequencies therefore have two byte pairs, mid and
+mid+127, that RSS *displays* the same; **RSS always writes the smaller mid**
+(every one of the 6818 VHF frequency fields in the RSS saves on hand has
+mid < 127; TX 162.56 MHz, C = 127·256, is written lo=128 mid=127, the only form).
+The other pair may well not tune the same, so motreader writes RSS's:
+`mid = C mod 127` (or 127 when that needs lo > 255). Until 2026-10-24 motreader
+picked whichever pair had the smaller floating-point error, e.g. TX 146.415 as
+lo=58 mid=146 where RSS writes lo=186 mid=19.
+
+**Not every TX/TA frequency above 165.74 MHz can be stored**: when `C − 128·mid`
+needs lo > 255 (C > 32385 + 128·(C mod 127)), no pair exists. RSS accepts such a
+value without complaint and stores a *wrapped* one (617ASQ: TX 165.75 saved as
+84.47, 174.0 as 92.72); 165.0, 170.25 and 171.0 store fine. motreader refuses
+them. RX (offset 52.91 MHz) is unaffected in 136–174.
+
+**Band byte rule** (`tools/scenario_vhf_band_sweep.py`, 181 points typed into
+RSS on 617ASQ, 144–174 MHz, plus 221AZN's saves): 6 MHz bands with exact
+boundaries, `v = ⌊(f − 126) / 6⌋` clamped to 3..7, byte = `0x80 | v0<<5 | v1<<2 | v2<<3`:
+
+| TX/TA MHz | byte | v |
+|---|---|---|
+| below 150 (seen down to 142 on 221AZN) | `0xA4` | 3 |
+| 150–156 | `0x88` | 4 |
+| 156–162 | `0xA8` | 5 |
+| 162–168 | `0x8C` | 6 |
+| 168–174 (174.000 included) | `0xAC` | 7 |
+
+(The earlier rule, `0x88` up to 157 and `0xA8` above, was wrong for 156–157 and
+above 162 MHz.) Data: `notes/ground-truth/vhf_band_rss/`.
+
+**RSS normalizations seen on re-save** (not motreader's doing; same on the
+unedited original, `vhf_band_rss/rss_617asq_resave_*`): on 617ASQ, viewing a mode
+screen clears a stale bit `true +20 b1` in that mode's record (and fixes its
+sum), and any GET+SAVE turns the byte at body 0x660 (just past the mode table)
+from `0xFF` to `0x00`. Home mode outside the home zone is moved to the zone's
+first mode on save.
 
 Recovered with the **inverse oracle**: template-patch a chosen stored value into
 the record, re-encrypt, let RSS decode + PRINT the MHz. A byte-linear least-squares

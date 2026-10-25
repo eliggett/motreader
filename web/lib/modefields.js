@@ -182,7 +182,14 @@ export function setModeField(cp, n, key, text) {
                 + (cp.band === "900" ? " (900 MHz modes read 895–942 MHz)" : ""));
         }
         if (asked !== null && got !== null && Math.abs(got - asked) > 0.00005) {
-            if (Math.abs(got - asked) > 0.01) throw new InvalidValue(`${asked} MHz can't be stored here (the nearest is ${got.toFixed(4)})`);
+            // on the field's raster but not stored as asked: the synthesizer bytes can't hold it
+            const step = cp.band === "vhf" ? (key === "rx_mhz" ? 0.005 : 0.0025) : 0.0125;
+            const onRaster = Math.abs(asked / step - Math.round(asked / step)) < 1e-6;
+            if (onRaster || Math.abs(got - asked) > 0.01) {
+                throw new InvalidValue(`${asked} MHz can't be stored in this field: the radio's synthesizer `
+                    + `can't be set to it${cp.band === "vhf" ? " (RSS itself stores a wrong frequency for it)" : ""}; `
+                    + `the nearest it holds is ${got.toFixed(4)} MHz`);
+            }
             note = `stored as ${got.toFixed(4)} MHz, the nearest the radio holds`;
         }
         /** @type {any} */ (want)[key] = got;

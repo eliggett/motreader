@@ -459,12 +459,31 @@ export function vhfDecode(/** @type {number} */ lo, /** @type {number} */ mid, /
     return pyRound(c0 * lo + c1 * mid + k, 4);
 }
 
-/** Best (lo, mid) in 0..255 for `freq` under a VHF field's coefficients. */
+/**
+ * (lo, mid) in 0..255 for `freq` under a VHF field's coefficients.
+ *
+ * The bytes program a 127/128 dual-modulus synthesizer: N = 127*Np + A with
+ * mid = A (the swallow count, at most 127) and lo = Np - A - 256 (8 bits).
+ * In field terms the count = 127*lo + 128*mid, which has two encodings, mid
+ * and mid+127; RSS writes the smaller mid (all 6818 VHF frequency fields in
+ * the RSS saves on hand have mid < 127; TX 162.56 MHz, count 127*256, gets
+ * mid = 127, lo = 128). Some TX/TA frequencies above 165.74 MHz have no
+ * encoding (lo would pass 255): RSS then stores a wrapped, wrong value
+ * (tools/scenario_vhf_band_sweep.py); here they get the nearest storable one,
+ * which vhfStorable() tells apart.
+ */
 export function vhfEncode(/** @type {number} */ freq, /** @type {Coef} */ coef) {
     const [c0, c1, k] = coef;
+    const count = pyRound((freq - k) / (c1 / 128));
+    const r = ((count % 127) + 127) % 127;
+    for (const mid of [r, r + 127]) {
+        const n = count - 128 * mid;
+        const lo = Math.floor(n / 127);
+        if (n - 127 * lo === 0 && lo >= 0 && lo <= 255 && mid <= 127) return /** @type {[number, number]} */ ([lo, mid]);
+    }
     /** @type {[number, number, number] | null} */
     let best = null;
-    for (let mid = 0; mid < 256; mid++) {
+    for (let mid = 0; mid < 128; mid++) {
         const lo = pyRound((freq - k - c1 * mid) / c0);
         if (lo < 0 || lo > 255) continue;
         const err = Math.abs(c0 * lo + c1 * mid + k - freq);
@@ -473,15 +492,24 @@ export function vhfEncode(/** @type {number} */ freq, /** @type {Coef} */ coef) 
     return /** @type {[number, number]} */ (best ? [best[1], best[2]] : [0, 0]);
 }
 
+/** Can `freq` be stored exactly (on its field's raster, with mid <= 127)? */
+export function vhfStorable(/** @type {number} */ freq, /** @type {Coef} */ coef) {
+    const [lo, mid] = vhfEncode(freq, coef);
+    return Math.abs(vhfDecode(lo, mid, coef) - pyRound(freq, 4)) < 1e-9;
+}
+
 /**
- * VCO band byte for a new TX/TA value (it doesn't change the displayed
- * frequency): 144-148 -> 0xA4, 150-155 -> 0x88, 160+ -> 0xA8. An unchanged
- * field keeps its original byte; this is only for brand-new values.
+ * The TX/TA band byte (view +12 / +16) RSS writes for `freq`: 6 MHz bands,
+ * v = (freq - 126) // 6 clamped to 3..7, stored as 0x80 | v0<<5 | v1<<2 |
+ * v2<<3. Swept in RSS on 617ASQ (144-174 MHz, exact boundaries at 150, 156,
+ * 162 and 168) and seen on 221AZN (142-160): 144-150 0xA4 (also below 144),
+ * 150-156 0x88, 156-162 0xA8, 162-168 0x8C, 168-174 0xAC. It doesn't change the
+ * displayed frequency (most likely the VCO range). An unchanged field keeps
+ * its original byte; this is for new values.
  */
 export function vhfTxBandByte(/** @type {number} */ freq) {
-    if (freq < 149.0) return 0xA4;
-    if (freq < 157.0) return 0x88;
-    return 0xA8;
+    const v = Math.min(7, Math.max(3, Math.floor((pyRound(freq * 10000) - 1260000) / 60000)));
+    return 0x80 | ((v & 1) << 5) | (((v >> 1) & 1) << 2) | (((v >> 2) & 1) << 3);
 }
 
 /** Record starts of the VHF conventional modes (may be empty). */
