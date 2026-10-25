@@ -6,8 +6,9 @@
 import { splitArchive } from "./archive.js";
 import { decryptBody } from "./crypto.js";
 import { parseCodeplug } from "./codeplug.js";
-import { decode as decodeRadioWide } from "./radiowide.js";
+import { decode as decodeRadioWide, encode as encodeRadioWide, FIELD_BY_KEY } from "./radiowide.js";
 import { trunkingInfo, TrunkingUnsupported } from "./trunking.js";
+import { MODE_FIELDS, fieldText } from "./modefields.js";
 
 /**
  * @typedef {{
@@ -19,9 +20,15 @@ import { trunkingInfo, TrunkingUnsupported } from "./trunking.js";
  *   radioWide: import("./radiowide.js").RadioWide,
  *   trunk: { info: import("./trunking.js").TrunkingInfo | null, unsupported: string | null },
  *   index: { fileName: string, record: import("./dbf.js").DbfRecord | null } | null,
+ *   radioWideEdits: Record<string, unknown>,
+ *   original: { modes: Record<string, string>[], zones: { name: string, modes: string }[], radioWide: import("./radiowide.js").RadioWide },
  * }} CodeplugDocument
  *   `trunk.unsupported`: why trunking is present but can't be removed by motreader.
  *   `index`: the archive's SPECTRAM.DBF entry, when the DBF was loaded too.
+ *   Edits: modes and zones are edited in place in `cp`; radio-wide edits
+ *   accumulate in `radioWideEdits` (applied on export), and `radioWide` shows
+ *   their effect. `original` is how everything read when the file was opened,
+ *   as displayed text, to tell what changed.
  */
 
 /** Decode an archive file. Throws if it isn't one. */
@@ -37,14 +44,60 @@ export function openDocument(/** @type {string} */ fileName, /** @type {Uint8Arr
         if (!(e instanceof TrunkingUnsupported)) throw e;
         trunk = { info: null, unsupported: e.message };
     }
+    const radioWide = decodeRadioWide(plain, cp.band);
     /** @type {CodeplugDocument} */
     const doc = {
-        fileName, raw, banner: a.banner, plain, cp,
-        radioWide: decodeRadioWide(plain, cp.band),
-        trunk, index: null,
+        fileName, raw, banner: a.banner, plain, cp, radioWide, trunk, index: null,
+        radioWideEdits: {},
+        original: {
+            modes: cp.modes.map(modeTexts),
+            zones: cp.zones.map((z) => ({ name: z.name, modes: z.modes.join(" ") })),
+            radioWide: { ...radioWide },
+        },
     };
     return doc;
 }
 
+/** A mode's fields as displayed text, key -> text. */
+export function modeTexts(/** @type {import("./codeplug.js").Mode} */ m) {
+    return Object.fromEntries(MODE_FIELDS.map((f) => [f.key, fieldText(m, f.key)]));
+}
+
 /** Does the codeplug have trunking (removable or not)? */
 export const hasTrunking = (/** @type {CodeplugDocument} */ d) => d.trunk.info !== null || d.trunk.unsupported !== null;
+
+/**
+ * Edit radio-wide setting `key`. The value is tried on the codeplug first
+ * (throws InvalidValue if it can't be stored); `radioWide` then shows the
+ * result, side effects included. Setting a field back to how it was opened
+ * drops the edit.
+ * @param {CodeplugDocument} doc @param {string} key @param {unknown} value
+ */
+export function setRadioWide(doc, key, value) {
+    const f = FIELD_BY_KEY.get(key);
+    if (!f) throw new Error(`no radio-wide field ${key}`);
+    const edits = { ...doc.radioWideEdits, [key]: value };
+    if (String(value) === String(doc.original.radioWide[key])) delete edits[key];
+    const body = encodeRadioWide(doc.plain, edits);
+    doc.radioWideEdits = edits;
+    doc.radioWide = decodeRadioWide(body, doc.cp.band);
+}
+
+/**
+ * What differs from the file as opened: mode numbers, zone numbers and
+ * radio-wide keys (side effects included).
+ * @param {CodeplugDocument} doc
+ */
+export function changes(doc) {
+    const modes = doc.cp.modes.filter((m, i) => {
+        const was = doc.original.modes[i] ?? {};
+        return MODE_FIELDS.some((f) => fieldText(m, f.key) !== was[f.key]);
+    }).map((m) => m.number);
+    const zones = doc.cp.zones.filter((z, i) => {
+        const was = doc.original.zones[i];
+        return !was || was.name !== z.name || was.modes !== z.modes.join(" ");
+    }).map((z) => z.number);
+    const keys = new Set([...Object.keys(doc.radioWide), ...Object.keys(doc.original.radioWide)]);
+    const radioWide = [...keys].filter((k) => String(doc.radioWide[k]) !== String(doc.original.radioWide[k]));
+    return { modes, zones, radioWide, any: modes.length + zones.length + radioWide.length > 0 };
+}

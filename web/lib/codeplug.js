@@ -649,7 +649,9 @@ export function find900Table(/** @type {Uint8Array} */ body) {
  *   modes: Mode[], zones: Zone[],
  *   ascii_names: [number, number] | null,
  *   zone_sections: ZoneSections | null,
+ *   trunked_mode1: boolean,
  * }} Codeplug
+ *   `trunked_mode1`: mode 1 is the 566AYA-layout special record (no tone slots).
  */
 
 const SIGNATURE = "COPYRIGHT MOTOROLA INC.,1987";
@@ -657,7 +659,10 @@ const SIGNATURE = "COPYRIGHT MOTOROLA INC.,1987";
 /** Decode a plaintext codeplug body. */
 export function parseCodeplug(/** @type {Uint8Array} */ body) {
     /** @type {Codeplug} */
-    const cp = { body, signature: "", serial: "", model: "", band: "", modes: [], zones: [], ascii_names: null, zone_sections: null };
+    const cp = {
+        body, signature: "", serial: "", model: "", band: "", modes: [], zones: [], ascii_names: null,
+        zone_sections: null, trunked_mode1: false,
+    };
     parseHeader(cp);
     parseModes(cp);
     parseZones(cp);
@@ -728,26 +733,80 @@ function parseModes(cp) {
     }
 }
 
+/**
+ * Decode the values of a VHF record (26 bytes) into mode `m`.
+ * @param {Mode} m @param {Uint8Array} rec
+ */
+function decodeVhfRecord(m, rec) {
+    m.rx_mhz = vhfDecode(at(rec, VHF_RX_OFF), at(rec, VHF_RX_OFF + 1), VHF_RX_COEF);
+    // TX / T·A are blank on an RX-only mode (both value bytes zero)
+    m.tx_mhz = at(rec, VHF_TX_OFF) || at(rec, VHF_TX_OFF + 1) ? vhfDecode(at(rec, VHF_TX_OFF), at(rec, VHF_TX_OFF + 1), VHF_TX_COEF) : null;
+    m.ta_mhz = at(rec, VHF_TA_OFF) || at(rec, VHF_TA_OFF + 1) ? vhfDecode(at(rec, VHF_TA_OFF), at(rec, VHF_TA_OFF + 1), VHF_TX_COEF) : null;
+    [m.rx_squelch_type, m.rx_pl] = slotDecode(at(rec, 17), at(rec, 18), false, false);
+    [m.tx_squelch_type, m.tx_pl] = slotDecode(at(rec, 19), at(rec, 20), true, true);
+    [m.ta_squelch_type, m.ta_pl] = slotDecode(at(rec, 21), at(rec, 22), true, true);
+    // option flags (FORMAT §5a); power only for a programmed TX / T·A
+    m.up_xtal_shift = at(rec, 3) & 0x10 ? "Disabled" : "Enabled";
+    m.mdc_ptt_id = ED(at(rec, 4), 0x80);
+    m.phone_encode = ED(at(rec, 4), 0x20);
+    m.mpl_type = /** @type {string} */ (MPL_BY_BITS[at(rec, 3) & 0x60]);
+    m.tx_power = m.tx_mhz !== null ? (at(rec, 9) & 0x40 ? "High" : "Low") : null;
+    m.ta_power = m.ta_mhz !== null ? (at(rec, 13) & 0x40 ? "High" : "Low") : null;
+}
+
+/**
+ * Decode the values of the 900 MHz record viewed at `off` in `b` into mode
+ * `m`. `special`: a trunked mode 1, which has no tone slots.
+ * @param {Mode} m @param {Uint8Array} b @param {number} off @param {number} stride @param {boolean} special
+ */
+function decode900Record(m, b, off, stride, special) {
+    const rec = b.subarray(off, off + stride);
+    [m.rx_mhz, m.tx_mhz, m.ta_mhz] = decode900Fields(rec);
+    // the three tone slots run past the 26-byte view
+    if (!special) {
+        for (const [key, so] of Object.entries(M900_SLOTS)) {
+            const hi = off + so < b.length ? at(b, off + so) : 0;
+            const lo = off + so + 1 < b.length ? at(b, off + so + 1) : 0;
+            const [t, code] = slotDecode(hi, lo, key !== "rx", true);
+            if (key === "rx") [m.rx_squelch_type, m.rx_pl] = [t, code];
+            else if (key === "tx") [m.tx_squelch_type, m.tx_pl] = [t, code];
+            else [m.ta_squelch_type, m.ta_pl] = [t, code];
+        }
+    }
+    const f11 = at(rec, 11);
+    const f12 = at(rec, 12);
+    m.up_xtal_shift = f11 & 0x10 ? "Disabled" : "Enabled";
+    m.audio_compander = ED(f12, 0x08);
+    m.adaptive_splatter = ED(f12, 0x40);
+    m.mdc_ptt_id = ED(f12, 0x80);
+    m.phone_encode = ED(f12, 0x20);
+    m.reverse_burst_toc = ED(f11, 0x04);
+    m.unmute_mute_type = /** @type {string} */ (UNMUTE_BY_BITS[f11 & 0x03]);
+    m.mpl_type = /** @type {string} */ (MPL_BY_BITS[f11 & 0x60]);
+    m.tx_power = m.tx_mhz !== null ? (at(rec, 17) & 0x40 ? "High" : "Low") : null;
+    m.ta_power = m.ta_mhz !== null ? (at(rec, 21) & 0x40 ? "High" : "Low") : null;
+}
+
+/**
+ * Mode `m` as it would decode from `body` (e.g. an edited copy of the
+ * codeplug): the same record, read with the codeplug's band and layout.
+ * The name is not re-read.
+ * @param {Codeplug} cp @param {Uint8Array} body @param {Mode} m
+ * @returns {Mode}
+ */
+export function readModeBack(cp, body, m) {
+    const back = newMode(m.number, body.slice(m.offset, m.offset + m.raw.length), m.offset, m.name);
+    if (cp.band === "vhf") decodeVhfRecord(back, back.raw);
+    else decode900Record(back, body, m.offset, m.raw.length, cp.trunked_mode1 && m.number === 1);
+    return back;
+}
+
 /** @param {Codeplug} cp @param {number[]} starts */
 function parseModesVhf(cp, starts) {
     starts.forEach((off, i) => {
         const n = i + 1;
-        const rec = cp.body.slice(off, off + VHF_REC_LEN);
-        const m = newMode(n, rec, off);
-        m.rx_mhz = vhfDecode(at(rec, VHF_RX_OFF), at(rec, VHF_RX_OFF + 1), VHF_RX_COEF);
-        // TX / T·A are blank on an RX-only mode (both value bytes zero)
-        if (at(rec, VHF_TX_OFF) || at(rec, VHF_TX_OFF + 1)) m.tx_mhz = vhfDecode(at(rec, VHF_TX_OFF), at(rec, VHF_TX_OFF + 1), VHF_TX_COEF);
-        if (at(rec, VHF_TA_OFF) || at(rec, VHF_TA_OFF + 1)) m.ta_mhz = vhfDecode(at(rec, VHF_TA_OFF), at(rec, VHF_TA_OFF + 1), VHF_TX_COEF);
-        [m.rx_squelch_type, m.rx_pl] = slotDecode(at(rec, 17), at(rec, 18), false, false);
-        [m.tx_squelch_type, m.tx_pl] = slotDecode(at(rec, 19), at(rec, 20), true, true);
-        [m.ta_squelch_type, m.ta_pl] = slotDecode(at(rec, 21), at(rec, 22), true, true);
-        // option flags (FORMAT §5a); power only for a programmed TX / T·A
-        m.up_xtal_shift = at(rec, 3) & 0x10 ? "Disabled" : "Enabled";
-        m.mdc_ptt_id = ED(at(rec, 4), 0x80);
-        m.phone_encode = ED(at(rec, 4), 0x20);
-        m.mpl_type = /** @type {string} */ (MPL_BY_BITS[at(rec, 3) & 0x60]);
-        if (m.tx_mhz !== null) m.tx_power = at(rec, 9) & 0x40 ? "High" : "Low";
-        if (m.ta_mhz !== null) m.ta_power = at(rec, 13) & 0x40 ? "High" : "Low";
+        const m = newMode(n, cp.body.slice(off, off + VHF_REC_LEN), off);
+        decodeVhfRecord(m, m.raw);
         m.name = nameFor(cp, n);
         cp.modes.push(m);
     });
@@ -806,31 +865,10 @@ function parseModes900(cp, pt) {
         if (!anySet(rec.subarray(0, 26))) break;
         n++;
         const m = newMode(n, rec, off, nameFor(cp, n));
-        [m.rx_mhz, m.tx_mhz, m.ta_mhz] = decode900Fields(rec);
-        // the three tone slots run past the 26-byte view; a trunked mode 1 has none
+        // a trunked mode 1 (566AYA layout) has no tone slots: its view offset is its true start
         const special = n === 1 && ((pt !== null && pt[2][0] === off) || (pt === null && off === MODE_TABLE_OFF));
-        if (!special) {
-            for (const [key, so] of Object.entries(M900_SLOTS)) {
-                const hi = off + so < b.length ? at(b, off + so) : 0;
-                const lo = off + so + 1 < b.length ? at(b, off + so + 1) : 0;
-                const [t, code] = slotDecode(hi, lo, key !== "rx", true);
-                if (key === "rx") [m.rx_squelch_type, m.rx_pl] = [t, code];
-                else if (key === "tx") [m.tx_squelch_type, m.tx_pl] = [t, code];
-                else [m.ta_squelch_type, m.ta_pl] = [t, code];
-            }
-        }
-        const f11 = at(rec, 11);
-        const f12 = at(rec, 12);
-        m.up_xtal_shift = f11 & 0x10 ? "Disabled" : "Enabled";
-        m.audio_compander = ED(f12, 0x08);
-        m.adaptive_splatter = ED(f12, 0x40);
-        m.mdc_ptt_id = ED(f12, 0x80);
-        m.phone_encode = ED(f12, 0x20);
-        m.reverse_burst_toc = ED(f11, 0x04);
-        m.unmute_mute_type = /** @type {string} */ (UNMUTE_BY_BITS[f11 & 0x03]);
-        m.mpl_type = /** @type {string} */ (MPL_BY_BITS[f11 & 0x60]);
-        if (m.tx_mhz !== null) m.tx_power = at(rec, 17) & 0x40 ? "High" : "Low";
-        if (m.ta_mhz !== null) m.ta_power = at(rec, 21) & 0x40 ? "High" : "Low";
+        if (special) cp.trunked_mode1 = true;
+        decode900Record(m, b, off, stride, special);
         cp.modes.push(m);
         if (n >= 250) break;
     }

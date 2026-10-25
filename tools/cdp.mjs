@@ -57,7 +57,12 @@ function cleanup() {
             try { process.kill(-c.pid, "SIGTERM"); } catch { try { c.kill("SIGTERM"); } catch { /* gone */ } }
         }
     }
-    if (profile) rmSync(profile, { recursive: true, force: true });
+    // Chrome may still be writing its profile as it exits: retry, and never fail the run over it
+    if (profile) {
+        try {
+            rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+        } catch { /* left in the temp dir */ }
+    }
 }
 process.on("exit", cleanup);
 for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => process.exit(130));
@@ -203,6 +208,8 @@ async function main() {
     await cdp.send("Runtime.enable");
     await cdp.send("Log.enable");
     await cdp.send("Page.enable");
+    // downloads (Export) must never land in the user's folders: the test API reads them instead
+    await cdp.send("Page.setDownloadBehavior", { behavior: "deny" }).catch(() => {});
     const loaded = cdp.once("Page.loadEventFired");
     await cdp.send("Page.navigate", { url });
     await loaded;

@@ -8,6 +8,7 @@ import { initLogView } from "./logview.js";
 import { installTestApi } from "./testapi.js";
 import { VERSION } from "./version.js";
 import * as actions from "./actions.js";
+import { isDirty } from "./editing.js";
 
 /** Toolbar buttons (by data-action) and the commands they run. */
 const COMMANDS = {
@@ -35,11 +36,18 @@ function start() {
         for (const name of NEEDS_DOC) {
             /** @type {HTMLButtonElement} */ ($(`[data-action="${name}"]`)).disabled = !store.get();
         }
-        $("#doc-name").textContent = store.get()?.fileName ?? "";
+        const doc = store.get();
+        const dirty = isDirty();
+        $("#doc-name").textContent = doc ? `${doc.fileName}${dirty ? " (modified)" : ""}` : "";
+        $("#doc-name").classList.toggle("dirty", dirty);
     };
     store.subscribe(enable);
     enable();
 
+    // the browser asks before leaving the page with unexported edits
+    window.addEventListener("beforeunload", (e) => {
+        if (isDirty()) e.preventDefault();
+    });
     window.addEventListener("error", (e) => log.error(`Uncaught: ${e.message} (${e.filename}:${e.lineno})`));
     window.addEventListener("unhandledrejection", (e) => log.error(`Unhandled: ${e.reason}`));
     log.info(`motreader ${VERSION} ready`);

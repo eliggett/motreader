@@ -25,8 +25,12 @@ export function pickFiles(accept = "", multiple = false) {
     });
 }
 
+/** The last file handed to the user (for the test API). */
+export let lastDownload = /** @type {{ name: string, bytes: Uint8Array | string } | null} */ (null);
+
 /** Offer `data` to the user as a download named `name`. */
 export function download(/** @type {Uint8Array | string} */ data, /** @type {string} */ name, type = "application/octet-stream") {
+    lastDownload = { name, bytes: data };
     const blob = new Blob([typeof data === "string" ? data : new Uint8Array(data)], { type });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

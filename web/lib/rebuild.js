@@ -57,14 +57,17 @@ function asciiFieldBytes(/** @type {string} */ name, /** @type {number} */ w) {
 }
 const asciiText = (/** @type {Uint8Array} */ b) => String.fromCharCode(...b).replace(/[ \x00]+$/, "");
 
+/** Write mode `m`'s values (record and name) into `out`, a copy of cp.body. */
+export function writeMode(/** @type {Codeplug} */ cp, /** @type {Uint8Array} */ out, /** @type {Mode} */ m) {
+    if (cp.band === "vhf") writeModeVhf(cp, out, m);
+    else writeMode900(cp, out, m);
+    writeName(cp, out, m);
+}
+
 /** A copy of the body with the modes' and zones' current values applied. */
 export function rebuild(/** @type {Codeplug} */ cp) {
     const out = new Uint8Array(cp.body);
-    for (const m of cp.modes) {
-        if (cp.band === "vhf") writeModeVhf(cp, out, m);
-        else writeMode900(cp, out, m);
-        writeName(cp, out, m);
-    }
+    for (const m of cp.modes) writeMode(cp, out, m);
     fixRecordSums(cp.body, out);
     for (const z of cp.zones) writeZone(cp, out, z);
     const secs = cp.zone_sections;

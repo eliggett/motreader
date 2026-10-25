@@ -8,10 +8,12 @@ import { h } from "./dom.js";
 import { store } from "./state.js";
 import { log } from "./log.js";
 import { pickFiles } from "./files.js";
-import { alertModal, openModal } from "./modal.js";
+import { alertModal, openModal, confirmModal } from "./modal.js";
 import { openDocument } from "../lib/document.js";
 import { isArchive } from "../lib/archive.js";
 import { readDbf, findArchiveRecord } from "../lib/dbf.js";
+import { exportDialog } from "./exportdialog.js";
+import { isDirty } from "./editing.js";
 
 const errText = (/** @type {unknown} */ e) => (e instanceof Error ? e.message : String(e));
 const isDbfName = (/** @type {string} */ name) => /\.dbf$/i.test(name);
@@ -74,6 +76,8 @@ export async function importCodeplug() {
     for (const f of other) log.warn(`${f.name}: not a Spectra archive or a DBF index; ignored`);
     if (archives.length > 1) log.warn(`Several archives picked; opening ${archives[0]?.name}`);
     const a = archives[0];
+    if (a && isDirty() && !(await confirmModal("Discard changes?",
+        `${store.get()?.fileName} has changes that haven't been exported. Open ${a.name} anyway?`, "Discard and open"))) return;
     if (a && !loadCodeplug(a.name, a.bytes)) return;
     const dbf = dbfs[0];
     if (dbf) loadIndex(dbf.name, dbf.bytes);
@@ -105,7 +109,7 @@ export async function importTables() {
 }
 
 export async function exportCodeplug() {
-    await notYet("Export codeplug");
+    await exportDialog();
 }
 
 export async function exportYaml() {

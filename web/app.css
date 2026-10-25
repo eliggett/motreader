@@ -157,3 +157,48 @@ table.grid td.name { font-family: var(--mono); }
 table.grid td.members { white-space: normal; min-width: 30rem; color: var(--muted); }
 .tag { margin-left: 0.5rem; padding: 0 0.4rem; border-radius: 3px; background: var(--accent); color: var(--accent-text); font-size: 0.75rem; font-family: var(--sans); }
 table.grid tr.trunked td:not(.name):not(.num) { color: var(--muted); }
+
+/* Editing: grid, forms, messages */
+.doc-name.dirty { color: var(--warn); }
+button.small { padding: 0 0.45rem; font-size: 12px; }
+table.grid.editable { outline: none; }
+table.grid.editable td { cursor: default; }
+table.grid.editable td.ro { color: var(--muted); }
+table.grid.editable td.changed { background: rgb(79 156 240 / 0.14); }
+table.grid.editable td.active { box-shadow: inset 0 0 0 2px var(--accent); }
+table.grid.editable:not(:focus-within) td.active { box-shadow: inset 0 0 0 1px var(--muted); }
+table.grid.editable td.editing { padding: 0; }
+table.grid.editable td.editing input, table.grid.editable td.editing select {
+  width: 100%; min-width: 7rem; font: inherit; font-family: var(--mono); color: var(--text);
+  background: var(--bg); border: 2px solid var(--accent); border-radius: 0; padding: 0.15rem 0.4rem;
+}
+table.grid td.action, table.grid th.action { padding: 0.1rem 0.3rem; position: sticky; left: 0; background: var(--bg); z-index: 1; }
+table.grid thead th.action { z-index: 2; background: var(--raised); }
+table.grid td.members-edit { font-family: var(--mono); min-width: 9rem; }
+.grid-status { min-height: 1.4em; margin: 0.4rem 0 0; color: var(--muted); }
+.grid-status.error { color: var(--error); }
+.grid-status.note { color: var(--warn); }
+
+.form { display: grid; grid-template-columns: max-content minmax(8rem, max-content) 1fr; gap: 0.35rem 1rem; align-items: center; }
+.form-row { display: contents; }
+.form-row > label { color: var(--muted); }
+.form-row.changed > label { color: var(--accent); }
+.form-row.changed > label::after { content: " •"; }
+.form input[type="text"], .form select, .export input[type="text"] {
+  font: inherit; font-family: var(--mono); color: var(--text); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 3px; padding: 0.2rem 0.4rem;
+}
+.form input:focus, .form select:focus, .export input:focus { outline: none; border-color: var(--accent); }
+.ro-value { font-family: var(--mono); }
+.field-msg { color: var(--muted); font-size: 0.85rem; }
+.field-msg.error { color: var(--error); }
+.warn-text { color: var(--warn); min-height: 1.2em; }
+.warn-box { border: 1px solid var(--warn); border-radius: 4px; padding: 0.5rem 0.75rem; margin: 0.5rem 0; color: var(--warn); }
+.export .form-row { display: flex; gap: 0.75rem; align-items: center; margin: 0.75rem 0 0.25rem; }
+.export progress { width: 100%; margin-top: 0.5rem; accent-color: var(--accent); }
+.mode-editor .form { grid-template-columns: max-content minmax(10rem, max-content) minmax(8rem, 1fr); }
+
+@media (max-width: 40rem) {
+  .form, .mode-editor .form { grid-template-columns: 1fr; }
+  .form-row > label { margin-top: 0.4rem; }
+}

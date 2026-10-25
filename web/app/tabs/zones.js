@@ -1,29 +1,71 @@
 // @ts-check
-/** Zones: each zone's name and member modes. Read-only for now. */
+/**
+ * Zones: each zone's name and member modes, editable in a grid (members as
+ * text like "1-5, 9"). Adding and deleting zones, and scan lists, come with
+ * the structural milestone.
+ */
 import { h, fill } from "../dom.js";
+import { createGrid } from "../grid.js";
+import { editZoneName, editZoneModes } from "../editing.js";
+import { formatModeList } from "../../lib/zonefields.js";
 import { empty, note, NO_DOC } from "./common.js";
+
+/** @typedef {import("../../lib/codeplug.js").Zone} Zone */
+/** @typedef {import("../state.js").Document} Document */
+
+/** @type {{ doc: Document, grid: ReturnType<typeof createGrid<Zone>>, el: HTMLElement } | null} */
+let cache = null;
+
+/** @param {Document} doc */
+function build(doc) {
+    const { cp } = doc;
+    const was = (/** @type {Zone} */ z) => doc.original.zones[z.number - 1];
+    const grid = createGrid({
+        label: "Zones",
+        columns: [
+            { id: "number", label: "#", cls: "num", text: (z) => String(z.number) },
+            {
+                id: "name", label: "Name", cls: "name", text: (z) => z.name,
+                editor: (z) => ({ type: "text", maxLength: z.name_enc === "ascii" ? z.name_w : 8 }),
+                changed: (z) => z.name !== was(z)?.name,
+            },
+            {
+                id: "home", label: "Home", text: (z) => (z.number === doc.radioWide.home_zone ? "home" : ""),
+            },
+            {
+                id: "modes", label: "Modes", cls: "members-edit", text: (z) => formatModeList(z.modes),
+                editor: () => ({ type: "text" }),
+                changed: (z) => z.modes.join(" ") !== was(z)?.modes,
+            },
+            { id: "count", label: "Count", cls: "num", text: (z) => String(z.modes.length) },
+            {
+                id: "members", label: "Members", cls: "members",
+                text: (z) => z.modes.map((n) => `${n} ${cp.modes[n - 1]?.name ?? "?"}`).join(", "),
+            },
+        ],
+        rows: () => cp.zones,
+        onEdit: (z, key, text) => (key === "name" ? editZoneName(z.number, text) : editZoneModes(z.number, text)),
+    });
+    const el = h("div", {},
+        note(`${cp.zones.length} zones. Edit a zone's name, or its modes as numbers and ranges (1-5, 9). `
+            + "The home zone is set on the Radio-Wide tab. Adding and deleting zones, and scan lists, come later."),
+        grid.el);
+    return { doc, grid, el };
+}
 
 /** @type {import("./common.js").Tab} */
 export default {
     id: "zones",
     title: "Zones",
     render(el, doc) {
-        if (!doc) return fill(el, empty(NO_DOC));
+        if (!doc) {
+            cache = null;
+            return fill(el, empty(NO_DOC));
+        }
         if (doc.radioWide.zone_operation === "Disabled") return fill(el, empty("Zone Operation is off on this radio: it has no zones."));
-        const zones = doc.cp.zones;
-        if (!zones.length) return fill(el, empty("No zones were found in this codeplug."));
-        const nameOf = new Map(doc.cp.modes.map((m) => [m.number, m.name]));
-        const home = doc.radioWide.home_zone;
-        fill(el,
-            note(`${zones.length} zones. Read-only for now: zone and scan list editing arrives in a later milestone.`),
-            h("div", { class: "table-wrap" },
-                h("table", { class: "grid" },
-                    h("thead", {}, h("tr", {}, h("th", { class: "num" }, "#"), h("th", { class: "name" }, "Name"),
-                        h("th", { class: "num" }, "Modes"), h("th", {}, "Members"))),
-                    h("tbody", {}, zones.map((z) => h("tr", {},
-                        h("td", { class: "num" }, z.number),
-                        h("td", { class: "name" }, z.name, z.number === home ? h("span", { class: "tag" }, "home") : null),
-                        h("td", { class: "num" }, z.modes.length),
-                        h("td", { class: "members" }, z.modes.map((n) => `${n} ${nameOf.get(n) ?? "?"}`).join(", "))))))));
+        if (!doc.cp.zones.length) return fill(el, empty("No zones were found in this codeplug."));
+        if (cache?.doc !== doc) cache = build(doc);
+        else cache.grid.refresh();
+        if (cache.el.parentElement !== el) fill(el, cache.el);
     },
 };
