@@ -557,7 +557,7 @@ const M900_STEP = 0.0125;
 const M900_HIGH = 816.0;
 const M900_RX_BASE = 109.65;
 const M900_BAND = /** @type {const} */ ([895.0, 942.0]);
-const VALID_CARRY_900 = [0xE8, 0xE9, 0xA8, 0xA9];
+export const VALID_CARRY_900 = [0xE8, 0xE9, 0xA8, 0xA9];
 /** Tone slots: view +25/+27/+29 on 900 MHz, +17/+19/+21 on VHF. */
 export const M900_SLOTS = /** @type {const} */ ({ rx: 25, tx: 27, ta: 29 });
 export const VHF_SLOTS = /** @type {const} */ ({ rx: 17, tx: 19, ta: 21 });

@@ -14,6 +14,7 @@ import { readDbf } from "../../web/lib/dbf.js";
 import { parseCodeplug, modePointerTable, zoneOperation, zoneSections } from "../../web/lib/codeplug.js";
 import { decode as decodeRadioWide, findExtBlock, findChbBlock } from "../../web/lib/radiowide.js";
 import { trunkingInfo } from "../../web/lib/trunking.js";
+import { decodePhones, decodeMpls } from "../../web/lib/lists.js";
 import { ROOT, GROUND_TRUTH, SPECTRA } from "./util.js";
 
 /** Every codeplug sample on hand: ground-truth bodies, then archives and DBFs. */
@@ -62,7 +63,16 @@ function codeplug(/** @type {Uint8Array} */ body) {
     } catch (e) {
         trunk = { error: e instanceof Error ? e.message : String(e) };
     }
+    const safe = (/** @type {(cp: any) => unknown} */ fn) => {
+        try {
+            return plain(fn(cp));
+        } catch (e) {
+            return { error: e instanceof Error ? e.message : String(e) };
+        }
+    };
     return {
+        phones: safe(decodePhones),
+        mpls: safe(decodeMpls),
         body_len: body.length,
         signature: cp.signature,
         serial: cp.serial,

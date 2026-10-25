@@ -12,7 +12,7 @@
 import {
     NAME_TABLE_OFF, NAME_LEN_BYTES, packName, packMembership, modePointerTable,
     vhfDecode, vhfEncode, vhfTxBandByte, VHF_RX_COEF, VHF_TX_COEF, VHF_SLOTS, M900_SLOTS,
-    decode900Fields, m900RxEncode, m900FreqEncode, M900_TX, M900_TA, MPL_BY_BITS, UNMUTE_BY_BITS,
+    decode900Fields, m900RxEncode, m900FreqEncode, M900_TX, M900_TA, MPL_BY_BITS, UNMUTE_BY_BITS, VALID_CARRY_900,
 } from "./codeplug.js";
 import { slotDecode, slotEncode, isDplCode } from "./tones.js";
 import { equal } from "./bytes.js";
@@ -247,7 +247,11 @@ function writeMode900(cp, out, m) {
         rec[15] = mid;
     }
     if (m.tx_mhz !== curTx || m.ta_mhz !== curTa) {
-        if (m.ta_mhz === null && m.tx_mhz !== null) {
+        // the simplex layout (TX in the +21..23 field) only for a mode that
+        // already has it, or whose T/A is being cleared: a split mode with no
+        // T/A (617ASN mode 1: 935.9 / 896.9) keeps its TX in +17..19
+        const txInTa = !(VALID_CARRY_900.includes(byteAt(m.raw, 17)) && (byteAt(m.raw, 18) || byteAt(m.raw, 19)));
+        if (m.ta_mhz === null && m.tx_mhz !== null && (txInTa || curTa !== null)) {
             // simplex: TX goes in the +21..23 field; clear the repeater input
             const [lo, mid, carry] = m900FreqEncode(m.tx_mhz, byteAt(m.raw, M900_TA[0]));
             [rec[M900_TA[1]], rec[M900_TA[2]], rec[M900_TA[0]]] = [lo, mid, carry];

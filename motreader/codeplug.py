@@ -1571,7 +1571,11 @@ class Codeplug:
             rec[M900_RX_LO], rec[M900_RX_MID] = lo, mid
 
         if (m.tx_mhz, m.ta_mhz) != (cur_tx, cur_ta):
-            if m.ta_mhz is None and m.tx_mhz is not None:
+            # the simplex layout (TX in the off21-23 field) only for a mode that
+            # already has it, or whose T/A is being cleared: a split mode with
+            # no T/A (617ASN mode 1: 935.9 / 896.9) keeps its TX in off17-19
+            tx_in_ta = not (m.raw[17] in VALID_CARRY_900 and (m.raw[18] or m.raw[19]))
+            if m.ta_mhz is None and m.tx_mhz is not None and (tx_in_ta or cur_ta is not None):
                 # simplex: TX goes in the off21-23 field; clear the repeater input
                 lo, mid, carry = m900_freq_encode(m.tx_mhz, m.raw[M900_TA[0]])
                 c, l, md = M900_TA

@@ -748,3 +748,22 @@ def test_unedited_rebuild_is_byte_identical_everywhere():
         if p.endswith("A428TWN2.810"):
             continue
         assert bytes(Codeplug.parse(body).rebuild()) == body, p
+
+
+def test_900_split_mode_without_ta_keeps_tx_field():
+    """617ASN mode 1 (Rx 935.9, Tx 896.9, no T/A) stores its TX in the repeater
+    field; editing TX must not move it into the T/A field (which left the mode
+    with no frequencies at all)."""
+    from tests.test_crypto import _archives
+    from motreader.archive import Archive
+    from motreader.crypto import decrypt_body
+    from motreader.codeplug import Codeplug
+    paths = [p for p in _archives() if os.path.basename(p).lower() == "a617asn1.665"]
+    if not paths:
+        pytest.skip("617ASN archive not present")
+    cp = Codeplug.parse(decrypt_body(Archive.load(paths[0]).body))
+    m = cp.modes[0]
+    assert (m.rx_mhz, m.tx_mhz, m.ta_mhz) == (935.9, 896.9, None)
+    m.tx_mhz = 896.8875
+    back = Codeplug.parse(bytes(cp.rebuild())).modes[0]
+    assert (back.rx_mhz, back.tx_mhz, back.ta_mhz) == (935.9, 896.8875, None)

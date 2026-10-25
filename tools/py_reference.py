@@ -16,7 +16,7 @@ import hashlib
 import json
 import sys
 
-from motreader import radiowide, trunking
+from motreader import lists, radiowide, trunking
 from motreader.archive import BANNER_PREFIX, Archive
 from motreader.codeplug import Codeplug, mode_pointer_table, zone_operation, zone_sections
 from motreader.crypto import decrypt_body
@@ -47,7 +47,14 @@ def codeplug(body: bytes) -> dict:
         trunk = None if trunk is None else {k: trunk[k] for k in ("r0", "pers", "tg", "data_end", "systems", "subfleets")}
     except ValueError as e:
         trunk = {"error": str(e)}
+    def safe(fn):
+        try:
+            return _plain(fn(cp))
+        except ValueError as e:
+            return {"error": str(e)}
     return {
+        "phones": safe(lists.decode_phones),
+        "mpls": safe(lists.decode_mpls),
         "body_len": len(body),
         "signature": cp.signature,
         "serial": cp.serial,

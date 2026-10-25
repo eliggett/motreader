@@ -9,6 +9,7 @@ import { parseCodeplug } from "./codeplug.js";
 import { decode as decodeRadioWide, encode as encodeRadioWide, FIELD_BY_KEY } from "./radiowide.js";
 import { trunkingInfo, TrunkingUnsupported } from "./trunking.js";
 import { MODE_FIELDS, fieldText } from "./modefields.js";
+import { decodePhones, decodeMpls } from "./lists.js";
 
 /**
  * @typedef {{
@@ -21,14 +22,21 @@ import { MODE_FIELDS, fieldText } from "./modefields.js";
  *   trunk: { info: import("./trunking.js").TrunkingInfo | null, unsupported: string | null },
  *   index: { fileName: string, record: import("./dbf.js").DbfRecord | null } | null,
  *   radioWideEdits: Record<string, unknown>,
- *   original: { modes: Record<string, string>[], zones: { name: string, modes: string }[], radioWide: import("./radiowide.js").RadioWide },
+ *   phones: import("./lists.js").Phone[],
+ *   mpls: import("./lists.js").Mpl[],
+ *   listProblem: string | null,
+ *   original: {
+ *     modes: Record<string, string>[], zones: { name: string, modes: string }[],
+ *     radioWide: import("./radiowide.js").RadioWide, phones: string[], mpls: string[],
+ *   },
  * }} CodeplugDocument
  *   `trunk.unsupported`: why trunking is present but can't be removed by motreader.
  *   `index`: the archive's SPECTRAM.DBF entry, when the DBF was loaded too.
  *   Edits: modes and zones are edited in place in `cp`; radio-wide edits
  *   accumulate in `radioWideEdits` (applied on export), and `radioWide` shows
- *   their effect. `original` is how everything read when the file was opened,
- *   as displayed text, to tell what changed.
+ *   their effect. `phones` / `mpls` are edited in place too (`listProblem`: why
+ *   a list couldn't be read). `original` is how everything read when the file
+ *   was opened, as displayed text, to tell what changed.
  */
 
 /** Decode an archive file. Throws if it isn't one. */
@@ -45,14 +53,28 @@ export function openDocument(/** @type {string} */ fileName, /** @type {Uint8Arr
         trunk = { info: null, unsupported: e.message };
     }
     const radioWide = decodeRadioWide(plain, cp.band);
+    /** @type {string | null} */
+    let listProblem = null;
+    const tryList = (/** @type {() => any[]} */ fn) => {
+        try {
+            return fn();
+        } catch (e) {
+            listProblem = e instanceof Error ? e.message : String(e);
+            return [];
+        }
+    };
+    const phones = tryList(() => decodePhones(cp));
+    const mpls = tryList(() => decodeMpls(cp));
     /** @type {CodeplugDocument} */
     const doc = {
         fileName, raw, banner: a.banner, plain, cp, radioWide, trunk, index: null,
-        radioWideEdits: {},
+        radioWideEdits: {}, phones, mpls, listProblem,
         original: {
             modes: cp.modes.map(modeTexts),
             zones: cp.zones.map((z) => ({ name: z.name, modes: z.modes.join(" ") })),
             radioWide: { ...radioWide },
+            phones: phones.map((p) => JSON.stringify(p)),
+            mpls: mpls.map((m) => JSON.stringify(m)),
         },
     };
     return doc;
@@ -99,5 +121,7 @@ export function changes(doc) {
     }).map((z) => z.number);
     const keys = new Set([...Object.keys(doc.radioWide), ...Object.keys(doc.original.radioWide)]);
     const radioWide = [...keys].filter((k) => String(doc.radioWide[k]) !== String(doc.original.radioWide[k]));
-    return { modes, zones, radioWide, any: modes.length + zones.length + radioWide.length > 0 };
+    const phones = doc.phones.filter((p, i) => JSON.stringify(p) !== doc.original.phones[i]).map((p) => p.number);
+    const mpls = doc.mpls.filter((m, i) => JSON.stringify(m) !== doc.original.mpls[i]).map((m) => m.number);
+    return { modes, zones, radioWide, phones, mpls, any: modes.length + zones.length + radioWide.length + phones.length + mpls.length > 0 };
 }
