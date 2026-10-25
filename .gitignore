@@ -1,6 +1,9 @@
 __pycache__/
 .pytest_cache/
 *.pyc
+*.pem
+._*
+
 
 # Saved third-party web pages (reference only, not ours to redistribute)
 /notes/*.html
