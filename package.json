@@ -1,0 +1,15 @@
+{
+  "name": "motreader",
+  "private": true,
+  "type": "module",
+  "description": "Motorola Spectra RSS codeplug editor (web app in web/, Python tools in motreader/ and tools/)",
+  "scripts": {
+    "test": "node --test \"tests/js/**/*.test.js\"",
+    "check": "tsc -p web/lib/jsconfig.json && tsc -p web/app/jsconfig.json && tsc -p tests/js/jsconfig.json",
+    "serve": "cd web && python3 ../server/server.py"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "6.0.3"
+  }
+}

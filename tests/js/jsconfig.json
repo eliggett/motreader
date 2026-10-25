@@ -1,0 +1,6 @@
+{
+  // Node tests: Node APIs plus the format core.
+  "extends": "../../jsconfig.base.json",
+  "compilerOptions": { "lib": ["ES2023"], "types": ["node"] },
+  "include": ["**/*.js", "../../web/lib/**/*.js"]
+}

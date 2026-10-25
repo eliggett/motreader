@@ -1,0 +1,7 @@
+{
+  // The format core: plain ECMAScript only, no browser or Node APIs, so the
+  // same files run in the page, in Node tests and in tools.
+  "extends": "../../jsconfig.base.json",
+  "compilerOptions": { "lib": ["ES2023"], "types": [] },
+  "include": ["**/*.js"]
+}
