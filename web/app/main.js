@@ -40,6 +40,12 @@ function start() {
         const dirty = isDirty();
         $("#doc-name").textContent = doc ? `${doc.fileName}${dirty ? " (modified)" : ""}` : "";
         $("#doc-name").classList.toggle("dirty", dirty);
+        // a codeplug motreader can't edit safely says so above every tab
+        const notice = $("#notice");
+        notice.hidden = !doc || doc.support.editable;
+        if (doc && !doc.support.editable) {
+            notice.textContent = `Read-only: ${doc.support.reasons.join("; ")}. It can be viewed (and exported unchanged), not edited.`;
+        }
     };
     store.subscribe(enable);
     enable();

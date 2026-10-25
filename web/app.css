@@ -24,7 +24,8 @@ html, body { height: 100%; margin: 0; }
 
 body {
   display: grid;
-  grid-template-rows: auto auto 1fr var(--log-height);
+  grid-template-rows: auto auto auto 1fr var(--log-height);
+  /* toolbar, tabs, read-only notice, panel, log */
   background: var(--bg);
   color: var(--text);
   font: 14px/1.4 var(--sans);
@@ -212,3 +213,4 @@ table.grid td.members-edit { font-family: var(--mono); min-width: 9rem; }
   .form-row > label { margin-top: 0.4rem; }
 }
 .import-report ul { margin: 0.25rem 0 0.75rem; padding-left: 1.2rem; font-size: 0.9rem; }
+.notice { padding: 0.5rem 1rem; background: rgb(224 179 65 / 0.14); border-bottom: 1px solid var(--warn); color: var(--warn); }

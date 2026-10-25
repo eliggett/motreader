@@ -1026,9 +1026,10 @@ def _record_band(body: bytes, starts) -> Optional[str]:
     # RX tag 0xA0 at +2 (b4 set = the mode scans with SCAN TYPE Talkgroup)
     s900 = sum(body[t + 2] & 0xEF == 0xA0 and body[t + 13] == 0x8C for t in starts)
     svhf = sum(body[t + 6] in (0xE9, 0xE8, 0x68) for t in starts)
-    if s900 >= max(2, len(starts) // 2):
+    need = max(min(2, len(starts)), len(starts) // 2)   # a one-mode codeplug has one record
+    if s900 >= need:
         return "900"
-    if svhf >= max(2, len(starts) // 2):
+    if svhf >= need:
         return "vhf"
     return None
 

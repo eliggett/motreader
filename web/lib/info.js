@@ -74,6 +74,10 @@ export function generalInfo(d) {
         { label: "Decryption key (nonce)", value: hex(nonce(d.plain), " "), note: "the 13 bytes at the start of the body; RSS picks new ones on every save" },
         { label: "Archive file", value: d.fileName, note: `${d.raw.length} bytes, ${d.banner.length === BANNER_LONG.length ? "long" : "short"} banner` },
         { label: "Signature", value: cp.signature || "not found" },
+        {
+            label: "Format version", value: d.support.version === null ? "unknown" : String(d.support.version),
+            note: d.support.editable ? "supported" : `read-only: ${d.support.reasons.join("; ")}`,
+        },
     ];
     if (sigOff >= 0) {
         codeplug.push({

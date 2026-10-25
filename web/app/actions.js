@@ -145,6 +145,10 @@ export async function importTables() {
 export async function applyTables(/** @type {import("../lib/tables.js").TextFile[]} */ files) {
     const doc = store.get();
     if (!doc) return null;
+    if (!doc.support.editable) {
+        await alertModal("Import CSV/YAML", `This codeplug is read-only, so nothing can be imported into it: ${doc.support.reasons.join("; ")}.`);
+        return null;
+    }
     let rep;
     try {
         rep = importTableFiles(doc, files);

@@ -404,7 +404,7 @@ function recordBand(/** @type {Uint8Array} */ body, /** @type {number[]} */ star
     // RX tag 0xA0 at +2 (b4 set = the mode scans with SCAN TYPE Talkgroup)
     const s900 = starts.filter((t) => (at(body, t + 2) & 0xEF) === 0xA0 && at(body, t + 13) === 0x8C).length;
     const svhf = starts.filter((t) => [0xE9, 0xE8, 0x68].includes(at(body, t + 6))).length;
-    const need = Math.max(2, Math.floor(starts.length / 2));
+    const need = Math.max(Math.min(2, starts.length), Math.floor(starts.length / 2));   // a one-mode codeplug has one record
     if (s900 >= need) return "900";
     if (svhf >= need) return "vhf";
     return null;

@@ -26,6 +26,7 @@ const errText = (/** @type {unknown} */ e) => (e instanceof Error ? e.message : 
 function run(what, fn) {
     const doc = store.get();
     if (!doc) return { error: "no codeplug is open" };
+    if (!doc.support.editable) return { error: `this codeplug is read-only: ${doc.support.reasons.join("; ")}` };
     try {
         const note = fn() ?? undefined;
         store.update(() => {}, "edit");

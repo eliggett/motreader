@@ -10,6 +10,7 @@ import { decode as decodeRadioWide, encode as encodeRadioWide, FIELD_BY_KEY } fr
 import { trunkingInfo, TrunkingUnsupported } from "./trunking.js";
 import { MODE_FIELDS, fieldText } from "./modefields.js";
 import { decodePhones, decodeMpls } from "./lists.js";
+import { assessSupport } from "./support.js";
 
 /**
  * @typedef {{
@@ -25,6 +26,7 @@ import { decodePhones, decodeMpls } from "./lists.js";
  *   phones: import("./lists.js").Phone[],
  *   mpls: import("./lists.js").Mpl[],
  *   listProblem: string | null,
+ *   support: import("./support.js").Support,
  *   original: {
  *     modes: Record<string, string>[], zones: { name: string, modes: string }[],
  *     radioWide: import("./radiowide.js").RadioWide, phones: string[], mpls: string[],
@@ -68,7 +70,7 @@ export function openDocument(/** @type {string} */ fileName, /** @type {Uint8Arr
     /** @type {CodeplugDocument} */
     const doc = {
         fileName, raw, banner: a.banner, plain, cp, radioWide, trunk, index: null,
-        radioWideEdits: {}, phones, mpls, listProblem,
+        radioWideEdits: {}, phones, mpls, listProblem, support: assessSupport(cp),
         original: {
             modes: cp.modes.map(modeTexts),
             zones: cp.zones.map((z) => ({ name: z.name, modes: z.modes.join(" ") })),

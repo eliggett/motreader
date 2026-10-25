@@ -224,10 +224,11 @@ def find_ext_block(body: bytes) -> Optional[int]:
     """Offset of the radio-wide extension section, or None.
 
     Signature (all on-hand models): byte0 = section length L (0x80..0xC0),
-    byte[L-1] = sum(bytes[0:L-1]) & 0xFF, bytes 5,6 = 0 and bytes 7,8 = the
-    mode count (header 0x109) repeated. The checksum makes a false match
-    vanishingly unlikely; requiring it also means we never patch a block we
-    can't re-checksum correctly."""
+    byte[L-1] = sum(bytes[0:L-1]) & 0xFF, bytes 5,6 = 0 and byte 7 = the mode
+    count (header 0x109). Byte 8 usually repeats it but not always (8 with 7
+    modes in a 604AUN backup; 5 and 4 on all-trunked radios), so it isn't
+    required. The checksum makes a false match vanishingly unlikely; requiring
+    it also means we never patch a block we can't re-checksum correctly."""
     n = body[0x109] if len(body) > 0x109 else None
     if n is None:
         return None
@@ -235,7 +236,7 @@ def find_ext_block(body: bytes) -> Optional[int]:
         L = body[k]
         if not (0x80 <= L <= 0xC0) or k + L > len(body):
             continue
-        if body[k + 5] or body[k + 6] or body[k + 7] != n or body[k + 8] != n:
+        if body[k + 5] or body[k + 6] or body[k + 7] != n:
             continue
         if (sum(body[k:k + L - 1]) & 0xFF) == body[k + L - 1]:
             return k

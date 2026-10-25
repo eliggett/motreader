@@ -163,7 +163,8 @@ const byte = (/** @type {Uint8Array} */ b, /** @type {number} */ o) => /** @type
 /**
  * Offset of the radio-wide extension section, or null. Signature: byte 0 =
  * length L (0x80..0xC0), byte L-1 = 8-bit sum of [0, L-1), bytes 5,6 = 0 and
- * bytes 7,8 = the mode count (header 0x109) twice.
+ * byte 7 = the mode count (header 0x109). Byte 8 usually repeats it but not
+ * always (8 with 7 modes in a 604AUN backup; 5 and 4 on all-trunked radios).
  */
 export function findExtBlock(/** @type {Uint8Array} */ body) {
     if (body.length <= 0x109) return null;
@@ -171,7 +172,7 @@ export function findExtBlock(/** @type {Uint8Array} */ body) {
     for (let k = 0x1E8; k < body.length - 0x80; k++) {
         const L = byte(body, k);
         if (L < 0x80 || L > 0xC0 || k + L > body.length) continue;
-        if (body[k + 5] || body[k + 6] || body[k + 7] !== n || body[k + 8] !== n) continue;
+        if (body[k + 5] || body[k + 6] || body[k + 7] !== n) continue;
         if (sum8(body, k, k + L - 1) === body[k + L - 1]) return k;
     }
     return null;
