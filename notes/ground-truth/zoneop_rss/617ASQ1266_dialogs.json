@@ -1,0 +1,309 @@
+[
+ {
+  "step": "radio-wide",
+  "rows": [
+   " MOTOROLA Radio Service Software         Use UP / DOWN Arrows To Enable.",
+   " SPECTRA        Model: D43KMA7JA5BK",
+   " CHG/VIEW:RADIO",
+   "  RADIO-WIDE CONFIGURATION                  ZONE OPERATION......... Disabled",
+   "   MODEL INFORMATION                        HOME MODE....................001",
+   "    D43KMA7JA5BK                             Name....................146 520",
+   "    Freq Range..146.0 - 174.0 MHz           MODE NAMES...............Enabled",
+   "    CONVENTIONAL STANDARD                   TIME OUT TIMER...........Enabled",
+   "                                            HUB SWITCH..............Disabled",
+   "                                            MAX USER MODES...............010",
+   "                                            MINIMUM VOLUME (0-15).........00",
+   "   MODES (max)................128           SPEAKER B MIN VOLUME (0-15)...08",
+   "   # Modes Enabled............010",
+   "   (Determined By Mode Menu)",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP    TRUNK                    PRINT    SCAN    ZONE   SYSTEM  OTHER     EXIT",
+   "       OPTIONS                   SCREEN  OPTIONS  LIST   S & L   OPTIONS"
+  ]
+ },
+ {
+  "step": "toggle",
+  "rows": [
+   " MOTOROLA Radio Service Software         Use UP / DOWN Arrows To Enable.",
+   " SPECTRA        Model: D43KMA7JA5BK",
+   " CHG/VIEW:RADIO",
+   "  RADIO-WIDE CONFIGURATION                  ZONE OPERATION.........  Enabled",
+   "                                              Positional............Disabled",
+   "                                              Home Zone...................00",
+   "   MODEL INFORMATION                        HOME MODE....................001",
+   "    D43KMA7JA5BK                             Name....................146 520",
+   "    Freq Range..146.0 - 174.0 MHz           MODE NAMES...............Enabled",
+   "    CONVENTIONAL STANDARD                   TIME OUT TIMER...........Enabled",
+   "                                            HUB SWITCH..............Disabled",
+   "                                            MAX USER MODES...............010",
+   "                                            MINIMUM VOLUME (0-15).........00",
+   "   MODES (max)................128           SPEAKER B MIN VOLUME (0-15)...08",
+   "   # Modes Enabled............010",
+   "   (Determined By Mode Menu)",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP    TRUNK                    PRINT    SCAN    ZONE   SYSTEM  OTHER     EXIT",
+   "       OPTIONS                   SCREEN  OPTIONS  LIST   S & L   OPTIONS"
+  ]
+ },
+ {
+  "step": "k:f7",
+  "rows": [
+   " MOTOROLA Radio Service Software         Enter Value.",
+   " SPECTRA        Model: D43KMA7JA5BK",
+   " CHG/VIEW:RADIO:ZONE_N",
+   "                                ZONE NAME LIST",
+   "    ZONE #   ZONE NAME     ZONE #   ZONE NAME",
+   "                                                  Add Zone At Position....--",
+   "                                                  Del Zone At Position....--",
+   "                                                  Name on 1st press. Disabled",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP    MODE      ADD    DELETE  PRINT            SCAN    SCAN             EXIT",
+   "        LIST      ZONE    ZONE   SCREEN           LIST   OPTIONS"
+  ]
+ },
+ {
+  "step": "k:f3",
+  "rows": [
+   " MOTOROLA Radio Service Software         Enter Value.",
+   " SPECTRA        Model: D43KMA7JA5BK",
+   " CHG/VIEW:RADIO:ZONE_N",
+   "                                ZONE NAME LIST",
+   "    ZONE #   ZONE NAME     ZONE #   ZONE NAME",
+   "                                                  Add Zone At Position....--",
+   "                                                  Del Zone At Position....--",
+   "                                                  Name on 1st press. Disabled",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP    MODE      ADD    DELETE  PRINT            SCAN    SCAN             EXIT",
+   "        LIST      ZONE    ZONE   SCREEN           LIST   OPTIONS"
+  ]
+ },
+ {
+  "step": "t:01",
+  "rows": [
+   " MOTOROLA Radio Service Software         Enter Value.",
+   " SPECTRA        Model: D43KMA7JA5BK",
+   " CHG/VIEW:RADIO:ZONE_N",
+   "                                ZONE NAME LIST",
+   "    ZONE #   ZONE NAME     ZONE #   ZONE NAME",
+   "                                                  Add Zone At Position....01",
+   "                                                  Del Zone At Position....--",
+   "                                                  Name on 1st press. Disabled",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP    MODE      ADD    DELETE  PRINT            SCAN    SCAN             EXIT",
+   "        LIST      ZONE    ZONE   SCREEN           LIST   OPTIONS"
+  ]
+ },
+ {
+  "step": "k:enter",
+  "rows": [
+   " MOTOROLA Radio Service Software         Use UP / DOWN Arrows To Adjust Value.",
+   " SPECTRA        Model: D43KMA7JA5BK",
+   " CHG/VIEW:RADIO:ZONE_N",
+   "                                ZONE NAME LIST",
+   "    ZONE #   ZONE NAME     ZONE #   ZONE NAME",
+   "     01      ZONE  01                             Add Zone At Position....--",
+   "                                                  Del Zone At Position....--",
+   "                                                  Name on 1st press. Disabled",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP    MODE      ADD    DELETE  PRINT            SCAN    SCAN             EXIT",
+   "        LIST      ZONE    ZONE   SCREEN           LIST   OPTIONS"
+  ]
+ },
+ {
+  "step": "k:f2",
+  "rows": [
+   " MOTOROLA Radio Service Software         Enter Value.",
+   " SPECTRA        Model: D43KMA7JA5BK",
+   " CHG/VIEW:RADIO:ZONE_N:MODE LIST",
+   "  Zone  01                      ZONE MODE LIST",
+   "  #      NAME      IN ZONE",
+   "  1    146 520",
+   "  2    144 0000",
+   "  3    145 0000",
+   "  4    146 0000",
+   "  5    147 0000",
+   "  6    148 0000",
+   "  7    150 0000",
+   "  8    155 0000",
+   "  9    155 0000",
+   "  10   160 0000",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP    GOTO    PREVIOUS  NEXT   PRINT            ERASE                    EXIT",
+   "        ZONE      ZONE    ZONE   SCREEN           LIST"
+  ]
+ },
+ {
+  "step": "k:tab",
+  "rows": [
+   " MOTOROLA Radio Service Software          Use Up / Down Arrows To Select,",
+   " SPECTRA        Model: D43KMA7JA5BK        Or Use PgUp / PgDn To View More.",
+   " CHG/VIEW:RADIO:ZONE_N:MODE LIST",
+   "  Zone  01                      ZONE MODE LIST",
+   "  #      NAME      IN ZONE",
+   "  1    146 520",
+   "  2    144 0000",
+   "  3    145 0000",
+   "  4    146 0000",
+   "  5    147 0000",
+   "  6    148 0000",
+   "  7    150 0000",
+   "  8    155 0000",
+   "  9    155 0000",
+   "  10   160 0000",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP    GOTO    PREVIOUS  NEXT   PRINT            ERASE                    EXIT",
+   "        ZONE      ZONE    ZONE   SCREEN           LIST"
+  ]
+ },
+ {
+  "step": "k:down tab down tab down tab down tab down tab down tab down tab down tab down tab down tab ",
+  "rows": [
+   " MOTOROLA Radio Service Software         Enter Value.",
+   " SPECTRA        Model: D43KMA7JA5BK",
+   " CHG/VIEW:RADIO:ZONE_N:MODE LIST",
+   "  Zone  01                      ZONE MODE LIST",
+   "  #      NAME      IN ZONE",
+   "  1    146 520       Y",
+   "  2    144 0000      Y",
+   "  3    145 0000      Y",
+   "  4    146 0000      Y",
+   "  5    147 0000      Y",
+   "  6    148 0000      Y",
+   "  7    150 0000      Y",
+   "  8    155 0000      Y",
+   "  9    155 0000      Y",
+   "  10   160 0000      Y",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP    GOTO    PREVIOUS  NEXT   PRINT            ERASE                    EXIT",
+   "        ZONE      ZONE    ZONE   SCREEN           LIST"
+  ]
+ },
+ {
+  "step": "k:f10",
+  "rows": [
+   " MOTOROLA Radio Service Software         Use UP / DOWN Arrows To Adjust Value.",
+   " SPECTRA        Model: D43KMA7JA5BK",
+   " CHG/VIEW:RADIO:ZONE_N",
+   "                                ZONE NAME LIST",
+   "    ZONE #   ZONE NAME     ZONE #   ZONE NAME",
+   "     01      ZONE  01                             Add Zone At Position....--",
+   "                                                  Del Zone At Position....--",
+   "                                                  Name on 1st press. Disabled",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP    MODE      ADD    DELETE  PRINT            SCAN    SCAN             EXIT",
+   "        LIST      ZONE    ZONE   SCREEN           LIST   OPTIONS"
+  ]
+ },
+ {
+  "step": "k:f10",
+  "rows": [
+   " MOTOROLA Radio Service Software         Use UP / DOWN Arrows To Enable.",
+   " SPECTRA        Model: D43KMA7JA5BK",
+   " CHG/VIEW:RADIO",
+   "  RADIO-WIDE CONFIGURATION                  ZONE OPERATION.........  Enabled",
+   "                                              Positional............Disabled",
+   "                                              Home Zone...................01",
+   "   MODEL INFORMATION                        HOME MODE....................001",
+   "    D43KMA7JA5BK                             Name....................146 520",
+   "    Freq Range..146.0 - 174.0 MHz           MODE NAMES...............Enabled",
+   "    CONVENTIONAL STANDARD                   TIME OUT TIMER...........Enabled",
+   "                                            HUB SWITCH..............Disabled",
+   "                                            MAX USER MODES...............010",
+   "                                            MINIMUM VOLUME (0-15).........00",
+   "   MODES (max)................128           SPEAKER B MIN VOLUME (0-15)...08",
+   "   # Modes Enabled............010",
+   "   (Determined By Mode Menu)",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP    TRUNK                    PRINT    SCAN    ZONE   SYSTEM  OTHER     EXIT",
+   "       OPTIONS                   SCREEN  OPTIONS  LIST   S & L   OPTIONS"
+  ]
+ },
+ {
+  "step": "exit0",
+  "rows": [
+   " MOTOROLA Radio Service Software         Select Function Key F1 - F10.",
+   " SPECTRA        Model: D43KMA7JA5BK",
+   " CHG/VIEW",
+   "                          CHANGE / VIEW CODEPLUG  MENU",
+   "        F1  - HELP",
+   "        F2  - RADIO-WIDE Configuration: Home, Volume, Alerts, Horn/Lights",
+   "        F3  - CONVENTIONAL Configuration: Scan Type, MDC ID's",
+   "        F4  - TRUNKING Configuration: Systems, Personalities",
+   "        F5  - MODE Configuration: Names, Freqs, Scan Lists, Etc",
+   "        F6  - CONTROL HEAD Configuration: Keypad Buttons, Sts/Msg, AMSS",
+   "        F7  -",
+   "        F8  -",
+   "        F9  -",
+   "        F10 - EXIT/Return To MAIN Menu",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP    RADIO     CONV   TRUNK    MODE   CONTROL                           EXIT",
+   "         WIDE                             HEAD"
+  ]
+ },
+ {
+  "step": "exit1",
+  "rows": [
+   " MOTOROLA Radio Service Software         Select Function Key F1 - F10.",
+   " SPECTRA        Model: D43KMA7JA5BK",
+   "                                    MAIN MENU",
+   "        F1  - HELP",
+   "        F2  - SERVICE: Alignment, Service Aids and Board Replacement",
+   "        F3  - GET/SAVE/PROGRAM Codeplug Data From/To Disk/Codeplug",
+   "        F4  - CHANGE/CREATE/VIEW Radio Codeplug Data",
+   "        F5  - PRINT Codeplug Data",
+   "        F6  -",
+   "        F7  -",
+   "        F8  -",
+   "        F9  - SETUP Computer Configuration",
+   "        F10 - EXIT Radio Service Software, Return to DOS",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP   SERVICE    GET    CHANGE   PRINT                          SETUP     EXIT",
+   "                  SAVE    VIEW                                            TO DO"
+  ]
+ },
+ {
+  "step": "main",
+  "rows": [
+   " MOTOROLA Radio Service Software         Select Function Key F1 - F10.",
+   " SPECTRA        Model: D43KMA7JA5BK",
+   "                                    MAIN MENU",
+   "        F1  - HELP",
+   "        F2  - SERVICE: Alignment, Service Aids and Board Replacement",
+   "        F3  - GET/SAVE/PROGRAM Codeplug Data From/To Disk/Codeplug",
+   "        F4  - CHANGE/CREATE/VIEW Radio Codeplug Data",
+   "        F5  - PRINT Codeplug Data",
+   "        F6  -",
+   "        F7  -",
+   "        F8  -",
+   "        F9  - SETUP Computer Configuration",
+   "        F10 - EXIT Radio Service Software, Return to DOS",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP   SERVICE    GET    CHANGE   PRINT                          SETUP     EXIT",
+   "                  SAVE    VIEW                                            TO DO"
+  ]
+ },
+ {
+  "step": "after",
+  "rows": [
+   " MOTOROLA Radio Service Software         Use UP / DOWN Arrows To Enable.",
+   " SPECTRA        Model: D43KMA7JA5BK",
+   " CHG/VIEW:RADIO",
+   "  RADIO-WIDE CONFIGURATION                  ZONE OPERATION.........  Enabled",
+   "                                              Positional............Disabled",
+   "                                              Home Zone...................01",
+   "   MODEL INFORMATION                        HOME MODE....................001",
+   "    D43KMA7JA5BK                             Name....................146 520",
+   "    Freq Range..146.0 - 174.0 MHz           MODE NAMES...............Enabled",
+   "    CONVENTIONAL STANDARD                   TIME OUT TIMER...........Enabled",
+   "                                            HUB SWITCH..............Disabled",
+   "                                            MAX USER MODES...............010",
+   "                                            MINIMUM VOLUME (0-15).........00",
+   "   MODES (max)................128           SPEAKER B MIN VOLUME (0-15)...08",
+   "   # Modes Enabled............010",
+   "   (Determined By Mode Menu)",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP    TRUNK                    PRINT    SCAN    ZONE   SYSTEM  OTHER     EXIT",
+   "       OPTIONS                   SCREEN  OPTIONS  LIST   S & L   OPTIONS"
+  ]
+ }
+]

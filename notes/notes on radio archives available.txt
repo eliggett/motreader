@@ -1,0 +1,43 @@
+566AYA0014, D37KGA5JB5FK, W6EL-13, 
+Mode 001 is a trunking channel I can't remove. 122 channels programmed. 12 zones. This is the first 900 MHz rig I got and it's in the Mercury vehicle. max conventional modes is 128, max modes is 160
+
+
+221AZN0035 ADAM, VHF 110W "trunk mounted", A9 Head (longer names), 12 zones, includes some RX-only WX modes
+
+617ASN1767 EXTRA2, 900 MHz, Four zones, "SIMPX ZN", "BUS ZN", "LOC RPTR", and "NODE CH". The "BUS ZN" probably has a commercial channel. This radio arrived to me with trunking enabled and I somehow managed to disable it. 128 modes max, 53 modes programmed. 
+
+
+604AUN0331 TRW-019: 900 MHz, Has four zones: HOME, SOCAL, SIMPLEX, TUCSON, this is the rig in the truck that I got at the TRW Swap Meet. "Internal PA shows 'Not Available'" on this model. 
+
+617ASQ1266: 2M Junk 2, VHF, only has a few channels, hardware has DTMF decoder. This had no zones but I added three zones just now (ZONE  01, ZONE  02, ALL ZONE. The new codeplug with the zones is: ~/.dosbox/c/MRSS/SPECTRA/ARCHIVE/A617ASQ1.266
+
+604ATY0472, CAMPort 001, 900 MHz, no zones, 128 modes (channels) defined, many are duplicates at the high end. 
+
+
+non-archive related notes: 
+
+Validation: mostly to be done in the UI 
+Feature on/off: When a feature is turned off in the UI, or turned on, be sure to address the data that comes with that feature. For example, if zones are turned on, a home zone has to be set and channels have to be put into zones. 
+
+ultimate plan: 
+
+Web editor in javascript hosted on github. Spreadsheet-like editor for zones and modes. UI for control head button assignmenmts, standard forum for other options. 
+
+The UI has buttons at the top: Import Codeplug, Export Codeplug, Import YAML, Import CSV, Export YAML, Export CSV. 
+The UI has then a row of tabs:
+Radio-wide, Conventional settings, modes, zones (something like this). There may be a hierachy of tabs, mimicing the OEM dos software for organization. 
+
+Mode editing should be like a spreadsheet. Users can edit the spreadsheet contents. Some items will be drop-down boxes, others free entry. Sanitize text and numbers. Modes also have an "Edit" button that brings up an editor for just that one mode -- might be easier to use on smaller displays. The editor supports things like moving, duplicating, and deleting modes. A user can also "import and insert" CSVs of modes. The importer asks where to insert the modes and which modes to import, accepting a range of modes, ie, "5-10, 34-38, 50". Or "all". The importer refusese to import formats that are not recognized or data too large to fit in the designated place. 
+
+Control panel edit: Shows a graphical representation of the control panel, similar ot the OEM. Buttons that are programmable have drop-down menus for the enabled options. The OEM software doesn't allow some buttons to have some functions. We want to allow the user to override this -- place the "not allowed" functions below a division line in the drop down menu. These items aren't guarenteed to work. 
+
+Trunking: A very nice beta feature would be the ability to remove trunking from a codeplug. MRSS doesn't allow the user to remove all the trunking channels, one has to stay. But it was found years ago that if the right steps were executed in MRSS, that last trunking channel could be removed, and the codeplug continued to work fine with the radio. Removing trunking channels frees up conventional channel space. If you can find a way to remove trunking, that would be fantastic. We can attmept the change and then load the codeplug back into RSS and see if it reads correctly and shows the correct modes (channels). 
+
+The UI also includes a read-only "hex editor" view of the decrypted codeplug (radio buttons select to display the "input" codeplug or the exported codeplug, if avaialble). 
+
+Stand-alone codeplug loader/reader in python that can run on any os. 
+
+stand-alone "service" mode python with UI. Most desired adjustments are the frequency ('warp'), power output levels (generally two), and audio modulation level aka deviation level. Service mode will be the last thing to get worked on. 
+
+
+

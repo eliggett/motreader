@@ -1,0 +1,1991 @@
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:27
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL: 
+
+  MODE    NAME        Rx Freq  Tx Freq   T/A Freq  Rx Code   Tx Code
+  ----  --------      -------- --------  --------  -------   -------
+  001   146 520       146.5200 146.5200  146.5200           
+  002   146 550       146.5500 146.5500  146.5500           
+  003   146 580       146.5800 146.5800  146.5800           
+  004   KC8MOB 6505   146.5050 146.5050  146.5050  100.0 1Z 100.0 1Z
+  005   KC8MOB 7199   147.1950 147.7950  147.1950  100.0 1Z 100.0 1Z
+
+  006   KC8MOB 5400   145.4000 146.0000  145.4000  100.0 1Z 100.0 1Z
+  007   KC8MOB 5420   145.4200 146.0200  145.4200  100.0 1Z 100.0 1Z
+  008   KI4ODC 4880   146.8800 146.2800  146.8800           136.5 4Z
+  009   CCORAL 7725   147.2250 147.8250  147.2250           136.5 4Z
+  010   LEEEOC 7165   147.1650 147.7650  147.1650           127.3 3A
+
+  011   W4LX   7170   147.1700 146.5700  147.1700  136.5 4Z 136.5 4Z
+  012   BKHAM  7325   147.3250 146.7250  147.3250  136.5 4Z 136.5 4Z
+  013   LHIREG 7345   147.3450 147.9450  147.3450           136.5 4Z
+  014   LHIACR 6715   146.7150 146.1150  146.7150   74.4 WA  74.4 WA
+  015   LABELLE EOC   145.4700 144.8700  145.4700            97.4 ZB
+
+  016   MORHVN 7300   147.3000 147.9000  147.3000           100.0 1Z
+  017   CLEWST 5350   145.3500 144.7500  145.3500           127.3 3A
+  018   BELGLA 7120   147.1200 147.7200  147.1200           110.9 2Z
+  019   PTCHAR 7255   147.2550 147.8550  147.2550           136.5 4Z
+  020   PTCHAR 6865   146.8650 146.2650  146.8650           136.5 4Z
+
+  021   PTCHAR 7120   147.1200 147.7200  147.1200           136.5 4Z
+  022   W3RX   8600   146.8600 146.2650  146.8600           123.0 3Z
+  023   BONISPRG PD   147.2850 147.8850  147.2850           136.5 4Z
+  024   NAPCOL BES    145.3000 144.7000  145.3000           136.5 4Z
+  025   NAPLES 7505   147.5050 146.9050  147.5050            67.0 XZ
+
+  026   HAMILT 7000   147.0000 147.6000  147.0000           123.0 3Z
+  027   MIDLTN 6610   146.6100 146.0100  146.6100   77.0 XB  77.0 XB
+  028   LEBANO 6865   146.8650 146.2650  146.8650  118.8 2B 118.8 2B
+  029   MASON  1530   145.1300 144.5300  145.1300           
+  030   WCHSTR 5390   145.3900 144.7900  145.3900  123.0 3Z 123.0 3Z
+
+  031   WTWOOD 4370   145.3700 144.7700  145.3700  123.0 3Z 123.0 3Z
+  032   FARA   5190   145.1900 144.5900  145.1900  123.0 3Z 123.0 3Z
+  033   CLIFTN 6670   146.6700 146.0700  146.6700  123.0 3Z 123.0 3Z
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  1 of  9
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:27
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL: 
+
+  MODE    NAME        Rx Freq  Tx Freq   T/A Freq  Rx Code   Tx Code
+  ----  --------      -------- --------  --------  -------   -------
+  034   DELHI  6925   146.9250 146.3250  146.9250  123.0 3Z 123.0 3Z
+  035   FORSVL 6850   146.8500 146.2500  146.8500  123.0 3Z 123.0 3Z
+
+  036   NTH KY 6625   146.6250 146.0250  146.6250  123.0 3Z 123.0 3Z
+  037   IT1 151 505   151.5050 151.5050  151.5050   88.5 YB  88.5 YB
+  038   RED 151 625   151.6250 151.6250  151.6250   88.5 YB  88.5 YB
+  039   PUR 154 010   154.0100 154.0100  154.0100   88.5 YB  88.5 YB
+  040   MRS 151 820   151.8200 151.8200  151.8200   88.5 YB  88.5 YB
+
+  041   MRS 151 880   151.8800 151.8800  151.8800   88.5 YB  88.5 YB
+  042   MRS 151 880   151.8800 151.8800  151.8800   88.5 YB  88.5 YB
+  043   MRS 151 940   151.9400 151.9400  151.9400   88.5 YB  88.5 YB
+  044   MRS 154 600   154.6000 154.6000  154.6000   88.5 YB  88.5 YB
+  045   SAR 155 160   155.1600 155.1600  155.1600  127.3 3A 127.3 3A
+
+  046   SAR 155 175   155.1750 155.1750  155.1750  127.3 3A 127.3 3A
+  047   MARINE 16     156.8000 156.8000  156.8000           
+  048   MARINE 13     156.6500 156.6500  156.6500           
+  049   MARINE 09     156.4500 156.4500  156.4500           
+  050   WX1 162 550   162.5500  Blank     Blank             
+
+  051   WX2 162 400   162.4000  Blank     Blank             
+  052   WX3 162 475   162.4750  Blank     Blank             
+  053   WX4 162 425   162.4250  Blank     Blank             
+  054   WX5 162 450   162.4500  Blank     Blank             
+  055   WX6 162 500   162.5000  Blank     Blank             
+
+  056   WX7 162 525   162.5250  Blank     Blank             
+  057   W6EL   6460   146.4600 146.4600  146.4600  100.0 1Z 100.0 1Z
+  058   144 000       144.0000 144.0000  144.0000           
+  059   145 000       145.0000 145.0000  145.0000           
+  060   146 000       146.0000 146.0000  146.0000           
+
+  061   147 000       147.0000 147.0000  147.0000           
+  062   148 000       148.0000 148.0000  148.0000           
+  063   JPL VHF       147.1500 147.7500  147.1500           100.0 1Z
+  064   CLARA 14522   145.2200 144.6200  145.2200           103.5 1A
+  065   APRS 144390   144.3900 144.3900  144.3900           
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  2 of  9
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:27
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL: 
+  (Option Key = 1-MDC ID, 2-Phone, 3-Scan, 4-DTMF Selective Call Encoder, 
+                5-DTMF Selective Call Decoder, 6-MDC Call) 
+
+  Mode     Name      TOT        1 2 3 4 5 6   
+  ----  -----------  ---       ----------------
+  001   146 520      210        Y Y N N N N    
+  002   146 550      210        Y Y N N N N    
+  003   146 580      210        Y Y N N N N    
+  004   KC8MOB 6505  210        Y Y N N N N    
+  005   KC8MOB 7199  210        Y Y N N N N    
+
+  006   KC8MOB 5400  210        Y Y N N N N    
+  007   KC8MOB 5420  210        Y Y N N N N    
+  008   KI4ODC 4880  210        Y Y N N N N    
+  009   CCORAL 7725  210        Y Y N N N N    
+  010   LEEEOC 7165  210        Y Y N N N N    
+
+  011   W4LX   7170  210        Y Y N N N N    
+  012   BKHAM  7325  210        Y Y N N N N    
+  013   LHIREG 7345  210        Y Y N N N N    
+  014   LHIACR 6715  210        Y Y N N N N    
+  015   LABELLE EOC  210        Y Y N N N N    
+
+  016   MORHVN 7300  210        Y Y N N N N    
+  017   CLEWST 5350  210        Y Y N N N N    
+  018   BELGLA 7120  210        Y Y N N N N    
+  019   PTCHAR 7255  210        Y Y N N N N    
+  020   PTCHAR 6865  210        Y Y N N N N    
+
+  021   PTCHAR 7120  210        Y Y N N N N    
+  022   W3RX   8600  210        Y Y N N N N    
+  023   BONISPRG PD  210        Y Y N N N N    
+  024   NAPCOL BES   210        Y Y N N N N    
+  025   NAPLES 7505  210        Y Y N N N N    
+
+  026   HAMILT 7000  210        Y Y N N N N    
+  027   MIDLTN 6610  210        Y Y N N N N    
+  028   LEBANO 6865  210        Y Y N N N N    
+  029   MASON  1530  210        Y Y N N N N    
+  030   WCHSTR 5390  210        Y Y N N N N    
+
+  031   WTWOOD 4370  210        Y Y N N N N    
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  3 of  9
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:27
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL: 
+  (Option Key = 1-MDC ID, 2-Phone, 3-Scan, 4-DTMF Selective Call Encoder, 
+                5-DTMF Selective Call Decoder, 6-MDC Call) 
+
+  Mode     Name      TOT        1 2 3 4 5 6   
+  ----  -----------  ---       ----------------
+  032   FARA   5190  210        Y Y N N N N    
+  033   CLIFTN 6670  210        Y Y N N N N    
+  034   DELHI  6925  210        Y Y N N N N    
+  035   FORSVL 6850  210        Y Y N N N N    
+
+  036   NTH KY 6625  210        Y Y N N N N    
+  037   IT1 151 505  210        Y Y N N N N    
+  038   RED 151 625  210        Y Y N N N N    
+  039   PUR 154 010  210        Y Y N N N N    
+  040   MRS 151 820  210        Y Y N N N N    
+
+  041   MRS 151 880  210        Y Y N N N N    
+  042   MRS 151 880  210        Y Y N N N N    
+  043   MRS 151 940  210        Y Y N N N N    
+  044   MRS 154 600  210        Y Y N N N N    
+  045   SAR 155 160  210        Y Y N N N N    
+
+  046   SAR 155 175  210        Y Y N N N N    
+  047   MARINE 16    210        Y Y N N N N    
+  048   MARINE 13    210        Y Y N N N N    
+  049   MARINE 09    210        Y Y N N N N    
+  050   WX1 162 550             Y Y N N N N    
+
+  051   WX2 162 400             Y Y N N N N    
+  052   WX3 162 475             Y Y N N N N    
+  053   WX4 162 425             Y Y N N N N    
+  054   WX5 162 450             Y Y N N N N    
+  055   WX6 162 500             Y Y N N N N    
+
+  056   WX7 162 525             Y Y N N N N    
+  057   W6EL   6460  210        Y Y N N N N    
+  058   144 000      210        Y Y N N N N    
+  059   145 000      210        Y Y N N N N    
+  060   146 000      210        Y Y N N N N    
+
+  061   147 000      210        Y Y N N N N    
+  062   148 000      210        Y Y N N N N    
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  4 of  9
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:27
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL: 
+  (Option Key = 1-MDC ID, 2-Phone, 3-Scan, 4-DTMF Selective Call Encoder, 
+                5-DTMF Selective Call Decoder, 6-MDC Call) 
+
+  Mode     Name      TOT        1 2 3 4 5 6   
+  ----  -----------  ---       ----------------
+  063   JPL VHF      210        Y Y N N N N    
+  064   CLARA 14522  210        Y Y N N N N    
+  065   APRS 144390  210        Y Y N N N N    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  5 of  9
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:27
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL SCAN LIST:                Non-Priority List
+
+  Mode  01  02  03  04  05    06  07  08  09  10    11  12  13  14  15  16 
+  ---- --------------------  --------------------  ------------------------
+  001                             Scan Disabled
+  002                             Scan Disabled
+  003                             Scan Disabled
+  004                             Scan Disabled
+  005                             Scan Disabled
+
+  006                             Scan Disabled
+  007                             Scan Disabled
+  008                             Scan Disabled
+  009                             Scan Disabled
+  010                             Scan Disabled
+
+  011                             Scan Disabled
+  012                             Scan Disabled
+  013                             Scan Disabled
+  014                             Scan Disabled
+  015                             Scan Disabled
+
+  016                             Scan Disabled
+  017                             Scan Disabled
+  018                             Scan Disabled
+  019                             Scan Disabled
+  020                             Scan Disabled
+
+  021                             Scan Disabled
+  022                             Scan Disabled
+  023                             Scan Disabled
+  024                             Scan Disabled
+  025                             Scan Disabled
+
+  026                             Scan Disabled
+  027                             Scan Disabled
+  028                             Scan Disabled
+  029                             Scan Disabled
+  030                             Scan Disabled
+
+  031                             Scan Disabled
+  032                             Scan Disabled
+  033                             Scan Disabled
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  6 of  9
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:27
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL SCAN LIST:                Non-Priority List
+
+  Mode  01  02  03  04  05    06  07  08  09  10    11  12  13  14  15  16 
+  ---- --------------------  --------------------  ------------------------
+  034                             Scan Disabled
+  035                             Scan Disabled
+
+  036                             Scan Disabled
+  037                             Scan Disabled
+  038                             Scan Disabled
+  039                             Scan Disabled
+  040                             Scan Disabled
+
+  041                             Scan Disabled
+  042                             Scan Disabled
+  043                             Scan Disabled
+  044                             Scan Disabled
+  045                             Scan Disabled
+
+  046                             Scan Disabled
+  047                             Scan Disabled
+  048                             Scan Disabled
+  049                             Scan Disabled
+  050                             Scan Disabled
+
+  051                             Scan Disabled
+  052                             Scan Disabled
+  053                             Scan Disabled
+  054                             Scan Disabled
+  055                             Scan Disabled
+
+  056                             Scan Disabled
+  057                             Scan Disabled
+  058                             Scan Disabled
+  059                             Scan Disabled
+  060                             Scan Disabled
+
+  061                             Scan Disabled
+  062                             Scan Disabled
+  063                             Scan Disabled
+  064                             Scan Disabled
+  065                             Scan Disabled
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  7 of  9
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:27
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL SCAN LIST:
+
+  Mode          Pri 1        Pri 2         Selected Mode
+  ----          -----        -----         -------------
+  001              Scan Disabled
+  002              Scan Disabled
+  003              Scan Disabled
+  004              Scan Disabled
+  005              Scan Disabled
+
+  006              Scan Disabled
+  007              Scan Disabled
+  008              Scan Disabled
+  009              Scan Disabled
+  010              Scan Disabled
+
+  011              Scan Disabled
+  012              Scan Disabled
+  013              Scan Disabled
+  014              Scan Disabled
+  015              Scan Disabled
+
+  016              Scan Disabled
+  017              Scan Disabled
+  018              Scan Disabled
+  019              Scan Disabled
+  020              Scan Disabled
+
+  021              Scan Disabled
+  022              Scan Disabled
+  023              Scan Disabled
+  024              Scan Disabled
+  025              Scan Disabled
+
+  026              Scan Disabled
+  027              Scan Disabled
+  028              Scan Disabled
+  029              Scan Disabled
+  030              Scan Disabled
+
+  031              Scan Disabled
+  032              Scan Disabled
+  033              Scan Disabled
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  8 of  9
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:27
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL SCAN LIST:
+
+  Mode          Pri 1        Pri 2         Selected Mode
+  ----          -----        -----         -------------
+  034              Scan Disabled
+  035              Scan Disabled
+
+  036              Scan Disabled
+  037              Scan Disabled
+  038              Scan Disabled
+  039              Scan Disabled
+  040              Scan Disabled
+
+  041              Scan Disabled
+  042              Scan Disabled
+  043              Scan Disabled
+  044              Scan Disabled
+  045              Scan Disabled
+
+  046              Scan Disabled
+  047              Scan Disabled
+  048              Scan Disabled
+  049              Scan Disabled
+  050              Scan Disabled
+
+  051              Scan Disabled
+  052              Scan Disabled
+  053              Scan Disabled
+  054              Scan Disabled
+  055              Scan Disabled
+
+  056              Scan Disabled
+  057              Scan Disabled
+  058              Scan Disabled
+  059              Scan Disabled
+  060              Scan Disabled
+
+  061              Scan Disabled
+  062              Scan Disabled
+  063              Scan Disabled
+  064              Scan Disabled
+  065              Scan Disabled
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  9 of  9
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  RADIO SUMMARY                                        
+  -----------------------------------------------------------------------------
+
+  GENERAL
+  # Modes Enabled       65 of 128
+  HOME MODE                    04
+  MODE NAMES              Enabled
+
+  CHANNEL SCAN LIST
+   Non-Priority List    Op Select
+   Priority List        Op Select
+
+  MDC SIGNALLING
+   Unit ID                   3951             Emergency             Disabled
+  User Group ID                55             Silent Alarm          Disabled
+   Fleet ID                     5             Mode Steering         Disabled
+   PTT ID                     EOT             Data Mode                Blank
+
+  MDC SIGNALLING OPTIONS
+  CALL ALERT               Encode             FLEET/GROUP CALLS     Disabled
+   Auto Select Response Not Avail              Operator Select     Not Avail
+  LIST TYPE             Unlimited              Mode Strapped       Not Avail
+   Selective Call Type   Enhanced               Fleet Mode         Not Avail
+  MUTING TYPE                None               Group Mode         Not Avail
+
+  MDC CALL LIST
+   # 1    UNIT   1      1               # 5    UNIT   5      5
+   # 2    UNIT   2      2               # 6    UNIT   6      6
+   # 3    UNIT   3      3               # 7    UNIT   7      7
+   # 4    UNIT   4      4               # 8    UNIT   8      8
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  1 of  3
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  RADIO SUMMARY                                        (continued)
+  -----------------------------------------------------------------------------
+
+  Phone Encode          Not Avail
+  ACCESS CODE                   *
+   Release Code                 #
+
+  PHONE LIST
+   # 1 DISC ALL     *51                 # 6 CONT W6EL 9  *3617081        
+   # 2 NODE STATUS  *70                 # 7 CONT W3RX V  *53             
+   # 3 MORSE ID     *80                 # 8 CONT W3RX U  *360975         
+   # 4 TIME DATE    *82                 # 9 LAST NODE N  *807            
+   # 5 CONT W6EL    *52             
+
+
+  Call Signalling OPTIONS
+  DTMF Unit Id                      0036  
+   End_Of_Callback              Disabled
+  End-of-Callback                  Blank
+   Digit Time (mSec)                 260
+   Interdigit Time (mSec)            200
+   System Delay (mSec)               500
+
+  DTMF SELECTIVE CALL LIST
+   # 1    UNIT   1                      # 5    UNIT   5           
+   # 2    UNIT   2                      # 6    UNIT   6           
+   # 3    UNIT   3                      # 7    UNIT   7           
+   # 4    UNIT   4                      # 8    UNIT   8           
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  2 of  3
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  RADIO SUMMARY                                        (continued)
+  -----------------------------------------------------------------------------
+
+  MODES
+   01  146 520       18  BELGLA 7120    35  FORSVL 6850    52  WX3 162 475
+   02  146 550       19  PTCHAR 7255    36  NTH KY 6625    53  WX4 162 425
+   03  146 580       20  PTCHAR 6865    37  IT1 151 505    54  WX5 162 450
+   04  KC8MOB 6505   21  PTCHAR 7120    38  RED 151 625    55  WX6 162 500
+   05  KC8MOB 7199   22  W3RX   8600    39  PUR 154 010    56  WX7 162 525
+   06  KC8MOB 5400   23  BONISPRG PD    40  MRS 151 820    57  W6EL   6460
+   07  KC8MOB 5420   24  NAPCOL BES     41  MRS 151 880    58  144 000    
+   08  KI4ODC 4880   25  NAPLES 7505    42  MRS 151 880    59  145 000    
+   09  CCORAL 7725   26  HAMILT 7000    43  MRS 151 940    60  146 000    
+   10  LEEEOC 7165   27  MIDLTN 6610    44  MRS 154 600    61  147 000    
+   11  W4LX   7170   28  LEBANO 6865    45  SAR 155 160    62  148 000    
+   12  BKHAM  7325   29  MASON  1530    46  SAR 155 175    63  JPL VHF    
+   13  LHIREG 7345   30  WCHSTR 5390    47  MARINE 16      64  CLARA 14522
+   14  LHIACR 6715   31  WTWOOD 4370    48  MARINE 13      65  APRS 144390
+   15  LABELLE EOC   32  FARA   5190    49  MARINE 09  
+   16  MORHVN 7300   33  CLIFTN 6670    50  WX1 162 550
+   17  CLEWST 5350   34  DELHI  6925    51  WX2 162 400
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  3 of  3
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL: 
+
+  MODE    NAME        Rx Freq  Tx Freq   T/A Freq  Rx Code   Tx Code
+  ----  --------      -------- --------  --------  -------   -------
+  001   146 520       146.5200 146.5200  146.5200           
+  002   146 550       146.5500 146.5500  146.5500           
+  003   146 580       146.5800 146.5800  146.5800           
+  004   KC8MOB 6505   146.5050 146.5050  146.5050  100.0 1Z 100.0 1Z
+  005   KC8MOB 7199   147.1950 147.7950  147.1950  100.0 1Z 100.0 1Z
+
+  006   KC8MOB 5400   145.4000 146.0000  145.4000  100.0 1Z 100.0 1Z
+  007   KC8MOB 5420   145.4200 146.0200  145.4200  100.0 1Z 100.0 1Z
+  008   KI4ODC 4880   146.8800 146.2800  146.8800           136.5 4Z
+  009   CCORAL 7725   147.2250 147.8250  147.2250           136.5 4Z
+  010   LEEEOC 7165   147.1650 147.7650  147.1650           127.3 3A
+
+  011   W4LX   7170   147.1700 146.5700  147.1700  136.5 4Z 136.5 4Z
+  012   BKHAM  7325   147.3250 146.7250  147.3250  136.5 4Z 136.5 4Z
+  013   LHIREG 7345   147.3450 147.9450  147.3450           136.5 4Z
+  014   LHIACR 6715   146.7150 146.1150  146.7150   74.4 WA  74.4 WA
+  015   LABELLE EOC   145.4700 144.8700  145.4700            97.4 ZB
+
+  016   MORHVN 7300   147.3000 147.9000  147.3000           100.0 1Z
+  017   CLEWST 5350   145.3500 144.7500  145.3500           127.3 3A
+  018   BELGLA 7120   147.1200 147.7200  147.1200           110.9 2Z
+  019   PTCHAR 7255   147.2550 147.8550  147.2550           136.5 4Z
+  020   PTCHAR 6865   146.8650 146.2650  146.8650           136.5 4Z
+
+  021   PTCHAR 7120   147.1200 147.7200  147.1200           136.5 4Z
+  022   W3RX   8600   146.8600 146.2650  146.8600           123.0 3Z
+  023   BONISPRG PD   147.2850 147.8850  147.2850           136.5 4Z
+  024   NAPCOL BES    145.3000 144.7000  145.3000           136.5 4Z
+  025   NAPLES 7505   147.5050 146.9050  147.5050            67.0 XZ
+
+  026   HAMILT 7000   147.0000 147.6000  147.0000           123.0 3Z
+  027   MIDLTN 6610   146.6100 146.0100  146.6100   77.0 XB  77.0 XB
+  028   LEBANO 6865   146.8650 146.2650  146.8650  118.8 2B 118.8 2B
+  029   MASON  1530   145.1300 144.5300  145.1300           
+  030   WCHSTR 5390   145.3900 144.7900  145.3900  123.0 3Z 123.0 3Z
+
+  031   WTWOOD 4370   145.3700 144.7700  145.3700  123.0 3Z 123.0 3Z
+  032   FARA   5190   145.1900 144.5900  145.1900  123.0 3Z 123.0 3Z
+  033   CLIFTN 6670   146.6700 146.0700  146.6700  123.0 3Z 123.0 3Z
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  1 of  9
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL: 
+
+  MODE    NAME        Rx Freq  Tx Freq   T/A Freq  Rx Code   Tx Code
+  ----  --------      -------- --------  --------  -------   -------
+  034   DELHI  6925   146.9250 146.3250  146.9250  123.0 3Z 123.0 3Z
+  035   FORSVL 6850   146.8500 146.2500  146.8500  123.0 3Z 123.0 3Z
+
+  036   NTH KY 6625   146.6250 146.0250  146.6250  123.0 3Z 123.0 3Z
+  037   IT1 151 505   151.5050 151.5050  151.5050   88.5 YB  88.5 YB
+  038   RED 151 625   151.6250 151.6250  151.6250   88.5 YB  88.5 YB
+  039   PUR 154 010   154.0100 154.0100  154.0100   88.5 YB  88.5 YB
+  040   MRS 151 820   151.8200 151.8200  151.8200   88.5 YB  88.5 YB
+
+  041   MRS 151 880   151.8800 151.8800  151.8800   88.5 YB  88.5 YB
+  042   MRS 151 880   151.8800 151.8800  151.8800   88.5 YB  88.5 YB
+  043   MRS 151 940   151.9400 151.9400  151.9400   88.5 YB  88.5 YB
+  044   MRS 154 600   154.6000 154.6000  154.6000   88.5 YB  88.5 YB
+  045   SAR 155 160   155.1600 155.1600  155.1600  127.3 3A 127.3 3A
+
+  046   SAR 155 175   155.1750 155.1750  155.1750  127.3 3A 127.3 3A
+  047   MARINE 16     156.8000 156.8000  156.8000           
+  048   MARINE 13     156.6500 156.6500  156.6500           
+  049   MARINE 09     156.4500 156.4500  156.4500           
+  050   WX1 162 550   162.5500  Blank     Blank             
+
+  051   WX2 162 400   162.4000  Blank     Blank             
+  052   WX3 162 475   162.4750  Blank     Blank             
+  053   WX4 162 425   162.4250  Blank     Blank             
+  054   WX5 162 450   162.4500  Blank     Blank             
+  055   WX6 162 500   162.5000  Blank     Blank             
+
+  056   WX7 162 525   162.5250  Blank     Blank             
+  057   W6EL   6460   146.4600 146.4600  146.4600  100.0 1Z 100.0 1Z
+  058   144 000       144.0000 144.0000  144.0000           
+  059   145 000       145.0000 145.0000  145.0000           
+  060   146 000       146.0000 146.0000  146.0000           
+
+  061   147 000       147.0000 147.0000  147.0000           
+  062   148 000       148.0000 148.0000  148.0000           
+  063   JPL VHF       147.1500 147.7500  147.1500           100.0 1Z
+  064   CLARA 14522   145.2200 144.6200  145.2200           103.5 1A
+  065   APRS 144390   144.3900 144.3900  144.3900           
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  2 of  9
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL: 
+  (Option Key = 1-MDC ID, 2-Phone, 3-Scan, 4-DTMF Selective Call Encoder, 
+                5-DTMF Selective Call Decoder, 6-MDC Call) 
+
+  Mode     Name      TOT        1 2 3 4 5 6   
+  ----  -----------  ---       ----------------
+  001   146 520      210        Y Y N N N N    
+  002   146 550      210        Y Y N N N N    
+  003   146 580      210        Y Y N N N N    
+  004   KC8MOB 6505  210        Y Y N N N N    
+  005   KC8MOB 7199  210        Y Y N N N N    
+
+  006   KC8MOB 5400  210        Y Y N N N N    
+  007   KC8MOB 5420  210        Y Y N N N N    
+  008   KI4ODC 4880  210        Y Y N N N N    
+  009   CCORAL 7725  210        Y Y N N N N    
+  010   LEEEOC 7165  210        Y Y N N N N    
+
+  011   W4LX   7170  210        Y Y N N N N    
+  012   BKHAM  7325  210        Y Y N N N N    
+  013   LHIREG 7345  210        Y Y N N N N    
+  014   LHIACR 6715  210        Y Y N N N N    
+  015   LABELLE EOC  210        Y Y N N N N    
+
+  016   MORHVN 7300  210        Y Y N N N N    
+  017   CLEWST 5350  210        Y Y N N N N    
+  018   BELGLA 7120  210        Y Y N N N N    
+  019   PTCHAR 7255  210        Y Y N N N N    
+  020   PTCHAR 6865  210        Y Y N N N N    
+
+  021   PTCHAR 7120  210        Y Y N N N N    
+  022   W3RX   8600  210        Y Y N N N N    
+  023   BONISPRG PD  210        Y Y N N N N    
+  024   NAPCOL BES   210        Y Y N N N N    
+  025   NAPLES 7505  210        Y Y N N N N    
+
+  026   HAMILT 7000  210        Y Y N N N N    
+  027   MIDLTN 6610  210        Y Y N N N N    
+  028   LEBANO 6865  210        Y Y N N N N    
+  029   MASON  1530  210        Y Y N N N N    
+  030   WCHSTR 5390  210        Y Y N N N N    
+
+  031   WTWOOD 4370  210        Y Y N N N N    
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  3 of  9
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL: 
+  (Option Key = 1-MDC ID, 2-Phone, 3-Scan, 4-DTMF Selective Call Encoder, 
+                5-DTMF Selective Call Decoder, 6-MDC Call) 
+
+  Mode     Name      TOT        1 2 3 4 5 6   
+  ----  -----------  ---       ----------------
+  032   FARA   5190  210        Y Y N N N N    
+  033   CLIFTN 6670  210        Y Y N N N N    
+  034   DELHI  6925  210        Y Y N N N N    
+  035   FORSVL 6850  210        Y Y N N N N    
+
+  036   NTH KY 6625  210        Y Y N N N N    
+  037   IT1 151 505  210        Y Y N N N N    
+  038   RED 151 625  210        Y Y N N N N    
+  039   PUR 154 010  210        Y Y N N N N    
+  040   MRS 151 820  210        Y Y N N N N    
+
+  041   MRS 151 880  210        Y Y N N N N    
+  042   MRS 151 880  210        Y Y N N N N    
+  043   MRS 151 940  210        Y Y N N N N    
+  044   MRS 154 600  210        Y Y N N N N    
+  045   SAR 155 160  210        Y Y N N N N    
+
+  046   SAR 155 175  210        Y Y N N N N    
+  047   MARINE 16    210        Y Y N N N N    
+  048   MARINE 13    210        Y Y N N N N    
+  049   MARINE 09    210        Y Y N N N N    
+  050   WX1 162 550             Y Y N N N N    
+
+  051   WX2 162 400             Y Y N N N N    
+  052   WX3 162 475             Y Y N N N N    
+  053   WX4 162 425             Y Y N N N N    
+  054   WX5 162 450             Y Y N N N N    
+  055   WX6 162 500             Y Y N N N N    
+
+  056   WX7 162 525             Y Y N N N N    
+  057   W6EL   6460  210        Y Y N N N N    
+  058   144 000      210        Y Y N N N N    
+  059   145 000      210        Y Y N N N N    
+  060   146 000      210        Y Y N N N N    
+
+  061   147 000      210        Y Y N N N N    
+  062   148 000      210        Y Y N N N N    
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  4 of  9
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL: 
+  (Option Key = 1-MDC ID, 2-Phone, 3-Scan, 4-DTMF Selective Call Encoder, 
+                5-DTMF Selective Call Decoder, 6-MDC Call) 
+
+  Mode     Name      TOT        1 2 3 4 5 6   
+  ----  -----------  ---       ----------------
+  063   JPL VHF      210        Y Y N N N N    
+  064   CLARA 14522  210        Y Y N N N N    
+  065   APRS 144390  210        Y Y N N N N    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  5 of  9
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL SCAN LIST:                Non-Priority List
+
+  Mode  01  02  03  04  05    06  07  08  09  10    11  12  13  14  15  16 
+  ---- --------------------  --------------------  ------------------------
+  001                             Scan Disabled
+  002                             Scan Disabled
+  003                             Scan Disabled
+  004                             Scan Disabled
+  005                             Scan Disabled
+
+  006                             Scan Disabled
+  007                             Scan Disabled
+  008                             Scan Disabled
+  009                             Scan Disabled
+  010                             Scan Disabled
+
+  011                             Scan Disabled
+  012                             Scan Disabled
+  013                             Scan Disabled
+  014                             Scan Disabled
+  015                             Scan Disabled
+
+  016                             Scan Disabled
+  017                             Scan Disabled
+  018                             Scan Disabled
+  019                             Scan Disabled
+  020                             Scan Disabled
+
+  021                             Scan Disabled
+  022                             Scan Disabled
+  023                             Scan Disabled
+  024                             Scan Disabled
+  025                             Scan Disabled
+
+  026                             Scan Disabled
+  027                             Scan Disabled
+  028                             Scan Disabled
+  029                             Scan Disabled
+  030                             Scan Disabled
+
+  031                             Scan Disabled
+  032                             Scan Disabled
+  033                             Scan Disabled
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  6 of  9
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL SCAN LIST:                Non-Priority List
+
+  Mode  01  02  03  04  05    06  07  08  09  10    11  12  13  14  15  16 
+  ---- --------------------  --------------------  ------------------------
+  034                             Scan Disabled
+  035                             Scan Disabled
+
+  036                             Scan Disabled
+  037                             Scan Disabled
+  038                             Scan Disabled
+  039                             Scan Disabled
+  040                             Scan Disabled
+
+  041                             Scan Disabled
+  042                             Scan Disabled
+  043                             Scan Disabled
+  044                             Scan Disabled
+  045                             Scan Disabled
+
+  046                             Scan Disabled
+  047                             Scan Disabled
+  048                             Scan Disabled
+  049                             Scan Disabled
+  050                             Scan Disabled
+
+  051                             Scan Disabled
+  052                             Scan Disabled
+  053                             Scan Disabled
+  054                             Scan Disabled
+  055                             Scan Disabled
+
+  056                             Scan Disabled
+  057                             Scan Disabled
+  058                             Scan Disabled
+  059                             Scan Disabled
+  060                             Scan Disabled
+
+  061                             Scan Disabled
+  062                             Scan Disabled
+  063                             Scan Disabled
+  064                             Scan Disabled
+  065                             Scan Disabled
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  7 of  9
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL SCAN LIST:
+
+  Mode          Pri 1        Pri 2         Selected Mode
+  ----          -----        -----         -------------
+  001              Scan Disabled
+  002              Scan Disabled
+  003              Scan Disabled
+  004              Scan Disabled
+  005              Scan Disabled
+
+  006              Scan Disabled
+  007              Scan Disabled
+  008              Scan Disabled
+  009              Scan Disabled
+  010              Scan Disabled
+
+  011              Scan Disabled
+  012              Scan Disabled
+  013              Scan Disabled
+  014              Scan Disabled
+  015              Scan Disabled
+
+  016              Scan Disabled
+  017              Scan Disabled
+  018              Scan Disabled
+  019              Scan Disabled
+  020              Scan Disabled
+
+  021              Scan Disabled
+  022              Scan Disabled
+  023              Scan Disabled
+  024              Scan Disabled
+  025              Scan Disabled
+
+  026              Scan Disabled
+  027              Scan Disabled
+  028              Scan Disabled
+  029              Scan Disabled
+  030              Scan Disabled
+
+  031              Scan Disabled
+  032              Scan Disabled
+  033              Scan Disabled
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  8 of  9
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL SCAN LIST:
+
+  Mode          Pri 1        Pri 2         Selected Mode
+  ----          -----        -----         -------------
+  034              Scan Disabled
+  035              Scan Disabled
+
+  036              Scan Disabled
+  037              Scan Disabled
+  038              Scan Disabled
+  039              Scan Disabled
+  040              Scan Disabled
+
+  041              Scan Disabled
+  042              Scan Disabled
+  043              Scan Disabled
+  044              Scan Disabled
+  045              Scan Disabled
+
+  046              Scan Disabled
+  047              Scan Disabled
+  048              Scan Disabled
+  049              Scan Disabled
+  050              Scan Disabled
+
+  051              Scan Disabled
+  052              Scan Disabled
+  053              Scan Disabled
+  054              Scan Disabled
+  055              Scan Disabled
+
+  056              Scan Disabled
+  057              Scan Disabled
+  058              Scan Disabled
+  059              Scan Disabled
+  060              Scan Disabled
+
+  061              Scan Disabled
+  062              Scan Disabled
+  063              Scan Disabled
+  064              Scan Disabled
+  065              Scan Disabled
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  9 of  9
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  ZONE OPERATION                                       
+  -----------------------------------------------------------------------------
+
+  ZONE #:                           01
+
+  ZONE NAME:                  SIMPLEX    
+
+  Talkback Scan:               Enabled
+
+  Scan Button Control:          Active
+
+  Coded Squelch Scan:          Enabled
+
+  Scan Type:                 Talkgroup
+       Non-Priority List:  Zone Slaved
+
+  Zone Mode List
+  --------------
+    Name        Name        Name        Name        Name        Name      
+  --------    --------    --------    --------    --------    --------    
+  146 520     146 550     146 580     KC8MOB 6505 W6EL   6460 
+
+                             **** ZONE MODE LIST EMPTY ****
+
+  Scan List
+  ---------
+    Name      Name      Name      Name      Name      Name      Name      Name    
+  --------  --------  --------  --------  --------  --------  --------  --------  
+  146 520    146 550    146 580    W6EL   6460
+
+                             **** SCAN LIST EMPTY ****
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  1 of 12
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  ZONE OPERATION                                       (continued)
+  -----------------------------------------------------------------------------
+
+  ZONE #:                           02
+
+  ZONE NAME:                  FT MY CENTR
+
+  Talkback Scan:               Enabled
+
+  Scan Button Control:          Active
+
+  Coded Squelch Scan:          Enabled
+
+  Scan Type:                 Talkgroup
+       Non-Priority List:  Zone Slaved
+
+  Zone Mode List
+  --------------
+    Name        Name        Name        Name        Name        Name      
+  --------    --------    --------    --------    --------    --------    
+  KC8MOB 6505 KC8MOB 7199 KC8MOB 5400 KC8MOB 5420 KI4ODC 4880 CCORAL 7725 
+  LEEEOC 7165 W4LX   7170 BKHAM  7325 LHIREG 7345 LHIACR 6715 LABELLE EOC 
+
+
+  Scan List
+  ---------
+    Name      Name      Name      Name      Name      Name      Name      Name    
+  --------  --------  --------  --------  --------  --------  --------  --------  
+  KC8MOB 6505KI4ODC 4880CCORAL 7725LEEEOC 7165W4LX   7170BKHAM  7325LHIREG 7345LHIACR 6715
+  LABELLE EOC
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  2 of 12
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  ZONE OPERATION                                       (continued)
+  -----------------------------------------------------------------------------
+
+  ZONE #:                           03
+
+  ZONE NAME:                  FT MY EAST 
+
+  Talkback Scan:               Enabled
+
+  Scan Button Control:          Active
+
+  Coded Squelch Scan:          Enabled
+
+  Scan Type:                 Talkgroup
+       Non-Priority List:  Zone Slaved
+
+  Zone Mode List
+  --------------
+    Name        Name        Name        Name        Name        Name      
+  --------    --------    --------    --------    --------    --------    
+  MORHVN 7300 CLEWST 5350 BELGLA 7120 
+
+                             **** ZONE MODE LIST EMPTY ****
+
+  Scan List
+  ---------
+    Name      Name      Name      Name      Name      Name      Name      Name    
+  --------  --------  --------  --------  --------  --------  --------  --------  
+  MORHVN 7300CLEWST 5350BELGLA 7120
+
+                             **** SCAN LIST EMPTY ****
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  3 of 12
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  ZONE OPERATION                                       (continued)
+  -----------------------------------------------------------------------------
+
+  ZONE #:                           04
+
+  ZONE NAME:                  FT MY NORTH
+
+  Talkback Scan:               Enabled
+
+  Scan Button Control:          Active
+
+  Coded Squelch Scan:          Enabled
+
+  Scan Type:                 Talkgroup
+       Non-Priority List:  Zone Slaved
+
+  Zone Mode List
+  --------------
+    Name        Name        Name        Name        Name        Name      
+  --------    --------    --------    --------    --------    --------    
+  PTCHAR 7255 PTCHAR 6865 PTCHAR 7120 W3RX   8600 
+
+                             **** ZONE MODE LIST EMPTY ****
+
+  Scan List
+  ---------
+    Name      Name      Name      Name      Name      Name      Name      Name    
+  --------  --------  --------  --------  --------  --------  --------  --------  
+  PTCHAR 7255PTCHAR 6865PTCHAR 7120W3RX   8600
+
+                             **** SCAN LIST EMPTY ****
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  4 of 12
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  ZONE OPERATION                                       (continued)
+  -----------------------------------------------------------------------------
+
+  ZONE #:                           05
+
+  ZONE NAME:                  FT MY SOUTH
+
+  Talkback Scan:               Enabled
+
+  Scan Button Control:          Active
+
+  Coded Squelch Scan:          Enabled
+
+  Scan Type:                 Talkgroup
+       Non-Priority List:  Zone Slaved
+
+  Zone Mode List
+  --------------
+    Name        Name        Name        Name        Name        Name      
+  --------    --------    --------    --------    --------    --------    
+  BONISPRG PD NAPCOL BES  NAPLES 7505 
+
+                             **** ZONE MODE LIST EMPTY ****
+
+  Scan List
+  ---------
+    Name      Name      Name      Name      Name      Name      Name      Name    
+  --------  --------  --------  --------  --------  --------  --------  --------  
+  BONISPRG PDNAPCOL BES NAPLES 7505
+
+                             **** SCAN LIST EMPTY ****
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  5 of 12
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  ZONE OPERATION                                       (continued)
+  -----------------------------------------------------------------------------
+
+  ZONE #:                           06
+
+  ZONE NAME:                  FT MY ALL  
+
+  Talkback Scan:               Enabled
+
+  Scan Button Control:          Active
+
+  Coded Squelch Scan:          Enabled
+
+  Scan Type:                 Talkgroup
+       Non-Priority List:  Zone Slaved
+
+  Zone Mode List
+  --------------
+    Name        Name        Name        Name        Name        Name      
+  --------    --------    --------    --------    --------    --------    
+  KC8MOB 6505 KI4ODC 4880 CCORAL 7725 LEEEOC 7165 W4LX   7170 BKHAM  7325 
+  LHIREG 7345 LHIACR 6715 LABELLE EOC MORHVN 7300 CLEWST 5350 BELGLA 7120 
+  PTCHAR 7255 PTCHAR 6865 PTCHAR 7120 W3RX   8600 BONISPRG PD NAPCOL BES  
+  NAPLES 7505 
+
+  Scan List
+  ---------
+    Name      Name      Name      Name      Name      Name      Name      Name    
+  --------  --------  --------  --------  --------  --------  --------  --------  
+  146 520    KC8MOB 6505KI4ODC 4880CCORAL 7725LEEEOC 7165W4LX   7170BKHAM  7325LHIREG 7345
+  LHIACR 6715LABELLE EOCMORHVN 7300CLEWST 5350BELGLA 7120PTCHAR 7255PTCHAR 6865
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  6 of 12
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  ZONE OPERATION                                       (continued)
+  -----------------------------------------------------------------------------
+
+  ZONE #:                           07
+
+  ZONE NAME:                  CINCINNATI 
+
+  Talkback Scan:               Enabled
+
+  Scan Button Control:          Active
+
+  Coded Squelch Scan:          Enabled
+
+  Scan Type:                 Talkgroup
+       Non-Priority List:  Zone Slaved
+
+  Zone Mode List
+  --------------
+    Name        Name        Name        Name        Name        Name      
+  --------    --------    --------    --------    --------    --------    
+  HAMILT 7000 MIDLTN 6610 LEBANO 6865 MASON  1530 WCHSTR 5390 WTWOOD 4370 
+  FARA   5190 CLIFTN 6670 DELHI  6925 FORSVL 6850 NTH KY 6625 
+
+  Scan List
+  ---------
+    Name      Name      Name      Name      Name      Name      Name      Name    
+  --------  --------  --------  --------  --------  --------  --------  --------  
+  HAMILT 7000MIDLTN 6610LEBANO 6865MASON  1530WCHSTR 5390WTWOOD 4370FARA   5190CLIFTN 6670
+  DELHI  6925FORSVL 6850NTH KY 6625
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  7 of 12
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  ZONE OPERATION                                       (continued)
+  -----------------------------------------------------------------------------
+
+  ZONE #:                           08
+
+  ZONE NAME:                  BBND/MURS  
+
+  Talkback Scan:               Enabled
+
+  Scan Button Control:          Active
+
+  Coded Squelch Scan:          Enabled
+
+  Scan Type:                 Talkgroup
+       Non-Priority List:  Zone Slaved
+
+  Zone Mode List
+  --------------
+    Name        Name        Name        Name        Name        Name      
+  --------    --------    --------    --------    --------    --------    
+  IT1 151 505 RED 151 625 PUR 154 010 MRS 151 820 MRS 151 880 MRS 151 880 
+  MRS 151 940 MRS 154 600 
+
+  Scan List
+  ---------
+    Name      Name      Name      Name      Name      Name      Name      Name    
+  --------  --------  --------  --------  --------  --------  --------  --------  
+  IT1 151 505RED 151 625PUR 154 010MRS 151 820MRS 151 880MRS 151 880MRS 151 940MRS 154 600
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  8 of 12
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  ZONE OPERATION                                       (continued)
+  -----------------------------------------------------------------------------
+
+  ZONE #:                           09
+
+  ZONE NAME:                  SEARCH RESC
+
+  Talkback Scan:               Enabled
+
+  Scan Button Control:          Active
+
+  Coded Squelch Scan:          Enabled
+
+  Scan Type:                 Talkgroup
+       Non-Priority List:  Zone Slaved
+
+  Zone Mode List
+  --------------
+    Name        Name        Name        Name        Name        Name      
+  --------    --------    --------    --------    --------    --------    
+  SAR 155 160 SAR 155 175 
+
+                             **** ZONE MODE LIST EMPTY ****
+
+  Scan List
+  ---------
+    Name      Name      Name      Name      Name      Name      Name      Name    
+  --------  --------  --------  --------  --------  --------  --------  --------  
+  SAR 155 160SAR 155 175
+
+                             **** SCAN LIST EMPTY ****
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  9 of 12
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  ZONE OPERATION                                       (continued)
+  -----------------------------------------------------------------------------
+
+  ZONE #:                           10
+
+  ZONE NAME:                  MARINE VHF 
+
+  Talkback Scan:               Enabled
+
+  Scan Button Control:          Active
+
+  Coded Squelch Scan:          Enabled
+
+  Scan Type:                 Talkgroup
+       Non-Priority List:  Zone Slaved
+
+  Zone Mode List
+  --------------
+    Name        Name        Name        Name        Name        Name      
+  --------    --------    --------    --------    --------    --------    
+  MARINE 16   MARINE 13   MARINE 09   
+
+                             **** ZONE MODE LIST EMPTY ****
+
+  Scan List
+  ---------
+    Name      Name      Name      Name      Name      Name      Name      Name    
+  --------  --------  --------  --------  --------  --------  --------  --------  
+  MARINE 16  MARINE 13  MARINE 09  
+
+                             **** SCAN LIST EMPTY ****
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page 10 of 12
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  ZONE OPERATION                                       (continued)
+  -----------------------------------------------------------------------------
+
+  ZONE #:                           11
+
+  ZONE NAME:                  NOAA WEATHR
+
+  Talkback Scan:               Enabled
+
+  Scan Button Control:          Active
+
+  Coded Squelch Scan:          Enabled
+
+  Scan Type:                 Talkgroup
+       Non-Priority List:  Zone Slaved
+
+  Zone Mode List
+  --------------
+    Name        Name        Name        Name        Name        Name      
+  --------    --------    --------    --------    --------    --------    
+  WX1 162 550 WX2 162 400 WX3 162 475 WX4 162 425 WX5 162 450 WX6 162 500 
+  WX7 162 525 
+
+  Scan List
+  ---------
+    Name      Name      Name      Name      Name      Name      Name      Name    
+  --------  --------  --------  --------  --------  --------  --------  --------  
+  WX1 162 550WX2 162 400WX3 162 475WX4 162 425WX5 162 450WX6 162 500WX7 162 525
+
+                             **** SCAN LIST EMPTY ****
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page 11 of 12
+
+  MOTOROLA Radio Service Software                                     22 Oct 26
+  SPECTRA                                                                 08:28
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    T83FWA7HA9AK                               CONVENTIONAL EXPANDED
+  Serial:   221AZN0035                                 VHF
+  Software:                                            
+  -----------------------------------------------------------------------------
+  ZONE OPERATION                                       (continued)
+  -----------------------------------------------------------------------------
+
+  ZONE #:                           12
+
+  ZONE NAME:                  SOCAL TEST 
+
+  Talkback Scan:               Enabled
+
+  Scan Button Control:          Active
+
+  Coded Squelch Scan:          Enabled
+
+  Scan Type:                 Talkgroup
+       Non-Priority List:  Zone Slaved
+
+  Zone Mode List
+  --------------
+    Name        Name        Name        Name        Name        Name      
+  --------    --------    --------    --------    --------    --------    
+  W6EL   6460 144 000     145 000     146 000     147 000     148 000     
+  JPL VHF     CLARA 14522 APRS 144390 
+
+  Scan List
+  ---------
+    Name      Name      Name      Name      Name      Name      Name      Name    
+  --------  --------  --------  --------  --------  --------  --------  --------  
+  W6EL   6460144 000    145 000    146 000    147 000    148 000    JPL VHF    CLARA 14522
+
+

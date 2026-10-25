@@ -1,0 +1,33 @@
+{
+ "serial": "566AYA0014",
+ "get_warnings": [],
+ "screens": {
+  "f4,f2,f9": [
+   "",
+   " MOTOROLA Radio Service Software         Use UP / DOWN Arrows To Enable.",
+   " SPECTRA        Model: D37KGA5JB5FK",
+   "",
+   " CHG/VIEW:RADIO:OPT",
+   "",
+   "",
+   "   RADIO-WIDE CONFIGURATION OPTIONS         MASTER OVERRIDES",
+   "                                             Adaptive Splatter......Disabled",
+   "                                             Audio Compandor........Disabled",
+   "    Volume Set Tone ......  Enabled          Phone/DTMF Encode.....Unlimited",
+   "    Mode Change Tone........Enabled         SECURENET..............Not Avail",
+   "    PTT on Rx-Only Mode.....Enabled         Subsequent Call Alert...Disabled",
+   "    Horn & Lights Rearm.....Enabled         PTT Ignition Sense.......Enabled",
+   "    Horn Time Out (s)............04         Siren/P.A. Options......Disabled",
+   "    Lights Time Out (s).........060         Vehicle Repeater........Disabled",
+   "    Control Head Type......Enhanced         Internal PA..............Enabled",
+   "    Dual Control Head.....Not Avail         Speaker A/B..............Enabled",
+   "                                            Speaker B VIP Number..........02",
+   "",
+   "",
+   "",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP  SECURENET            VRS   PRINT  SIREN/PA  MORE           RESET     EXIT",
+   "       OPTIONS           OPTIONS SCREEN OPTIONS  OPTIONS        DEFAULT"
+  ]
+ }
+}

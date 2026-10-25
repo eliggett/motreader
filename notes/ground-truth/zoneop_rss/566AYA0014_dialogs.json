@@ -1,0 +1,156 @@
+[
+ {
+  "step": "radio-wide",
+  "rows": [
+   " MOTOROLA Radio Service Software         Use UP / DOWN Arrows To Enable.",
+   " SPECTRA        Model: D37KGA5JB5FK",
+   " CHG/VIEW:RADIO",
+   "  RADIO-WIDE CONFIGURATION                  ZONE OPERATION.........  Enabled",
+   "                                              Positional............Disabled",
+   "                                              Home Zone...................12",
+   "   MODEL INFORMATION                        HOME MODE....................120",
+   "    D37KGA5JB5FK                             Name...................850 MDCH",
+   "    Freq Range..892.0 - 941.0 MHz           MODE NAMES...............Enabled",
+   "    TRUNKED DUAL MODE                       TIME OUT TIMER...........Enabled",
+   "     MAX SYSTEMS...............01           HUB SWITCH..............Disabled",
+   "     MAX SUBFLEETS.............01           MAX USER MODES...............122",
+   "     MAX CONV MODES...........128           MINIMUM VOLUME (0-15).........06",
+   "   MODES (max)................160           SPEAKER B MIN VOLUME (0-15)...00",
+   "   # Modes Enabled............122",
+   "   (Determined By Mode Menu)",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP    TRUNK                    PRINT    SCAN    ZONE   SYSTEM  OTHER     EXIT",
+   "       OPTIONS                   SCREEN  OPTIONS  LIST   S & L   OPTIONS"
+  ]
+ },
+ {
+  "step": "toggle",
+  "rows": [
+   " MOTOROLA Radio Service Software         Press F10 To Abort.",
+   " SPECTRA        Model: D37KGA5JB5FK",
+   " CHG/VIEW:RADIO",
+   "  RADIO-WIDE CONFIGURATION                  ZONE OPERATION.........  Enabled",
+   "                                              Positional............Disabled",
+   "                                              Home Zone...................12",
+   "   MODEL INFORMATIO                                          ............120",
+   "    D37KGA5JB5FK                                             .......850 MDCH",
+   "    Freq Range..892         Disabling zone mode will         ........Enabled",
+   "    TRUNKED DUAL MO           clear all zone lists           ........Enabled",
+   "     MAX SYSTEMS...                                          .......Disabled",
+   "     MAX SUBFLEETS.        F2                    F10         ............122",
+   "     MAX CONV MODES     CONTINUE                ABORT        -15).........06",
+   "   MODES (max)................160           SPEAKER B MIN VOLUME (0-15)...00",
+   "   # Modes Enabled............122",
+   "   (Determined By Mode Menu)",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10"
+  ]
+ },
+ {
+  "step": "toggle",
+  "rows": [
+   " MOTOROLA Radio Service Software         Use UP / DOWN Arrows To Enable.",
+   " SPECTRA        Model: D37KGA5JB5FK",
+   " CHG/VIEW:RADIO",
+   "  RADIO-WIDE CONFIGURATION                  ZONE OPERATION......... Disabled",
+   "   MODEL INFORMATION                        HOME MODE....................120",
+   "    D37KGA5JB5FK                             Name...................850 MDCH",
+   "    Freq Range..892.0 - 941.0 MHz           MODE NAMES...............Enabled",
+   "    TRUNKED DUAL MODE                       TIME OUT TIMER...........Enabled",
+   "     MAX SYSTEMS...............01           HUB SWITCH..............Disabled",
+   "     MAX SUBFLEETS.............01           MAX USER MODES...............122",
+   "     MAX CONV MODES...........128           MINIMUM VOLUME (0-15).........06",
+   "   MODES (max)................250           SPEAKER B MIN VOLUME (0-15)...00",
+   "   # Modes Enabled............122",
+   "   (Determined By Mode Menu)",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP    TRUNK                    PRINT    SCAN    ZONE   SYSTEM  OTHER     EXIT",
+   "       OPTIONS                   SCREEN  OPTIONS  LIST   S & L   OPTIONS"
+  ]
+ },
+ {
+  "step": "exit0",
+  "rows": [
+   " MOTOROLA Radio Service Software         Select Function Key F1 - F10.",
+   " SPECTRA        Model: D37KGA5JB5FK",
+   " CHG/VIEW",
+   "                          CHANGE / VIEW CODEPLUG  MENU",
+   "        F1  - HELP",
+   "        F2  - RADIO-WIDE Configuration: Home, Volume, Alerts, Horn/Lights",
+   "        F3  - CONVENTIONAL Configuration: Scan Type, MDC ID's",
+   "        F4  - TRUNKING Configuration: Systems, Personalities",
+   "        F5  - MODE Configuration: Names, Freqs, Scan Lists, Etc",
+   "        F6  - CONTROL HEAD Configuration: Keypad Buttons, Sts/Msg, AMSS",
+   "        F7  -",
+   "        F8  -",
+   "        F9  -",
+   "        F10 - EXIT/Return To MAIN Menu",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP    RADIO     CONV   TRUNK    MODE   CONTROL                           EXIT",
+   "         WIDE                             HEAD"
+  ]
+ },
+ {
+  "step": "exit1",
+  "rows": [
+   " MOTOROLA Radio Service Software         Select Function Key F1 - F10.",
+   " SPECTRA        Model: D37KGA5JB5FK",
+   "                                    MAIN MENU",
+   "        F1  - HELP",
+   "        F2  - SERVICE: Alignment, Service Aids and Board Replacement",
+   "        F3  - GET/SAVE/PROGRAM Codeplug Data From/To Disk/Codeplug",
+   "        F4  - CHANGE/CREATE/VIEW Radio Codeplug Data",
+   "        F5  - PRINT Codeplug Data",
+   "        F6  -",
+   "        F7  -",
+   "        F8  -",
+   "        F9  - SETUP Computer Configuration",
+   "        F10 - EXIT Radio Service Software, Return to DOS",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP   SERVICE    GET    CHANGE   PRINT                          SETUP     EXIT",
+   "                  SAVE    VIEW                                            TO DO"
+  ]
+ },
+ {
+  "step": "main",
+  "rows": [
+   " MOTOROLA Radio Service Software         Select Function Key F1 - F10.",
+   " SPECTRA        Model: D37KGA5JB5FK",
+   "                                    MAIN MENU",
+   "        F1  - HELP",
+   "        F2  - SERVICE: Alignment, Service Aids and Board Replacement",
+   "        F3  - GET/SAVE/PROGRAM Codeplug Data From/To Disk/Codeplug",
+   "        F4  - CHANGE/CREATE/VIEW Radio Codeplug Data",
+   "        F5  - PRINT Codeplug Data",
+   "        F6  -",
+   "        F7  -",
+   "        F8  -",
+   "        F9  - SETUP Computer Configuration",
+   "        F10 - EXIT Radio Service Software, Return to DOS",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP   SERVICE    GET    CHANGE   PRINT                          SETUP     EXIT",
+   "                  SAVE    VIEW                                            TO DO"
+  ]
+ },
+ {
+  "step": "after",
+  "rows": [
+   " MOTOROLA Radio Service Software         Use UP / DOWN Arrows To Enable.",
+   " SPECTRA        Model: D37KGA5JB5FK",
+   " CHG/VIEW:RADIO",
+   "  RADIO-WIDE CONFIGURATION                  ZONE OPERATION......... Disabled",
+   "   MODEL INFORMATION                        HOME MODE....................120",
+   "    D37KGA5JB5FK                             Name...................850 MDCH",
+   "    Freq Range..892.0 - 941.0 MHz           MODE NAMES...............Enabled",
+   "    TRUNKED DUAL MODE                       TIME OUT TIMER...........Enabled",
+   "     MAX SYSTEMS...............01           HUB SWITCH..............Disabled",
+   "     MAX SUBFLEETS.............01           MAX USER MODES...............122",
+   "     MAX CONV MODES...........128           MINIMUM VOLUME (0-15).........06",
+   "   MODES (max)................250           SPEAKER B MIN VOLUME (0-15)...00",
+   "   # Modes Enabled............122",
+   "   (Determined By Mode Menu)",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP    TRUNK                    PRINT    SCAN    ZONE   SYSTEM  OTHER     EXIT",
+   "       OPTIONS                   SCREEN  OPTIONS  LIST   S & L   OPTIONS"
+  ]
+ }
+]

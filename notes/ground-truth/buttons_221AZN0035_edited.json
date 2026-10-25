@@ -1,0 +1,33 @@
+{
+ "serial": "221AZN0035",
+ "get_warnings": [],
+ "screens": {
+  "f4,f6,f2": [
+   "",
+   " MOTOROLA Radio Service Software         Use UP / DOWN Arrows To Select.",
+   " SPECTRA        Model: T83FWA7HA9AK      Select",
+   "",
+   " CHG/VIEW:CNTRL HD:KEYPAD",
+   "",
+   "    Ind 1   Ind 2   Ind 3   Ind 4   Ind 5   Ind 6       1        2        3",
+   "",
+   "     Sel    Sts  3   Alt    Siren  Zone  4  Emp No    Blank   Mode  3   Page-A",
+   "",
+   "                                                        4        5        6",
+   "",
+   "                                                      Blank    Msg  2   Blank",
+   "                   CONTROL HEAD BUTTONS",
+   "                                                        7        8        9",
+   "",
+   "                                                      Phone    Blank     H/L",
+   "     -----   -----   -----   -----   -----   -----",
+   "    Mode Dn Mode Up  Airhn   Vol Up  Emer    Home       *        0        #",
+   "",
+   "                                                       RCL      Sql      Del",
+   "",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP                             PRINT                                     EXIT",
+   "                                 SCREEN"
+  ]
+ }
+}

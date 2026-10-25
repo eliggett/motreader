@@ -1,0 +1,33 @@
+{
+ "serial": "617ASQ1266",
+ "get_warnings": [],
+ "screens": {
+  "f4,f5": [
+   "",
+   " MOTOROLA Radio Service Software         Enter NAME (1-8 Characters).",
+   " SPECTRA        Model: D43KMA7JA5BK       Ex: DISPATCH",
+   "",
+   " CHG/VIEW:MODE",
+   "",
+   "",
+   "                         CONVENTIONAL MODE CONFIGURATION",
+   "   MODE 001",
+   "",
+   "   NAME....................146 520          TIME OUT TIMER (s)...........210",
+   "   Rx FREQUENCY...........146.52000         SCAN.....................Enabled",
+   "   Tx FREQUENCY...........146.52000         MDC PTT ID..............Disabled",
+   "   TALKAROUND...............Enabled         Phone Encode.............Enabled",
+   "    Frequency.............146.52000         Call Signalling.........Disabled",
+   "   Rx SQUELCH TYPE..........Carrier",
+   "",
+   "   Tx SQUELCH TYPE..........Carrier",
+   "",
+   "   TA Squelch Type..............TPL",
+   "    TA Code................88.5  YB",
+   "",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP     GOTO   PREVIOUS  NEXT   PRINT    SCAN    MODE    MODE             EXIT",
+   "         MODE     MODE    MODE   SCREEN   LIST    OPT 1  UTILITY"
+  ]
+ }
+}

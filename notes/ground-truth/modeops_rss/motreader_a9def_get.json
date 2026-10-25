@@ -1,0 +1,33 @@
+{
+ "serial": "221AZN0035",
+ "get_warnings": [],
+ "screens": {
+  "f4,f5,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4,f4": [
+   "",
+   " MOTOROLA Radio Service Software         Enter NAME (1-11 Characters).",
+   " SPECTRA        Model: T83FWA7HA9AK       Ex: DISPATCH 01",
+   "",
+   " CHG/VIEW:MODE",
+   "",
+   "",
+   "                         CONVENTIONAL MODE CONFIGURATION",
+   "   MODE 066",
+   "",
+   "   NAME.................  MODE   66         TIME OUT TIMER (s)...........210",
+   "   Rx FREQUENCY...........144.39000",
+   "   Tx FREQUENCY...........144.39000         MDC PTT ID..............Disabled",
+   "   TALKAROUND...............Enabled         Phone Encode.............Enabled",
+   "    Frequency.............144.39000         Call Signalling.........Disabled",
+   "   Rx SQUELCH TYPE..........Carrier",
+   "",
+   "   Tx SQUELCH TYPE..........Carrier",
+   "",
+   "   TA Squelch Type..........Carrier",
+   "",
+   "",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP     GOTO   PREVIOUS  NEXT   PRINT    SCAN    MODE    MODE             EXIT",
+   "         MODE     MODE    MODE   SCREEN   LIST    OPT 1  UTILITY"
+  ]
+ }
+}

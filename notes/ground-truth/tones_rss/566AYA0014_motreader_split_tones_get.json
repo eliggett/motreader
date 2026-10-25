@@ -1,0 +1,33 @@
+{
+ "serial": "566AYA0014",
+ "get_warnings": [],
+ "screens": {
+  "f4,f5,f4,f4": [
+   "",
+   " MOTOROLA Radio Service Software         Enter NAME (1-8 Characters).",
+   " SPECTRA        Model: D37KGA5JB5FK       Ex: DISPATCH",
+   "",
+   " CHG/VIEW:MODE",
+   "",
+   "",
+   "                         CONVENTIONAL MODE CONFIGURATION",
+   "   MODE 003",
+   "",
+   "   NAME....................AG2 2500         TIME OUT TIMER (s)...........090",
+   "   Rx FREQUENCY...........927.25000",
+   "   Tx FREQUENCY...........902.25000         MDC PTT ID..............Disabled",
+   "   TALKAROUND...............Enabled         Phone Encode.............Enabled",
+   "    Frequency.............927.25000         Call Signalling.........Disabled",
+   "   Rx SQUELCH TYPE..............TPL",
+   "    Rx CODE................100.0 1Z",
+   "   Tx SQUELCH TYPE..............DPL",
+   "    Tx CODE.....................023",
+   "   TA Squelch Type..............TPL",
+   "    TA Code................123.0 3Z",
+   "",
+   " F1       F2       F3      F4      F5      F6      F7      F8      F9      F10",
+   "HELP     GOTO   PREVIOUS  NEXT   PRINT    SCAN    MODE    MODE    MODE     EXIT",
+   "         MODE     MODE    MODE   SCREEN   LIST    OPT 1  UTILITY  OPT 2"
+  ]
+ }
+}

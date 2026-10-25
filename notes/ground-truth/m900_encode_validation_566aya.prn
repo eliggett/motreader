@@ -1,0 +1,1038 @@
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:30
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KGA5JB5FK                               TRUNKED DUAL MODE
+  Serial:   566AYA0014                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         
+  -----------------------------------------------------------------------------
+
+  TRUNKING:  (Option Key = Private Call, Phone, Scan, Call Alert)
+
+  Mode     Name        Type   Pers  Sub/Tlkgrp  TOT  Failsoft   Options
+  ----  -----------  -------- ----  ----------  ---  --------   --------
+  001   098 USED      Type II  01       001     030    Blank     N Y N N
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  1 of 18
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:30
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KGA5JB5FK                               TRUNKED DUAL MODE
+  Serial:   566AYA0014                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL: 
+
+  MODE    NAME        Rx Freq  Tx Freq   T/A Freq  Rx Code   Tx Code
+  ----  --------      -------- --------  --------  -------   -------
+  002   L P 0375      927.0375 902.0375  927.0375  141.3 4A 141.3 4A
+  003   AG2 2500      927.2500 903.0000  927.5000  114.8 2A 114.8 2A
+  004   AX1 0500      927.0500 902.5000  927.9500    411      411  
+  005   SUN 2875      927.2875 904.0000  927.0000  151.4 5Z 151.4 5Z
+
+  006   HP1 5250      927.5250 902.9875  926.0000  127.3 3A 127.3 3A
+  007   HND 5625      927.5625 902.5625  927.5625  107.2 1B 107.2 1B
+  008   AG1 3375      927.3375 902.3375  927.3375  151.4 5Z 151.4 5Z
+  009   OPL 3125      927.3125 902.3125  927.3125    606      606  
+  010   RNO 1125      927.1125 902.1125  927.1125  114.8 2A 114.8 2A
+
+  011   WST 6750      927.6750 902.6750  927.6750   82.5 YZ  82.5 YZ
+  012   HP2 9125      927.9125 902.9125  927.9125    606      606  
+  013   AG3 6625      927.6625 902.6625  927.6625    606      606  
+  014   RNO 4625      927.4625 902.4625  927.4625  114.8 2A 114.8 2A
+  015   SPR 8875      927.8875 902.8875  927.8875    606      606  
+
+  016   NJJ 1375      927.1375 902.1375  927.1375    411      411  
+  017   LSUN1875      927.1875 902.1875  927.1875  151.4 5Z 151.4 5Z
+  018   AZ  4875      927.4875 902.4875  927.4875  100.0 1Z 100.0 1Z
+  019   AZ  8375      927.8375 902.8375  927.8375  151.4 5Z 151.4 5Z
+  020   CA  375       927.3750 902.3750  927.3750   88.5 YB  88.5 YB
+
+  021   SPT 8875      927.8875 902.8875  927.8875    606      606  
+  022   AZ  5375      927.5375 902.5375  927.5375  151.4 5Z 151.4 5Z
+  023   CA  9875      927.9875 902.9875  927.9875  114.8 2A 114.8 2A
+  024   CA   575      927.5750 902.5750  927.5750  151.4 5Z 151.4 5Z
+  025   AP1 5875      927.5875 902.5875  927.5875  131.8 3B 131.8 3B
+
+  026   CA  8500      927.8500 902.8500  927.8500  114.8 2A 114.8 2A
+  027   PAS 9625      927.9625 902.9625  927.9625  100.0 1Z 100.0 1Z
+  028   AZ   475      927.4750 902.4750  927.4750    532      532  
+  029   HP2 9125      927.9125 902.9125  927.9125    606      606  
+  030   RNO 3500      927.3500 902.3500  927.3500  114.8 2A 114.8 2A
+
+  031   LSN 1875      927.1875 902.1875  927.1875  151.4 5Z 151.4 5Z
+  032   AZ  5875      927.5875 902.5875  927.5875  151.4 5Z 151.4 5Z
+  033   CA   875      927.8750 902.8750  927.8750  103.5 1A 103.5 1A
+  034   NAPA 400      927.4000 902.4000  927.4000  192.8 7A 192.8 7A
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  2 of 18
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:30
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KGA5JB5FK                               TRUNKED DUAL MODE
+  Serial:   566AYA0014                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL: 
+
+  MODE    NAME        Rx Freq  Tx Freq   T/A Freq  Rx Code   Tx Code
+  ----  --------      -------- --------  --------  -------   -------
+  035   NAPA 500      927.5000 902.5000  927.5000  192.8 7A 192.8 7A
+
+  036   CA  8875      927.8875 902.8875  927.8875  114.8 2A 114.8 2A
+  037   CA  6875      927.6875 902.6875  927.6875  114.8 2A 114.8 2A
+  038   VACA 800      927.8000 902.8000  927.8000  192.8 7A 192.8 7A
+  039   RNO 3500      927.3500 902.3500  927.3500  114.8 2A 114.8 2A
+  040   N CA 875      927.8750 902.8750  927.8750  114.8 2A 114.8 2A
+
+  041   DANA 175      927.1750 902.1750  927.1750  123.0 3Z 123.0 3Z
+  042   CA  2875      927.2875 902.2875  927.2875    423      423  
+  043   NM  7000      927.7000 902.7000  927.7000  203.5 M1 203.4 M1
+  044   ODSA 025      927.0250 902.0250  927.0250    532      532  
+  045   CA  4875      927.4875 902.4875  927.4875    311      311  
+
+  046   CA   800      927.8000 902.8000  927.8000  218.1 M3 218.2 M3
+  047   CA  6500      927.6500 902.6500  927.6500    411      411  
+  048   WST 6750      927.6750 902.6750  927.6750   82.5 YZ  82.5 YZ
+  049   CA   825      927.8250 902.8250  927.8250  114.8 2A 114.8 2A
+  050   AOR 1250      927.1250 902.1250  927.1250  103.5 1A 103.5 1A
+
+  051   MID 0375      927.0375 902.0375  927.0375  141.3 4A 141.3 4A
+  052   CA  525       927.5250 902.5250  927.5250  192.8 7A 192.8 7A
+  053   NCA 5125      927.5125 902.5125  927.5125    606      606  
+  054   PAL 5375      927.5375 902.5375  927.5375    606      606  
+  055   NCA 5625      927.5625 902.5625  927.5625    606      606  
+
+  056   NCA 5875      927.5875 902.5875  927.5875    606      606  
+  057   AZ  2625      927.2625 902.2625  927.2625  100.0 1Z 100.0 1Z
+  058   YORBA CA      927.3375 902.3375  927.3375   88.5 YB  88.5 YB
+  059   STH 4250      927.4250 902.4250  927.4250   82.5 YZ  82.5 YZ
+  060   NCA  525      927.5250 902.5250  927.5250  173.8 6A 173.8 6A
+
+  061   DALS 850      927.8500 902.8500  927.8500    125      125  
+  062   CA  8375      927.8375 902.8375  927.8375  114.8 2A 114.8 2A
+  063   CA  7250      927.7250 902.7250  927.7250    411      411  
+  064   CA   625      927.6250 902.6250  927.6250    411      411  
+  065   CAT 9375      927.9375 902.9375  927.9375    311      311  
+
+  066   NCA 9125      927.9125 902.9125  927.9125  146.2 4B 146.2 4B
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  3 of 18
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:30
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KGA5JB5FK                               TRUNKED DUAL MODE
+  Serial:   566AYA0014                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL: 
+
+  MODE    NAME        Rx Freq  Tx Freq   T/A Freq  Rx Code   Tx Code
+  ----  --------      -------- --------  --------  -------   -------
+  067   SIG 1375      927.1375 902.1375  927.1375    411      411  
+  068   DENT 975      927.9750 902.9750  927.9750    125      125  
+  069   RNO 0875      927.0875 902.0875  927.0875  114.8 2A 114.8 2A
+  070   TX  0750      927.0750 902.0750  927.0750  218.1 M3 218.2 M3
+
+  071   C MAY725      927.7250 902.0125  927.7250  146.2 4B 146.2 4B
+  072   RDG 0125      927.0125 902.0125  927.0125   88.5 YB  88.5 YB
+  073   BSHP0125      927.0125 902.0125  927.0125  100.0 1Z 100.0 1Z
+  074   CAM 0250      927.0250 902.0250  927.0250  146.2 4B 146.2 4B
+  075   FRES0500      927.0500 902.0500  927.0500  141.3 4A 141.3 4A
+
+  076   ROSA0500      927.0500 902.0500  927.0500  146.2 4B 146.2 4B
+  077   FRES0625      927.0625 902.0625  927.0625  141.3 4A 141.3 4A
+  078   CUMM0750      927.0750 902.0750  927.0750  203.5 M1 203.4 M1
+  079   TAFT0875      927.0875 902.0875  927.0875  100.0 1Z 100.0 1Z
+  080   SANT1250      927.1250 902.1250  927.1250  103.5 1A 103.5 1A
+
+  081   BARS1250      927.1250 902.1250  927.1250  151.4 5Z 151.4 5Z
+  082   BAKR1325      927.1375 902.1375  927.1375  203.5 M1 203.4 M1
+  083   PLPK1375      927.1375 902.1375  927.1375    411      411  
+  084   PLPK ALT      927.1375 902.0375  927.1375    411      411  
+  085   PAS15000      927.1500 902.1500  927.1500    411      411  
+
+  086   PAS  ALT      927.1500 902.0500  927.1500    411      411  
+  087   MTWD1500      927.1500 902.1500  927.1500    114      114  
+  088   MTWD150A      927.1500 902.0500  927.1500    114      114  
+  089   SMIG1625      927.1625 902.1625  927.1625    411      411  
+  090   SMIG162A      927.1625 902.0625  927.1625    411      411  
+
+  091   CDMR1875      927.1875 902.1875  927.1875  103.5 1A 103.5 1A
+  092   WRWD2250      927.2250 902.2250  927.2250  141.3 4A 141.3 4A
+  093   UPLN3250      927.3250 902.3250  927.3250  114.8 2A 114.8 2A
+  094   UCSD4625      927.4625 902.4625  927.4625  100.0 1Z 100.0 1Z
+  095   SPX 5000      927.5000 927.5000   Blank             
+
+  096   SPX 6000      927.6000 927.6000   Blank             
+  097   FRE6625       927.6625 902.6625  927.6625  146.2 4B 146.2 4B
+  098   FRE6625A      927.6625 902.0125  927.6625  146.2 4B 146.2 4B
+  099   TST 7000      927.7000 902.7000  927.7000    411      411  
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  4 of 18
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:30
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KGA5JB5FK                               TRUNKED DUAL MODE
+  Serial:   566AYA0014                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL: 
+
+  MODE    NAME        Rx Freq  Tx Freq   T/A Freq  Rx Code   Tx Code
+  ----  --------      -------- --------  --------  -------   -------
+  100   SPX 8000      927.8000 927.8000   Blank             
+
+  101   MTLK9750      927.9750 902.9750  927.9750  110.9 2Z 110.9 2Z
+  102   MTLK975A      927.9750 902.0375  927.9750  110.9 2Z 110.9 2Z
+  103   MTLK LOW      927.9750 902.0375  927.9750  110.9 2Z 110.9 2Z
+  104   MTW9875       927.9875 902.9875  927.9875    311      311  
+  105   MTW9875A      927.9875 902.0500  927.9875    311      311  
+
+  106   SPX 5875      927.5875 927.5875   Blank      411    
+  107   SPX 6125      927.6125 927.6125   Blank      411    
+  108   SPX 6000      927.6000 927.6000   Blank      411    
+  109   700 HP        927.7000 927.7000   Blank      411    
+  110   700 LP        927.7000 927.7000   Blank      411    
+
+  111   700 LPHC      927.7000 927.7000   Blank      411    
+  112   700 DBAR      927.7000 902.7000   Blank    107.2 1B 107.2 1B
+  113   750 SPX       927.7500 927.7500   Blank      411    
+  114   750 LOW       927.7500 927.7500   Blank      411    
+  115   7625 SPX      927.7625 927.7625   Blank      411    
+
+  116   7625 LOW      927.7625 927.7625   Blank      411    
+  117   850 R H       927.8500 902.8500  927.8500   88.5 YB  88.5 YB
+  118   850 R L       927.8500 902.8500  927.8500   88.5 YB  88.5 YB
+  119   850 MDCL      927.8500 902.8500  927.8500   88.5 YB  88.5 YB
+  120   850 MDCH      927.8500 902.8500  927.8500   88.5 YB  88.5 YB
+
+  121   8625 SPX      927.8625 927.8625   Blank      411    
+  122   8625 LOW      927.8625 927.8625   Blank      411    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  5 of 18
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:30
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KGA5JB5FK                               TRUNKED DUAL MODE
+  Serial:   566AYA0014                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL: 
+  (Option Key = 1-MDC ID, 2-Phone, 3-Scan, 4-DTMF Selective Call Encoder, 
+                5-DTMF Selective Call Decoder, 6-MDC Call) 
+
+  Mode     Name      TOT        1 2 3 4 5 6   
+  ----  -----------  ---       ----------------
+  002   L P 0375     090        Y Y N N N N    
+  003   AG2 2500     090        Y Y N N N N    
+  004   AX1 0500     090        Y Y N N N N    
+  005   SUN 2875     090        Y Y N N N N    
+
+  006   HP1 5250     090        Y Y N N N N    
+  007   HND 5625     090        Y Y N N N N    
+  008   AG1 3375     090        Y Y N N N N    
+  009   OPL 3125     090        Y Y N N N N    
+  010   RNO 1125     090        Y Y N N N N    
+
+  011   WST 6750     090        Y Y N N N N    
+  012   HP2 9125     090        Y Y N N N N    
+  013   AG3 6625     090        Y Y N N N N    
+  014   RNO 4625     090        Y Y N N N N    
+  015   SPR 8875     090        Y Y N N N N    
+
+  016   NJJ 1375     090        Y Y N N N N    
+  017   LSUN1875     090        Y Y N N N N    
+  018   AZ  4875     090        Y Y N N N N    
+  019   AZ  8375     090        Y Y N N N N    
+  020   CA  375      090        Y Y N N N N    
+
+  021   SPT 8875     090        Y Y N N N N    
+  022   AZ  5375     090        Y Y N N N N    
+  023   CA  9875     090        Y Y N N N N    
+  024   CA   575     090        Y Y N N N N    
+  025   AP1 5875     090        Y Y N N N N    
+
+  026   CA  8500     090        Y Y N N N N    
+  027   PAS 9625     090        Y Y N N N N    
+  028   AZ   475     090        Y Y N N N N    
+  029   HP2 9125     090        Y Y N N N N    
+  030   RNO 3500     090        Y Y N N N N    
+
+  031   LSN 1875     090        Y Y N N N N    
+  032   AZ  5875     090        Y Y N N N N    
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  6 of 18
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:30
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KGA5JB5FK                               TRUNKED DUAL MODE
+  Serial:   566AYA0014                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL: 
+  (Option Key = 1-MDC ID, 2-Phone, 3-Scan, 4-DTMF Selective Call Encoder, 
+                5-DTMF Selective Call Decoder, 6-MDC Call) 
+
+  Mode     Name      TOT        1 2 3 4 5 6   
+  ----  -----------  ---       ----------------
+  033   CA   875     090        Y Y N N N N    
+  034   NAPA 400     090        Y Y N N N N    
+  035   NAPA 500     090        Y Y N N N N    
+
+  036   CA  8875     090        Y Y N N N N    
+  037   CA  6875     090        Y Y N N N N    
+  038   VACA 800     090        Y Y N N N N    
+  039   RNO 3500     090        Y Y N N N N    
+  040   N CA 875     090        Y Y N N N N    
+
+  041   DANA 175     090        Y Y N N N N    
+  042   CA  2875     090        Y Y N N N N    
+  043   NM  7000     090        Y Y N N N N    
+  044   ODSA 025     090        Y Y N N N N    
+  045   CA  4875     090        Y Y N N N N    
+
+  046   CA   800     090        Y Y N N N N    
+  047   CA  6500     090        Y Y N N N N    
+  048   WST 6750     090        Y Y N N N N    
+  049   CA   825     090        Y Y N N N N    
+  050   AOR 1250     090        Y Y N N N N    
+
+  051   MID 0375     090        Y Y N N N N    
+  052   CA  525      090        Y Y N N N N    
+  053   NCA 5125     090        Y Y N N N N    
+  054   PAL 5375     090        Y Y N N N N    
+  055   NCA 5625     090        Y Y N N N N    
+
+  056   NCA 5875     090        Y Y N N N N    
+  057   AZ  2625     090        Y Y N N N N    
+  058   YORBA CA     090        Y Y N N N N    
+  059   STH 4250     090        Y Y N N N N    
+  060   NCA  525     090        Y Y N N N N    
+
+  061   DALS 850     090        Y Y N N N N    
+  062   CA  8375     090        Y Y N N N N    
+  063   CA  7250     090        Y Y N N N N    
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  7 of 18
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:30
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KGA5JB5FK                               TRUNKED DUAL MODE
+  Serial:   566AYA0014                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL: 
+  (Option Key = 1-MDC ID, 2-Phone, 3-Scan, 4-DTMF Selective Call Encoder, 
+                5-DTMF Selective Call Decoder, 6-MDC Call) 
+
+  Mode     Name      TOT        1 2 3 4 5 6   
+  ----  -----------  ---       ----------------
+  064   CA   625     090        Y Y N N N N    
+  065   CAT 9375     090        Y Y N N N N    
+
+  066   NCA 9125     090        Y Y N N N N    
+  067   SIG 1375     090        Y Y N N N N    
+  068   DENT 975     090        Y Y N N N N    
+  069   RNO 0875     090        Y Y N N N N    
+  070   TX  0750     090        Y Y N N N N    
+
+  071   C MAY725     090        Y Y N N N N    
+  072   RDG 0125     090        Y Y N N N N    
+  073   BSHP0125     090        Y Y N N N N    
+  074   CAM 0250     090        Y Y N N N N    
+  075   FRES0500     090        Y Y N N N N    
+
+  076   ROSA0500     090        Y Y N N N N    
+  077   FRES0625     090        Y Y N N N N    
+  078   CUMM0750     090        Y Y N N N N    
+  079   TAFT0875     090        Y Y N N N N    
+  080   SANT1250     090        Y Y N N N N    
+
+  081   BARS1250     090        Y Y N N N N    
+  082   BAKR1325     090        Y Y N N N N    
+  083   PLPK1375     090        Y Y N N N N    
+  084   PLPK ALT     090        Y Y N N N N    
+  085   PAS15000     090        Y Y N N N N    
+
+  086   PAS  ALT     090        Y Y N N N N    
+  087   MTWD1500     090        Y Y N N N N    
+  088   MTWD150A     090        Y Y N N N N    
+  089   SMIG1625     090        Y Y N N N N    
+  090   SMIG162A     090        Y Y N N N N    
+
+  091   CDMR1875     090        Y Y N N N N    
+  092   WRWD2250     090        Y Y N N N N    
+  093   UPLN3250     090        Y Y N N N N    
+  094   UCSD4625     090        Y Y N N N N    
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  8 of 18
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:30
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KGA5JB5FK                               TRUNKED DUAL MODE
+  Serial:   566AYA0014                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL: 
+  (Option Key = 1-MDC ID, 2-Phone, 3-Scan, 4-DTMF Selective Call Encoder, 
+                5-DTMF Selective Call Decoder, 6-MDC Call) 
+
+  Mode     Name      TOT        1 2 3 4 5 6   
+  ----  -----------  ---       ----------------
+  095   SPX 5000     090        Y Y N N N N    
+
+  096   SPX 6000     090        Y Y N N N N    
+  097   FRE6625      090        Y Y N N N N    
+  098   FRE6625A     090        Y Y N N N N    
+  099   TST 7000     090        Y Y N N N N    
+  100   SPX 8000     090        Y Y N N N N    
+
+  101   MTLK9750     090        Y Y N N N N    
+  102   MTLK975A     090        Y Y N N N N    
+  103   MTLK LOW     090        Y Y N N N N    
+  104   MTW9875      090        Y Y N N N N    
+  105   MTW9875A     090        Y Y N N N N    
+
+  106   SPX 5875     090        Y Y N N N N    
+  107   SPX 6125     090        Y Y N N N N    
+  108   SPX 6000     090        Y Y N N N N    
+  109   700 HP       090        Y Y N N N N    
+  110   700 LP       090        Y Y N N N N    
+
+  111   700 LPHC     090        Y Y N N N N    
+  112   700 DBAR     090        Y Y N N N N    
+  113   750 SPX      090        Y Y N N N N    
+  114   750 LOW      090        Y Y N N N N    
+  115   7625 SPX     090        Y Y N N N N    
+
+  116   7625 LOW     090        Y Y N N N N    
+  117   850 R H      210        Y Y N N N N    
+  118   850 R L      210        Y Y N N N N    
+  119   850 MDCL     210        Y Y N N N N    
+  120   850 MDCH     210        Y Y N N N N    
+
+  121   8625 SPX     090        Y Y N N N N    
+  122   8625 LOW     090        Y Y N N N N    
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  9 of 18
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:30
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KGA5JB5FK                               TRUNKED DUAL MODE
+  Serial:   566AYA0014                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL SCAN LIST:                Non-Priority List
+
+  Mode  01  02  03  04  05    06  07  08  09  10    11  12  13  14  15  16 
+  ---- --------------------  --------------------  ------------------------
+  002                             Scan Disabled
+  003                             Scan Disabled
+  004                             Scan Disabled
+  005                             Scan Disabled
+
+  006                             Scan Disabled
+  007                             Scan Disabled
+  008                             Scan Disabled
+  009                             Scan Disabled
+  010                             Scan Disabled
+
+  011                             Scan Disabled
+  012                             Scan Disabled
+  013                             Scan Disabled
+  014                             Scan Disabled
+  015                             Scan Disabled
+
+  016                             Scan Disabled
+  017                             Scan Disabled
+  018                             Scan Disabled
+  019                             Scan Disabled
+  020                             Scan Disabled
+
+  021                             Scan Disabled
+  022                             Scan Disabled
+  023                             Scan Disabled
+  024                             Scan Disabled
+  025                             Scan Disabled
+
+  026                             Scan Disabled
+  027                             Scan Disabled
+  028                             Scan Disabled
+  029                             Scan Disabled
+  030                             Scan Disabled
+
+  031                             Scan Disabled
+  032                             Scan Disabled
+  033                             Scan Disabled
+  034                             Scan Disabled
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page 10 of 18
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:30
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KGA5JB5FK                               TRUNKED DUAL MODE
+  Serial:   566AYA0014                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL SCAN LIST:                Non-Priority List
+
+  Mode  01  02  03  04  05    06  07  08  09  10    11  12  13  14  15  16 
+  ---- --------------------  --------------------  ------------------------
+  035                             Scan Disabled
+
+  036                             Scan Disabled
+  037                             Scan Disabled
+  038                             Scan Disabled
+  039                             Scan Disabled
+  040                             Scan Disabled
+
+  041                             Scan Disabled
+  042                             Scan Disabled
+  043                             Scan Disabled
+  044                             Scan Disabled
+  045                             Scan Disabled
+
+  046                             Scan Disabled
+  047                             Scan Disabled
+  048                             Scan Disabled
+  049                             Scan Disabled
+  050                             Scan Disabled
+
+  051                             Scan Disabled
+  052                             Scan Disabled
+  053                             Scan Disabled
+  054                             Scan Disabled
+  055                             Scan Disabled
+
+  056                             Scan Disabled
+  057                             Scan Disabled
+  058                             Scan Disabled
+  059                             Scan Disabled
+  060                             Scan Disabled
+
+  061                             Scan Disabled
+  062                             Scan Disabled
+  063                             Scan Disabled
+  064                             Scan Disabled
+  065                             Scan Disabled
+
+  066                             Scan Disabled
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page 11 of 18
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:31
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KGA5JB5FK                               TRUNKED DUAL MODE
+  Serial:   566AYA0014                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL SCAN LIST:                Non-Priority List
+
+  Mode  01  02  03  04  05    06  07  08  09  10    11  12  13  14  15  16 
+  ---- --------------------  --------------------  ------------------------
+  067                             Scan Disabled
+  068                             Scan Disabled
+  069                             Scan Disabled
+  070                             Scan Disabled
+
+  071                             Scan Disabled
+  072                             Scan Disabled
+  073                             Scan Disabled
+  074                             Scan Disabled
+  075                             Scan Disabled
+
+  076                             Scan Disabled
+  077                             Scan Disabled
+  078                             Scan Disabled
+  079                             Scan Disabled
+  080                             Scan Disabled
+
+  081                             Scan Disabled
+  082                             Scan Disabled
+  083                             Scan Disabled
+  084                             Scan Disabled
+  085                             Scan Disabled
+
+  086                             Scan Disabled
+  087                             Scan Disabled
+  088                             Scan Disabled
+  089                             Scan Disabled
+  090                             Scan Disabled
+
+  091                             Scan Disabled
+  092                             Scan Disabled
+  093                             Scan Disabled
+  094                             Scan Disabled
+  095                             Scan Disabled
+
+  096                             Scan Disabled
+  097                             Scan Disabled
+  098                             Scan Disabled
+  099                             Scan Disabled
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page 12 of 18
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:31
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KGA5JB5FK                               TRUNKED DUAL MODE
+  Serial:   566AYA0014                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL SCAN LIST:                Non-Priority List
+
+  Mode  01  02  03  04  05    06  07  08  09  10    11  12  13  14  15  16 
+  ---- --------------------  --------------------  ------------------------
+  100                             Scan Disabled
+
+  101                             Scan Disabled
+  102                             Scan Disabled
+  103                             Scan Disabled
+  104                             Scan Disabled
+  105                             Scan Disabled
+
+  106                             Scan Disabled
+  107                             Scan Disabled
+  108                             Scan Disabled
+  109                             Scan Disabled
+  110                             Scan Disabled
+
+  111                             Scan Disabled
+  112                             Scan Disabled
+  113                             Scan Disabled
+  114                             Scan Disabled
+  115                             Scan Disabled
+
+  116                             Scan Disabled
+  117                             Scan Disabled
+  118                             Scan Disabled
+  119                             Scan Disabled
+  120                             Scan Disabled
+
+  121                             Scan Disabled
+  122                             Scan Disabled
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page 13 of 18
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:31
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KGA5JB5FK                               TRUNKED DUAL MODE
+  Serial:   566AYA0014                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL SCAN LIST:
+
+  Mode          Pri 1        Pri 2         Selected Mode
+  ----          -----        -----         -------------
+  002              Scan Disabled
+  003              Scan Disabled
+  004              Scan Disabled
+  005              Scan Disabled
+
+  006              Scan Disabled
+  007              Scan Disabled
+  008              Scan Disabled
+  009              Scan Disabled
+  010              Scan Disabled
+
+  011              Scan Disabled
+  012              Scan Disabled
+  013              Scan Disabled
+  014              Scan Disabled
+  015              Scan Disabled
+
+  016              Scan Disabled
+  017              Scan Disabled
+  018              Scan Disabled
+  019              Scan Disabled
+  020              Scan Disabled
+
+  021              Scan Disabled
+  022              Scan Disabled
+  023              Scan Disabled
+  024              Scan Disabled
+  025              Scan Disabled
+
+  026              Scan Disabled
+  027              Scan Disabled
+  028              Scan Disabled
+  029              Scan Disabled
+  030              Scan Disabled
+
+  031              Scan Disabled
+  032              Scan Disabled
+  033              Scan Disabled
+  034              Scan Disabled
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page 14 of 18
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:31
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KGA5JB5FK                               TRUNKED DUAL MODE
+  Serial:   566AYA0014                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL SCAN LIST:
+
+  Mode          Pri 1        Pri 2         Selected Mode
+  ----          -----        -----         -------------
+  035              Scan Disabled
+
+  036              Scan Disabled
+  037              Scan Disabled
+  038              Scan Disabled
+  039              Scan Disabled
+  040              Scan Disabled
+
+  041              Scan Disabled
+  042              Scan Disabled
+  043              Scan Disabled
+  044              Scan Disabled
+  045              Scan Disabled
+
+  046              Scan Disabled
+  047              Scan Disabled
+  048              Scan Disabled
+  049              Scan Disabled
+  050              Scan Disabled
+
+  051              Scan Disabled
+  052              Scan Disabled
+  053              Scan Disabled
+  054              Scan Disabled
+  055              Scan Disabled
+
+  056              Scan Disabled
+  057              Scan Disabled
+  058              Scan Disabled
+  059              Scan Disabled
+  060              Scan Disabled
+
+  061              Scan Disabled
+  062              Scan Disabled
+  063              Scan Disabled
+  064              Scan Disabled
+  065              Scan Disabled
+
+  066              Scan Disabled
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page 15 of 18
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:31
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KGA5JB5FK                               TRUNKED DUAL MODE
+  Serial:   566AYA0014                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL SCAN LIST:
+
+  Mode          Pri 1        Pri 2         Selected Mode
+  ----          -----        -----         -------------
+  067              Scan Disabled
+  068              Scan Disabled
+  069              Scan Disabled
+  070              Scan Disabled
+
+  071              Scan Disabled
+  072              Scan Disabled
+  073              Scan Disabled
+  074              Scan Disabled
+  075              Scan Disabled
+
+  076              Scan Disabled
+  077              Scan Disabled
+  078              Scan Disabled
+  079              Scan Disabled
+  080              Scan Disabled
+
+  081              Scan Disabled
+  082              Scan Disabled
+  083              Scan Disabled
+  084              Scan Disabled
+  085              Scan Disabled
+
+  086              Scan Disabled
+  087              Scan Disabled
+  088              Scan Disabled
+  089              Scan Disabled
+  090              Scan Disabled
+
+  091              Scan Disabled
+  092              Scan Disabled
+  093              Scan Disabled
+  094              Scan Disabled
+  095              Scan Disabled
+
+  096              Scan Disabled
+  097              Scan Disabled
+  098              Scan Disabled
+  099              Scan Disabled
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page 16 of 18
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:31
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KGA5JB5FK                               TRUNKED DUAL MODE
+  Serial:   566AYA0014                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL SCAN LIST:
+
+  Mode          Pri 1        Pri 2         Selected Mode
+  ----          -----        -----         -------------
+  100              Scan Disabled
+
+  101              Scan Disabled
+  102              Scan Disabled
+  103              Scan Disabled
+  104              Scan Disabled
+  105              Scan Disabled
+
+  106              Scan Disabled
+  107              Scan Disabled
+  108              Scan Disabled
+  109              Scan Disabled
+  110              Scan Disabled
+
+  111              Scan Disabled
+  112              Scan Disabled
+  113              Scan Disabled
+  114              Scan Disabled
+  115              Scan Disabled
+
+  116              Scan Disabled
+  117              Scan Disabled
+  118              Scan Disabled
+  119              Scan Disabled
+  120              Scan Disabled
+
+  121              Scan Disabled
+  122              Scan Disabled
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page 17 of 18
+

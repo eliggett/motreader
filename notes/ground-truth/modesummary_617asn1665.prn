@@ -1,0 +1,489 @@
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:46
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KMA7JA5DK                               CONVENTIONAL STANDARD
+  Serial:   617ASN1665                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL: 
+
+  MODE    NAME        Rx Freq  Tx Freq   T/A Freq  Rx Code   Tx Code
+  ----  --------      -------- --------  --------  -------   -------
+  001   BUS 1         935.9000 896.9000   Blank    162.2 5B 162.2 5B
+  002   BUS 2         937.9250 898.9250   Blank    162.2 5B 162.2 5B
+  003   BUS 3         939.4500 900.4500   Blank    162.2 5B 162.2 5B
+  004   SHUTTLE1      938.4625 899.4625   Blank    162.2 5B 162.2 5B
+  005   SHUTTLE2      939.9625 900.9625   Blank    162.2 5B 162.2 5B
+
+  006   500           927.5000 927.5000   Blank      411    
+  007   500 HC        927.5000 927.5000   Blank      411    
+  008   600           927.6000 927.6000   Blank             
+  009   600 HC        927.6000 927.6000   Blank             
+  010   700           927.7000 927.7000   Blank      411    
+
+  011   700 HC        927.7000 927.7000   Blank      411    
+  012   700 LOW       927.7000 927.7000   Blank      411    
+  013   700 L HC      927.7000 927.7000   Blank      411    
+  014   850 MDCL      927.8500 902.8500  927.8500   88.5 YB  88.5 YB
+  015   850 MDCH      927.8500 902.8500  927.8500   88.5 YB  88.5 YB
+
+  016   CDMR1875      927.1875 902.1875  927.1875  103.5 1A 103.5 1A
+  017   PLPK1375      927.1375 902.1375  927.1375    411      411  
+  018   PLPK ALT      927.1375 902.0375  927.1375    411      411  
+  019   PLPKALOW      927.1375 902.0375  927.1375    411      411  
+  020   SANT1250      927.1250 902.1250  927.1250  103.5 1A 103.5 1A
+
+  021   PAS 1500      927.1500 902.1500  927.1500    411      411  
+  022   PAS ALT       927.1500 902.0500  927.1500    411      411  
+  023   SMIG1625      927.1625 902.1625  927.1625    411      411  
+  024   SMG1625A      927.1625 902.0625  927.1625    411      411  
+  025   MTLK975A      927.9750 902.0375  927.9750  110.9 2Z 110.9 2Z
+
+  026   MTLK LOW      927.9750 902.0375  927.9750  110.9 2Z 110.9 2Z
+  027   MTWL9875      927.9875 902.9875  927.9875    311      311  
+  028   MTW9875A      927.9875 902.0500  927.9875    311      311  
+  029   927 2750      927.2750 927.2750   Blank      411    
+  030   927 2875      927.2875 927.2875   Blank      411    
+
+  031   927 3000      927.3000 927.3000   Blank      411    
+  032   927 3750      927.3750 927.3750   Blank      411    
+  033   927 3875      927.3875 927.3875   Blank      411    
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  1 of  9
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:46
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KMA7JA5DK                               CONVENTIONAL STANDARD
+  Serial:   617ASN1665                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL: 
+
+  MODE    NAME        Rx Freq  Tx Freq   T/A Freq  Rx Code   Tx Code
+  ----  --------      -------- --------  --------  -------   -------
+  034   927 4000      927.4000 927.4000   Blank      411    
+  035   927 4125      927.4125 927.4125   Blank      411    
+
+  036   927 4250      927.4250 927.4250   Blank      411    
+  037   927 5250      927.5250 927.5250   Blank      411    
+  038   927 6250      927.6250 927.6250   Blank      411    
+  039   927 6375      927.6375 927.6375   Blank      411    
+  040   927 6500      927.6500 927.6500   Blank      411    
+
+  041   927 7250      927.7250 927.7250   Blank      411    
+  042   927 7375      927.7375 927.7375   Blank      411    
+  043   927 7500      927.7500 927.7500   Blank      411    
+  044   927 7625      927.7625 927.7625   Blank      411    
+  045   927 7750      927.7750 927.7750   Blank      411    
+
+  046   927 8250      927.8250 927.8250   Blank      411    
+  047   927 8375      927.8375 927.8375   Blank      411    
+  048   927 8500      927.8500 927.8500   Blank      411    
+  049   927 8625      927.8625 927.8625   Blank      411    
+  050   927 8750      927.8750 927.8750   Blank      411    
+
+  051   927 8875      927.8875 927.8875   Blank      411    
+  052   927 9000      927.9000 927.9000   Blank      411    
+  053   927 9125      927.9125 927.9125   Blank      411    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  2 of  9
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:46
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KMA7JA5DK                               CONVENTIONAL STANDARD
+  Serial:   617ASN1665                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL: 
+  (Option Key = 1-MDC ID, 2-Phone, 3-Scan, 4-DTMF Selective Call Encoder, 
+                5-DTMF Selective Call Decoder, 6-MDC Call) 
+
+  Mode     Name      TOT        1 2 3 4 5 6   
+  ----  -----------  ---       ----------------
+  001   BUS 1        060        Y Y N N N N    
+  002   BUS 2        060        Y Y N N N N    
+  003   BUS 3        060        Y Y N N N N    
+  004   SHUTTLE1     060        Y Y N N N N    
+  005   SHUTTLE2     060        Y Y N N N N    
+
+  006   500          210        Y Y N N N N    
+  007   500 HC       210        Y Y N N N N    
+  008   600          210        Y Y N N N N    
+  009   600 HC       210        Y Y N N N N    
+  010   700          210        Y Y N N N N    
+
+  011   700 HC       210        Y Y N N N N    
+  012   700 LOW      210        Y Y N N N N    
+  013   700 L HC     210        Y Y N N N N    
+  014   850 MDCL     210        Y Y N N N N    
+  015   850 MDCH     210        Y Y N N N N    
+
+  016   CDMR1875     210        Y Y N N N N    
+  017   PLPK1375     210        Y Y N N N N    
+  018   PLPK ALT     210        Y Y N N N N    
+  019   PLPKALOW     060        Y Y N N N N    
+  020   SANT1250     210        Y Y N N N N    
+
+  021   PAS 1500     210        Y Y N N N N    
+  022   PAS ALT      210        Y Y N N N N    
+  023   SMIG1625     210        Y Y N N N N    
+  024   SMG1625A     210        Y Y N N N N    
+  025   MTLK975A     210        Y Y N N N N    
+
+  026   MTLK LOW     210        Y Y N N N N    
+  027   MTWL9875     210        Y Y N N N N    
+  028   MTW9875A     210        Y Y N N N N    
+  029   927 2750     210        Y Y N N N N    
+  030   927 2875     210        Y Y N N N N    
+
+  031   927 3000     210        Y Y N N N N    
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  3 of  9
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:46
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KMA7JA5DK                               CONVENTIONAL STANDARD
+  Serial:   617ASN1665                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL: 
+  (Option Key = 1-MDC ID, 2-Phone, 3-Scan, 4-DTMF Selective Call Encoder, 
+                5-DTMF Selective Call Decoder, 6-MDC Call) 
+
+  Mode     Name      TOT        1 2 3 4 5 6   
+  ----  -----------  ---       ----------------
+  032   927 3750     210        Y Y N N N N    
+  033   927 3875     210        Y Y N N N N    
+  034   927 4000     210        Y Y N N N N    
+  035   927 4125     210        Y Y N N N N    
+
+  036   927 4250     210        Y Y N N N N    
+  037   927 5250     210        Y Y N N N N    
+  038   927 6250     210        Y Y N N N N    
+  039   927 6375     210        Y Y N N N N    
+  040   927 6500     210        Y Y N N N N    
+
+  041   927 7250     210        Y Y N N N N    
+  042   927 7375     210        Y Y N N N N    
+  043   927 7500     210        Y Y N N N N    
+  044   927 7625     210        Y Y N N N N    
+  045   927 7750     210        Y Y N N N N    
+
+  046   927 8250     210        Y Y N N N N    
+  047   927 8375     210        Y Y N N N N    
+  048   927 8500     210        Y Y N N N N    
+  049   927 8625     210        Y Y N N N N    
+  050   927 8750     210        Y Y N N N N    
+
+  051   927 8875     210        Y Y N N N N    
+  052   927 9000     210        Y Y N N N N    
+  053   927 9125     210        Y Y N N N N    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  4 of  9
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:46
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KMA7JA5DK                               CONVENTIONAL STANDARD
+  Serial:   617ASN1665                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL SCAN LIST:                Non-Priority List
+
+  Mode  01  02  03  04  05    06  07  08  09  10    11  12  13  14  15  16 
+  ---- --------------------  --------------------  ------------------------
+  001                             Scan Disabled
+  002                             Scan Disabled
+  003                             Scan Disabled
+  004                             Scan Disabled
+  005                             Scan Disabled
+
+  006                             Scan Disabled
+  007                             Scan Disabled
+  008                             Scan Disabled
+  009                             Scan Disabled
+  010                             Scan Disabled
+
+  011                             Scan Disabled
+  012                             Scan Disabled
+  013                             Scan Disabled
+  014                             Scan Disabled
+  015                             Scan Disabled
+
+  016                             Scan Disabled
+  017                             Scan Disabled
+  018                             Scan Disabled
+  019                             Scan Disabled
+  020                             Scan Disabled
+
+  021                             Scan Disabled
+  022                             Scan Disabled
+  023                             Scan Disabled
+  024                             Scan Disabled
+  025                             Scan Disabled
+
+  026                             Scan Disabled
+  027                             Scan Disabled
+  028                             Scan Disabled
+  029                             Scan Disabled
+  030                             Scan Disabled
+
+  031                             Scan Disabled
+  032                             Scan Disabled
+  033                             Scan Disabled
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  5 of  9
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:46
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KMA7JA5DK                               CONVENTIONAL STANDARD
+  Serial:   617ASN1665                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL SCAN LIST:                Non-Priority List
+
+  Mode  01  02  03  04  05    06  07  08  09  10    11  12  13  14  15  16 
+  ---- --------------------  --------------------  ------------------------
+  034                             Scan Disabled
+  035                             Scan Disabled
+
+  036                             Scan Disabled
+  037                             Scan Disabled
+  038                             Scan Disabled
+  039                             Scan Disabled
+  040                             Scan Disabled
+
+  041                             Scan Disabled
+  042                             Scan Disabled
+  043                             Scan Disabled
+  044                             Scan Disabled
+  045                             Scan Disabled
+
+  046                             Scan Disabled
+  047                             Scan Disabled
+  048                             Scan Disabled
+  049                             Scan Disabled
+  050                             Scan Disabled
+
+  051                             Scan Disabled
+  052                             Scan Disabled
+  053                             Scan Disabled
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  6 of  9
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:46
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KMA7JA5DK                               CONVENTIONAL STANDARD
+  Serial:   617ASN1665                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL SCAN LIST:
+
+  Mode          Pri 1        Pri 2         Selected Mode
+  ----          -----        -----         -------------
+  001              Scan Disabled
+  002              Scan Disabled
+  003              Scan Disabled
+  004              Scan Disabled
+  005              Scan Disabled
+
+  006              Scan Disabled
+  007              Scan Disabled
+  008              Scan Disabled
+  009              Scan Disabled
+  010              Scan Disabled
+
+  011              Scan Disabled
+  012              Scan Disabled
+  013              Scan Disabled
+  014              Scan Disabled
+  015              Scan Disabled
+
+  016              Scan Disabled
+  017              Scan Disabled
+  018              Scan Disabled
+  019              Scan Disabled
+  020              Scan Disabled
+
+  021              Scan Disabled
+  022              Scan Disabled
+  023              Scan Disabled
+  024              Scan Disabled
+  025              Scan Disabled
+
+  026              Scan Disabled
+  027              Scan Disabled
+  028              Scan Disabled
+  029              Scan Disabled
+  030              Scan Disabled
+
+  031              Scan Disabled
+  032              Scan Disabled
+  033              Scan Disabled
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  7 of  9
+
+  MOTOROLA Radio Service Software                                     21 Oct 26
+  SPECTRA                                                                 22:46
+  Version   R06.00.05
+  -----------------------------------------------------------------------------
+  Model:    D37KMA7JA5DK                               CONVENTIONAL STANDARD
+  Serial:   617ASN1665                                 900 MHz
+  Software:                                            
+  -----------------------------------------------------------------------------
+  MODE SUMMARY                                         (continued)
+  -----------------------------------------------------------------------------
+
+  CONVENTIONAL SCAN LIST:
+
+  Mode          Pri 1        Pri 2         Selected Mode
+  ----          -----        -----         -------------
+  034              Scan Disabled
+  035              Scan Disabled
+
+  036              Scan Disabled
+  037              Scan Disabled
+  038              Scan Disabled
+  039              Scan Disabled
+  040              Scan Disabled
+
+  041              Scan Disabled
+  042              Scan Disabled
+  043              Scan Disabled
+  044              Scan Disabled
+  045              Scan Disabled
+
+  046              Scan Disabled
+  047              Scan Disabled
+  048              Scan Disabled
+  049              Scan Disabled
+  050              Scan Disabled
+
+  051              Scan Disabled
+  052              Scan Disabled
+  053              Scan Disabled
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MOTOROLA, Inc.                                                  Page  8 of  9
+

@@ -1,0 +1,32 @@
+[
+ [
+  "617ASN1767_hd0_Standard",
+  "617ASN1767_hd1_Enhanced",
+  "617ASN1767_hd2_Rotary",
+  "617ASN1767_hd3_Standard"
+ ],
+ [
+  "566AYA0014_hd0_Enhanced",
+  "566AYA0014_hd1_Rotary",
+  "566AYA0014_hd2_Standard",
+  "566AYA0014_hd3_Enhanced"
+ ],
+ [
+  "617ASQ1266_hd0_Standard",
+  "617ASQ1266_hd1_Enhanced",
+  "617ASQ1266_hd2_Rotary",
+  "617ASQ1266_hd3_Standard"
+ ],
+ [
+  "617ASN1767_hu0_Standard",
+  "617ASN1767_hu1_Rotary",
+  "617ASN1767_hu2_Enhanced",
+  "617ASN1767_hu3_Standard"
+ ],
+ [
+  "566AYA0014_hu0_Enhanced",
+  "566AYA0014_hu1_Standard",
+  "566AYA0014_hu2_Rotary",
+  "566AYA0014_hu3_Enhanced"
+ ]
+]
