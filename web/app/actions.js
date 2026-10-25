@@ -20,6 +20,28 @@ const errText = (/** @type {unknown} */ e) => (e instanceof Error ? e.message : 
 const isDbfName = (/** @type {string} */ name) => /\.dbf$/i.test(name);
 
 /**
+ * The last SPECTRAM.DBF loaded this session. It stays loaded: every codeplug
+ * opened afterwards (and the one open when it is loaded) is looked up in it.
+ * @type {{ fileName: string, records: import("../lib/dbf.js").DbfRecord[] } | null}
+ */
+let index = null;
+
+/** The loaded DBF index (file name and record count), or null. */
+export const loadedIndex = () => index && { fileName: index.fileName, records: index.records.length };
+
+/** Look the open codeplug up in the loaded DBF, if there is one. */
+function attachIndex() {
+    const doc = store.get();
+    if (!doc || !index) return null;
+    const record = findArchiveRecord(index.records, doc.fileName, doc.cp.serial);
+    const { fileName } = index;
+    store.update((d) => (d.index = { fileName, record }), "index");
+    if (record) log.info(`${fileName}: ${doc.fileName} is "${record.CUSTOMER}", saved ${record.DATEPGM}`);
+    else log.warn(`${fileName}: no entry for ${doc.fileName} (serial ${doc.cp.serial})`);
+    return record;
+}
+
+/**
  * Open a codeplug archive from bytes, as if the user had picked the file.
  * Returns the document, or null (after telling the user) if it can't be read.
  */
@@ -40,28 +62,25 @@ export function loadCodeplug(/** @type {string} */ fileName, /** @type {Uint8Arr
         + `name table ${cp.ascii_names ? `ASCII at 0x${cp.ascii_names[0].toString(16)} x ${cp.ascii_names[1]}` : "6-bit at 0x266"}`);
     if (cp.band === "900?") log.warn("900 MHz mode layout not recognised: frequencies are not decoded");
     store.setDocument(doc, "load");
+    attachIndex();
     void trunkingNotice(doc);
     return doc;
 }
 
-/** Attach SPECTRAM.DBF (RSS's archive index) to the open codeplug, for customer and date. */
+/**
+ * Load SPECTRAM.DBF (RSS's archive index, for customer and date). It is kept
+ * for the rest of the session and used for this and every later codeplug.
+ * Returns the open codeplug's record, or null.
+ */
 export function loadIndex(/** @type {string} */ fileName, /** @type {Uint8Array} */ bytes) {
-    const doc = store.get();
-    if (!doc) {
-        log.warn(`${fileName}: open the archive first (or pick both together)`);
-        return null;
-    }
     try {
-        const t = readDbf(bytes);
-        const record = findArchiveRecord(t.records, doc.fileName, doc.cp.serial);
-        store.update((d) => (d.index = { fileName, record }), "index");
-        if (record) log.info(`${fileName}: ${doc.fileName} is "${record.CUSTOMER}", saved ${record.DATEPGM}`);
-        else log.warn(`${fileName}: no entry for ${doc.fileName} (serial ${doc.cp.serial})`);
-        return record;
+        index = { fileName, records: readDbf(bytes).records };
     } catch (e) {
         log.error(`${fileName}: ${errText(e)}`);
         return null;
     }
+    log.info(`${fileName}: ${index.records.filter((r) => !r.__deleted__).length} archives listed; used for every codeplug opened`);
+    return attachIndex();
 }
 
 /** Import Codeplug: an archive, optionally with SPECTRAM.DBF picked alongside. */
@@ -79,9 +98,10 @@ export async function importCodeplug() {
     const a = archives[0];
     if (a && isDirty() && !(await confirmModal("Discard changes?",
         `${store.get()?.fileName} has changes that haven't been exported. Open ${a.name} anyway?`, "Discard and open"))) return;
-    if (a && !loadCodeplug(a.name, a.bytes)) return;
+    // the DBF first, so the archive opened with it is looked up in it
     const dbf = dbfs[0];
     if (dbf) loadIndex(dbf.name, dbf.bytes);
+    if (a) loadCodeplug(a.name, a.bytes);
     if (!a && !dbf && other.length) await alertModal("Import", "Pick a Spectra archive file (A… or B…), optionally with SPECTRAM.DBF.");
 }
 

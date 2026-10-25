@@ -32,7 +32,7 @@ export function generalInfo(d) {
     const rec = d.index?.record ?? null;
     const fromDbf = d.index
         ? (rec ? null : `${d.fileName} is not listed in ${d.index.fileName}`)
-        : "kept by RSS in SPECTRAM.DBF: import it together with the archive to show it";
+        : "kept by RSS in SPECTRAM.DBF: import it (with or without an archive) to show it";
     const zoneOp = rw.zone_operation;
     const sigOff = cp.signature ? latin1(d.plain).indexOf(cp.signature) : -1;
 
@@ -41,7 +41,7 @@ export function generalInfo(d) {
         { label: "Radio model", value: cp.model || "unknown" },
         { label: "Serial number", value: cp.serial || "unknown" },
         { label: "Customer", value: rec?.CUSTOMER || "—", note: rec ? undefined : fromDbf ?? undefined },
-        { label: "Date programmed", value: rec?.DATEPGM || "—", note: rec ? "from SPECTRAM.DBF (the date RSS last saved it)" : fromDbf ?? undefined },
+        { label: "Date programmed", value: rec?.DATEPGM || "—", note: rec ? `from ${d.index?.fileName} (the date RSS last saved it)` : fromDbf ?? undefined },
         { label: "Radio band", value: BAND_NAMES[cp.band] ?? cp.band },
         { label: "Control head", value: rw.control_head_type ? valueLabel("control_head_type", rw.control_head_type) : "unknown" },
         { label: "Modes", value: String(cp.modes.length) },

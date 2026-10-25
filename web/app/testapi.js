@@ -64,6 +64,8 @@ export function installTestApi(/** @type {Promise<void>} */ ready) {
         /** Attach a SPECTRAM.DBF (same data forms as load); returns the archive's record or null. */
         loadIndex: (/** @type {string} */ name, /** @type {Uint8Array | number[] | string} */ data) =>
             actions.loadIndex(name, toBytes(data)),
+        /** The SPECTRAM.DBF loaded this session ({ fileName, records }), or null. */
+        index: () => actions.loadedIndex(),
         /** A summary of the open document. */
         state() {
             const d = store.get();
