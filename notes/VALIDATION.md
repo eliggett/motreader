@@ -61,6 +61,9 @@ motreader).
 | RSS refuses a frequency outside the model's range ("Value Outside Range For This Model": 617ASQ takes 144 MHz and up). The owner's rule for the UI: don't validate frequencies, write whatever can be encoded. | blocks (RSS) |
 | VHF TX/TA: above 165.74 MHz some frequencies have no byte encoding (the synthesizer's 8-bit count would overflow; FORMAT §5a). RSS accepts them and **stores a wrong (wrapped) frequency** (165.75 → 84.47 MHz). motreader and the web app refuse them, naming the nearest storable value; 165.0, 170.25, 171.0 are fine. | refused by motreader |
 | VHF: RX on a 5 kHz raster, TX/TA on 2.5 kHz. Other values are stored as the nearest the field holds (the web app says so). | n/a |
+| UHF: frequencies on a 6.25 or 5 kHz raster only (RSS refuses most others); the web app refuses them. | refused by the web app |
+| UHF: RSS forces Tx/T·A power Low above 470 MHz; the encoder does the same and the web app refuses High there. | side effect / refused |
+| UHF and VHF: entering some Rx frequencies makes RSS change uP Xtal Shift ("Crystal Frequency Will Be Shifted", F2 to continue). The web app keeps it as a setting; a UI could warn. | side effect (RSS) |
 | 900 MHz: 12.5 kHz raster; motreader reads 895–942 MHz as a 900 MHz frequency, so values outside it are refused. Adding T/A to a simplex 900 mode isn't supported yet (clearing T/A to make a mode simplex is). | refused by motreader |
 
 ## Modes (modes.csv) — squelch codes

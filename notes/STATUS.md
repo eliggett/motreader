@@ -27,6 +27,10 @@ the reverse-engineering tool and the reference:
   add/delete/move, scan lists, trunk removal, Zone Operation), 6 control head
   buttons, 7 export-time checks.
 
+UHF (2026-10-25): decoded, edited and exported (FORMAT §5a-UHF), validated
+in RSS. Codeplugs motreader can't edit safely (older format versions 101-114,
+inconsistent copies, all-trunked radios) open read-only (lib/support.js).
+
 Found while validating (fixed in Python too): an unedited rebuild zeroed tone
 slots that aren't tones (six codeplugs); VHF frequencies now use RSS's byte pair
 (smallest swallow count) and RSS's band byte (6 MHz bands; the old rule was

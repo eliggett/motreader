@@ -39,5 +39,6 @@ Stand-alone codeplug loader/reader in python that can run on any os.
 
 stand-alone "service" mode python with UI. Most desired adjustments are the frequency ('warp'), power output levels (generally two), and audio modulation level aka deviation level. Service mode will be the last thing to get worked on. 
 
+Odd limitation: Some VHF Tx/talk-around frequencies above 165.74 MHz can't be stored at all, for example 165.75 and 174.0. RSS accepts them and silently saves a wrong frequency (165.75 became 84.47 MHz). motreader now refuses them and names the nearest one that can be stored.
 
 

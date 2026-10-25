@@ -209,6 +209,45 @@ boundaries, `v = ⌊(f − 126) / 6⌋` clamped to 3..7, byte = `0x80 | v0<<5 | 
 (The earlier rule, `0x88` up to 157 and `0xA8` above, was wrong for 156–157 and
 above 162 MHz.) Data: `notes/ground-truth/vhf_band_rss/`.
 
+### 5a-UHF. UHF conventional — SOLVED (2026-10-25, validated vs RSS)
+
+Mapped on a 440–490 MHz A9-head radio (model T84FWA…, a third-party AR-ORIG
+sample; only the codec is recorded here) with `tools/scenario_freq_sweep.py`:
+type frequencies into RSS's MODE screen, SAVE, read the bytes. **The record is
+the VHF one** (26-byte view = true − 3; tags at +9/+13; tone slots +17..+22 in
+the same codec; option bits as VHF), so motreader parses UHF with the VHF code
+and a different frequency codec. It is the same 127/128 dual-modulus
+synthesizer as VHF (`N = 127·Np + A`, mid = A), on a **6.25 kHz or 5 kHz**
+reference:
+
+| Field | MHz | flags |
+|---|---|---|
+| TX (+10/+11), T/A (+14/+15) | `step·(127·(lo + 256 + 256·tag.b1) + 128·mid)` | tag (+9/+13) b1 = lo's 9th bit, b0 its complement (E9/EA); band byte (+12/+16) = `0x80 \| b0 5 kHz \| b2 ≥ 467.000 MHz` |
+| RX (+6/+7) | `step·(127·(lo + 512 + 256·(+5).b0) + 128·mid) − 109.65` | +5 b0 = lo's 9th bit; flag byte +8 = `b0 5 kHz \| b2 ≥ 467.000 MHz \| b3` |
+
+- 109.65 MHz is the first IF (the same as VHF and 900 MHz: the RX synthesizer
+  runs that far above the receive frequency).
+- RSS uses the 6.25 kHz reference when the frequency is on that raster
+  (460.000, 460.025 …), else 5 kHz (444.44); other values are mostly refused.
+  RSS sometimes writes a 2.5 kHz form (band byte b1) that isn't decoded —
+  motreader opens such a codeplug read-only.
+- RSS forces TX/T·A power **Low above 470.000 MHz** (tag b6 cleared); this
+  radio accepted 440–490 MHz.
+- Band byte b2 / flag b2 switch exactly at 467.000 MHz (466.99375 still clear):
+  two VCO ranges, not VHF's 6 MHz bands.
+- Flag b3: RSS sets it on every save (an unedited GET+SAVE sets it on all 19
+  modes that had it clear); it doesn't change the frequency.
+- Detection: TX tag E9/EA, a TX band byte 0x80..0x87 (VHF's always has b3 or b5
+  set) and an RX that reads as UHF.
+- Entering some RX frequencies makes RSS change uP Xtal Shift (+3 b4) with a
+  "Crystal Frequency Will Be Shifted" dialog; motreader leaves it as a setting.
+
+Validated: all 49 modes of the sample decode as RSS's MODE SUMMARY prints them;
+134 values typed in RSS encode to its exact bytes; a web-app edit (6.25 and
+5 kHz RX/TX pairs, a TX above 470 MHz) GETs with no warning, shows every value,
+and RSS's re-save differs only by RSS's own normalizations (flag b3, and the
+stale +20 b1 it clears on viewed modes).
+
 **RSS normalizations seen on re-save** (not motreader's doing; same on the
 unedited original, `vhf_band_rss/rss_617asq_resave_*`): on 617ASQ, viewing a mode
 screen clears a stale bit `true +20 b1` in that mode's record (and fixes its
