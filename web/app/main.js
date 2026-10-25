@@ -42,9 +42,12 @@ function start() {
         $("#doc-name").classList.toggle("dirty", dirty);
         // a codeplug motreader can't edit safely says so above every tab
         const notice = $("#notice");
-        notice.hidden = !doc || doc.support.editable;
+        notice.hidden = !doc || (doc.support.editable && !doc.support.modesOnly);
         if (doc && !doc.support.editable) {
             notice.textContent = `Read-only: ${doc.support.reasons.join("; ")}. It can be viewed (and exported unchanged), not edited.`;
+        } else if (doc?.support.modesOnly) {
+            notice.textContent = `Older format version ${doc.support.version}: only the modes are decoded and can be edited; `
+                + "everything else is kept exactly as it is.";
         }
     };
     store.subscribe(enable);

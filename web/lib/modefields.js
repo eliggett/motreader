@@ -11,7 +11,7 @@
  * refused with a reason, so export never meets a value it can't write.
  */
 import { InvalidValue } from "./errors.js";
-import { readModeBack, uhfStep } from "./codeplug.js";
+import { readModeBack, uhfStep, vhfRxStep } from "./codeplug.js";
 import { writeMode } from "./rebuild.js";
 import { CTCSS_TONES, DPL_CODES } from "./tones.js";
 
@@ -183,6 +183,9 @@ export function setModeField(cp, n, key, text) {
     if (cp.band === "uhf" && f.kind === "mhz" && want[/** @type {"rx_mhz"} */ (key)] !== null
         && uhfStep(/** @type {number} */ (want[/** @type {"rx_mhz"} */ (key)])) === null) {
         throw new InvalidValue(`${text} MHz isn't on a 6.25 or 5 kHz raster, which UHF frequencies use`);
+    }
+    if (cp.band === "vhf" && key === "rx_mhz" && want.rx_mhz !== null && vhfRxStep(/** @type {number} */ (want.rx_mhz)) === null) {
+        throw new InvalidValue(`${text} MHz isn't on a 5 or 6.25 kHz raster, which VHF receive frequencies use`);
     }
     if (cp.band === "uhf" && (key === "tx_power" || key === "ta_power") && want[key] === "High"
         && /** @type {number} */ (m[key === "tx_power" ? "tx_mhz" : "ta_mhz"]) > 470.0) {

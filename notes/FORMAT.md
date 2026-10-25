@@ -118,6 +118,29 @@ longer interferes once decrypted).
 > harness can read RSS's already-decoded working-image value directly — see
 > `notes/PHASE1-HARNESS.md` §13.
 
+**Older format versions (101–114; 2026-10-25).** RSS R06 opens and saves these
+in their own version (the 3 digits after the serial). Seen on AR-ORIG samples:
+101/102 (900 MHz, all trunked or trunked + one conventional mode), 112 (VHF,
+900 MHz mixed) and 114 (VHF, 900 MHz mixed). What is known:
+- The mode pointer table is there (header 0xED, n = 0x109, record length
+  0x10A) with the usual base **0x5F53**, but there is no radio-wide ext block
+  to derive the base from.
+- The conventional record is the current one for its first 24 bytes (VHF: view
+  +3..+26; 900 MHz conventional records match the 900 layout too), with its
+  8-bit sum at **true start +23**, followed by a per-mode scan list (the record
+  length grows with the mode count: 33, 35, 36 on the samples).
+- Mode names: the 6-bit table at 0x266, as now.
+- Zones, radio-wide settings and lists are not mapped (the zone finder matches
+  the phone list on v112).
+
+Versions 112 and 114 (VHF) were checked: every one of 145 modes decodes as RSS's
+MODE SUMMARY prints it; web-app edits (names, 5 / 6.25 kHz RX, RX ≥ 166.15, TX,
+T·A, PL, DPL, MDC PTT ID) GET with no warning, show in RSS, and RSS re-saves the
+file byte-identically; RSS's own edits leave valid sums at +23. motreader opens
+them **modes only** (`support.js`); 101 and 102 stay read-only. On both v112/114
+VHF radios RSS shows Transmit Power as "Not Avail" (and MPL Type on one), so
+those bits have no effect there.
+
 Header / global:
 - `0x00`: 13-byte nonce, then padding.
 - `0xAD`: `COPYRIGHT MOTOROLA INC.,1987` signature.
@@ -209,6 +232,28 @@ boundaries, `v = ⌊(f − 126) / 6⌋` clamped to 3..7, byte = `0x80 | v0<<5 | 
 (The earlier rule, `0x88` up to 157 and `0xA8` above, was wrong for 156–157 and
 above 162 MHz.) Data: `notes/ground-truth/vhf_band_rss/`.
 
+**RX on a 6.25 kHz raster (2026-10-25, RSS sweeps on 617ASQ and an AR-ORIG v112
+radio; 78 values typed into RSS, encoded byte-exact).** The RX field is the same
+synthesizer count as UHF's, on a **5 kHz or 6.25 kHz** reference:
+
+| Field | MHz | flags |
+|---|---|---|
+| RX (+6/+7) | `step·(127·(lo + 256·(+5).b0) + 128·mid) − 109.65` | +5 b0 = lo's 9th bit; flag byte +8 = `b0 6.25 kHz \| b2 ≥ 166.150 MHz` |
+
+- Every 5 kHz value has +5 b0 set (and +8 b0 clear), which makes this the
+  linear `0.635·lo + 0.64·mid + 52.91` above; 6.25 kHz values (145.6125,
+  146.50625 …) need the general form (e.g. 145.6125 = lo 0xF6, mid 0x4B, +5 b0
+  clear, +8 = 0x01). The 6.25 kHz flag is the opposite of UHF's (where b0 marks
+  5 kHz): it marks the step that isn't the band's usual one.
+- RSS uses 5 kHz when the frequency is on that raster, else 6.25 kHz, else
+  refuses it. mid = count mod 127 (the smaller swallow count, as TX).
+- Flag b2 switches exactly at **166.150 MHz** (166.145 and 166.14375 clear;
+  166.15 and 166.15625 set), for both steps. No sample had an RX that high, so
+  b2 was never seen set before.
+- RSS's RX limits are per model: both radios refused 136.0–140.0 ("Outside
+  Range"); the v112 one took 144.0–174.005.
+- TX/T·A keep the 2.5 kHz codec above.
+
 ### 5a-UHF. UHF conventional — SOLVED (2026-10-25, validated vs RSS)
 
 Mapped on a 440–490 MHz A9-head radio (model T84FWA…, a third-party AR-ORIG
@@ -247,6 +292,31 @@ Validated: all 49 modes of the sample decode as RSS's MODE SUMMARY prints them;
 5 kHz RX/TX pairs, a TX above 470 MHz) GETs with no warning, shows every value,
 and RSS's re-save differs only by RSS's own normalizations (flag b3, and the
 stale +20 b1 it clears on viewed modes).
+
+### 5a-800. 800 MHz conventional — decoded, not edited (2026-10-25)
+
+Two AR-ORIG radios (model D45…, RSS: "800 Mhz", both TRUNKED DUAL MODE with a
+trunked mode 1) keep their conventional modes in the VHF record, with the UHF
+form of the codec on a **12.5 kHz** reference:
+
+| Field | MHz |
+|---|---|
+| RX (+6/+7) | `0.0125·(127·(lo + 256·(+5).b0) + 128·mid) + 109.65` (the IF is *added* here) |
+| TX (+10/+11), T/A (+14/+15) | `0.0125·(127·(lo + 256 + 256·tag.b1) + 128·mid)` |
+
+All 11 conventional modes decode as RSS's MODE SUMMARY prints them (tones in
+the VHF slots too). As on 900 MHz, RSS shows **TX = the TX field when
+programmed, else the T/A field** (a simplex mode). Band bytes seen: 0x88
+(806–808 MHz), 0x8C (853 MHz). Detection: VHF tags with an RX that reads as
+800 MHz and not as VHF. Until 2026-10-25 these decoded as VHF with nonsense
+frequencies (RX ≈ 187 MHz) and opened editable, the trunked mode 1 included.
+Encoding isn't mapped (the band byte, RX flag bits), so 800 MHz codeplugs
+open read-only.
+
+Trunked records in a VHF-layout table are recognised by `0x25` at true start +1
+after a byte below 0x80 (0x1F / 0x20); a conventional record starts with a flag
+byte with bit 7 set (0x84 / 0x94 / 0xB4 on every sample). They are listed with
+no values and never written.
 
 **RSS normalizations seen on re-save** (not motreader's doing; same on the
 unedited original, `vhf_band_rss/rss_617asq_resave_*`): on 617ASQ, viewing a mode

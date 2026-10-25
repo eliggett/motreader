@@ -21,12 +21,14 @@ const errText = (/** @type {unknown} */ e) => (e instanceof Error ? e.message : 
  * anything else is a bug and is logged as an error.
  * @param {string} what  for the log, e.g. "mode 3 Rx MHz"
  * @param {() => string | null | void} fn  returns a note, if any
+ * @param {boolean} [mode]  a mode edit (the only kind on an older format version)
  * @returns {EditResult}
  */
-function run(what, fn) {
+function run(what, fn, mode = false) {
     const doc = store.get();
     if (!doc) return { error: "no codeplug is open" };
     if (!doc.support.editable) return { error: `this codeplug is read-only: ${doc.support.reasons.join("; ")}` };
+    if (doc.support.modesOnly && !mode) return { error: `only modes are edited in format version ${doc.support.version}` };
     try {
         const note = fn() ?? undefined;
         store.update(() => {}, "edit");
@@ -48,7 +50,7 @@ export function editMode(/** @type {number} */ n, /** @type {string} */ key, /**
     return run(`Mode ${n} ${label} = ${JSON.stringify(text)}`, () => {
         const doc = /** @type {import("./state.js").Document} */ (store.get());
         return setModeField(doc.cp, n, key, text).note;
-    });
+    }, true);
 }
 
 /** Set radio-wide setting `key`. */

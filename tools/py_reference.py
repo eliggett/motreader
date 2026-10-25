@@ -60,6 +60,7 @@ def codeplug(body: bytes) -> dict:
         "serial": cp.serial,
         "model": cp.model,
         "band": cp.band,
+        "format_version": cp.format_version,
         "ascii_names": _plain(cp.ascii_names),
         "modes": _plain(cp.modes),
         "zones": _plain(cp.zones),

@@ -10,7 +10,7 @@ import { decode as decodeRadioWide, encode as encodeRadioWide, FIELD_BY_KEY } fr
 import { trunkingInfo, TrunkingUnsupported } from "./trunking.js";
 import { MODE_FIELDS, fieldText } from "./modefields.js";
 import { decodePhones, decodeMpls } from "./lists.js";
-import { assessSupport } from "./support.js";
+import { assessSupport, isOldFormat } from "./support.js";
 
 /**
  * @typedef {{
@@ -40,6 +40,8 @@ import { assessSupport } from "./support.js";
  *   their effect. `phones` / `mpls` are edited in place too (`listProblem`: why
  *   a list couldn't be read). `original` is how everything read when the file
  *   was opened, as displayed text, to tell what changed.
+ *   An older format version (`support.modesOnly`) decodes only its modes:
+ *   `radioWide`, `phones` and `mpls` are empty (and zones aren't parsed).
  */
 
 /** Decode an archive file. Throws if it isn't one. */
@@ -55,7 +57,9 @@ export function openDocument(/** @type {string} */ fileName, /** @type {Uint8Arr
         if (!(e instanceof TrunkingUnsupported)) throw e;
         trunk = { info: null, unsupported: e.message };
     }
-    const radioWide = decodeRadioWide(plain, cp.band);
+    // older format versions: only the modes are mapped
+    const modesOnly = isOldFormat(cp.format_version);
+    const radioWide = modesOnly ? {} : decodeRadioWide(plain, cp.band);
     /** @type {string | null} */
     let listProblem = null;
     const tryList = (/** @type {() => any[]} */ fn) => {
@@ -66,8 +70,8 @@ export function openDocument(/** @type {string} */ fileName, /** @type {Uint8Arr
             return [];
         }
     };
-    const phones = tryList(() => decodePhones(cp));
-    const mpls = tryList(() => decodeMpls(cp));
+    const phones = modesOnly ? [] : tryList(() => decodePhones(cp));
+    const mpls = modesOnly ? [] : tryList(() => decodeMpls(cp));
     /** @type {CodeplugDocument} */
     const doc = {
         fileName, raw, banner: a.banner, plain, cp, radioWide, trunk, index: null,

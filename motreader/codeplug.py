@@ -567,6 +567,46 @@ def vhf_tx_band_byte(freq: float) -> int:
     return 0x80 | (v & 1) << 5 | (v >> 1 & 1) << 2 | (v >> 2 & 1) << 3
 
 
+# VHF RX (FORMAT §5a; RSS sweeps on 617ASQ and an AR-ORIG v112 radio,
+# 2026-10-25): the synthesizer count on a 5 kHz reference, or 6.25 kHz when
+# the flag byte (+8) has b0 set:
+#   freq = step * (127*(lo + 256*rec5.b0) + 128*mid) - 109.65 (the IF, as UHF)
+# view +5 b0 = lo's 9th bit; flag b2 = 166.15 MHz and up. RSS uses 5 kHz when
+# the frequency is on that raster, else 6.25 kHz, else refuses. Every 5 kHz
+# value has the 9th bit set, so for those this is VHF_RX_COEF's
+# 0.635*lo + 0.64*mid + 52.91.
+VHF_RX_HIGH = 166.15
+
+
+def vhf_rx_step(freq: float):
+    """The reference RSS uses for a VHF RX freq: 5 kHz if it's on that raster,
+    else 6.25 kHz, else None (not storable)."""
+    for step in (0.005, 0.00625):
+        n = freq / step
+        if abs(n - round(n)) < 1e-6:
+            return step
+    return None
+
+
+def vhf_decode_rx(lo: int, mid: int, flag: int, hi: int) -> float:
+    """hi = the byte at view +5, whose bit 0 is lo's 9th bit."""
+    step = 0.00625 if flag & 1 else 0.005
+    return round(step * (127 * (lo + 256 * (hi & 1)) + 128 * mid) - UHF_RX_IF, 5)
+
+
+def vhf_encode_rx(freq: float):
+    """(lo, mid, lo's 9th bit, flag bits) for a VHF RX frequency, or None."""
+    step = vhf_rx_step(freq)
+    if step is None:
+        return None
+    n = round((freq + UHF_RX_IF) / step)
+    np_, a = divmod(n, 127)
+    x = np_ - a
+    if not 0 <= x <= 511:
+        return None
+    return x & 0xFF, a, x >> 8, (1 if step == 0.00625 else 0) | (4 if freq >= VHF_RX_HIGH else 0)
+
+
 # ---------------------------------------------------------------------------
 # UHF conventional (2026-10-25; mapped with RSS on a 440-490 MHz A9 radio,
 # tools/scenario_freq_sweep.py; FORMAT §5a-uhf). The record is the VHF one
@@ -646,6 +686,44 @@ def _uhf_record(body: bytes, t: int) -> bool:
             and UHF_BAND[0] <= uhf_decode_rx(body[t + 3], body[t + 4], body[t + 5], body[t + 2]) <= UHF_BAND[1])
 
 
+# ---------------------------------------------------------------------------
+# 800 MHz conventional, decode only (FORMAT §5a-800; RSS's MODE SUMMARY of two
+# AR-ORIG radios). The VHF record layout with the UHF form of the codec on a
+# 12.5 kHz reference:
+#   RX:       freq = 0.0125*(127*(lo + 256*rec5.b0) + 128*mid) + 109.65
+#   TX / T/A: freq = 0.0125*(127*(lo + 256 + 256*tag.b1) + 128*mid)
+# RSS shows TX = the TX field when programmed, else the T/A field (a simplex
+# mode), as on 900 MHz.
+M800_STEP = 0.0125
+M800_BAND = (806.0, 870.0)
+
+
+def m800_decode_rx(lo: int, mid: int, hi: int) -> float:
+    """hi = the byte at view +5, whose bit 0 is lo's 9th bit."""
+    return round(M800_STEP * (127 * (lo + 256 * (hi & 1)) + 128 * mid) + UHF_RX_IF, 5)
+
+
+def m800_decode_txta(lo: int, mid: int, tag: int) -> float:
+    return round(M800_STEP * (127 * (lo + 256 + 256 * ((tag >> 1) & 1)) + 128 * mid), 5)
+
+
+def _m800_record(body: bytes, t: int) -> bool:
+    """The record at true start t is 800 MHz: VHF tags, an RX that reads as
+    800 MHz and not as VHF."""
+    if body[t + 6] not in (0xE9, 0xE8, 0x68):
+        return False
+    rx = m800_decode_rx(body[t + 3], body[t + 4], body[t + 2])
+    vhf = vhf_decode_rx(body[t + 3], body[t + 4], body[t + 5], body[t + 2])
+    return M800_BAND[0] <= rx <= M800_BAND[1] and not 108.0 <= vhf <= 180.0
+
+
+def is_trunked_record(body: bytes, t: int) -> bool:
+    """A trunked record in RSS's mode table: its length byte, 0x25 (37), at
+    true start +1, after 0x1F / 0x20. A conventional record starts with a flag
+    byte that has bit 7 set (0x84, 0x94, 0xB4 on every sample)."""
+    return t + 1 < len(body) and body[t + 1] == 0x25 and body[t] < 0x80
+
+
 def find_vhf_records(body: bytes) -> list[int]:
     """Return record-start offsets for VHF conventional modes (may be empty).
 
@@ -679,8 +757,8 @@ def find_vhf_records(body: bytes) -> list[int]:
         if rec[9] == 0xE9 and rec[13] == 0xA9:
             return True
         # RX-only mode (blank TX/T·A): accept only on a plausible VHF RX freq.
-        return 108.0 <= vhf_decode(rec[VHF_RX_OFF], rec[VHF_RX_OFF + 1],
-                                   VHF_RX_COEF) <= 180.0
+        return 108.0 <= vhf_decode_rx(rec[VHF_RX_OFF], rec[VHF_RX_OFF + 1],
+                                      rec[VHF_RX_OFF + 2], rec[VHF_RX_OFF - 1]) <= 180.0
 
     s = best[0]
     while valid(s - VHF_REC_LEN):
@@ -1005,14 +1083,22 @@ M900_SLOTS = {"rx": 25, "tx": 27, "ta": 29}
 VHF_SLOTS = {"rx": 17, "tx": 19, "ta": 21}
 
 
+def _sum_places(body: bytes):
+    """Where a record's 8-bit sum may be, relative to its true start: at L-1,
+    or +25 / +26 on zones-off records with a scan list after them (26: a 900
+    27-byte record); on the older format versions at +23, before the scan list."""
+    v = codeplug_version(body)
+    return (23,) if v is not None and v < 115 else (body[0x10A] - 1, 25, 26)
+
+
 def record_sum_offsets(body: bytes) -> set:
     """Body offsets of the mode records' 8-bit sums (see Codeplug._fix_record_sums)."""
     pt = mode_pointer_table(body)
     if pt is None:
         return set()
-    L, out = body[0x10A], set()
+    out = set()
     for t in pt[2]:
-        for k in (L - 1, 25, 26):     # 26: 900 27-byte record + scan list
+        for k in _sum_places(body):
             if t + k < len(body) and sum(body[t:t + k]) & 0xFF == body[t + k]:
                 out.add(t + k)
                 break
@@ -1070,6 +1156,20 @@ class Mode:
         return self.raw[RX_VALUE_OFF] | (self.raw[RX_VALUE_OFF + 1] << 8)
 
 
+OLD_FORMAT_BASE = 0x5F53   # pointer base of the older format versions
+
+
+def codeplug_version(body: bytes) -> Optional[int]:
+    """The codeplug format version: the three digits after the serial in the
+    header ("617ASQ126600 115A" -> 115), or None."""
+    import re
+    i = body[:0x200].find(b"COPYRIGHT MOTOROLA INC.,1987")
+    if i < 0:
+        return None
+    m = re.match(rb"[0-9A-Z]{10}\d\d (\d{3})", body[i + 0x1D:i + 0x1D + 17])
+    return int(m.group(1)) if m else None
+
+
 def mode_pointer_table(body: bytes):
     """The mode pointer table: (base, table offset, [true record starts]) or None.
 
@@ -1080,14 +1180,14 @@ def mode_pointer_table(body: bytes):
     length = header 0x10A; it changes with ZONE OPERATION (per-mode scan list),
     so this is the robust way to find the records. 566AYA's first record is a
     longer special one. motreader's per-band record views start 11 (900 MHz)
-    or 3 (VHF) bytes before the true start."""
+    or 3 (VHF) bytes before the true start. The older format versions (101-114)
+    have the same table, record length and base, but no ext block."""
     from .radiowide import find_ext_block
     if len(body) < 0x1E8:
         return None
     e = find_ext_block(body)
-    if e is None:
-        return None
-    base = ((body[0xE5] << 8) | body[0xE6]) - e
+    # older format versions (101-114) have no ext block: their pointers use the usual base
+    base = OLD_FORMAT_BASE if e is None else ((body[0xE5] << 8) | body[0xE6]) - e
     tab = ((body[0xED] << 8) | body[0xEE]) - base
     n, L = body[0x109], body[0x10A]
     if not (0x1E8 <= tab < len(body) - 2 * n) or n == 0 or L < 20:
@@ -1107,11 +1207,14 @@ def _record_band(body: bytes, starts) -> Optional[str]:
     svhf = sum(body[t + 6] in (0xE9, 0xE8, 0x68) for t in starts)
     # UHF: the VHF record with tags E9/EA (lo's 9th bit) and an RX that only reads as UHF
     suhf = sum(_uhf_record(body, t) for t in starts)
+    s800 = sum(_m800_record(body, t) for t in starts)
     need = max(min(2, len(starts)), len(starts) // 2)   # a one-mode codeplug has one record
     if s900 >= need:
         return "900"
     if suhf >= need:
         return "uhf"
+    if s800 >= need:
+        return "800"
     if svhf >= need:
         return "vhf"
     return None
@@ -1160,7 +1263,9 @@ class Codeplug:
     signature: str = ""
     serial: str = ""
     model: str = ""
-    band: str = ""  # "vhf" | "900" | "900?" | ""
+    band: str = ""  # "vhf" | "uhf" | "800" (decode only) | "900" | "900?" | ""
+    # the codeplug format version in the header (115, 116; older radios 101-114)
+    format_version: Optional[int] = None
     modes: list[Mode] = field(default_factory=list)
     zones: list = field(default_factory=list)   # list[Zone] (radio-wide)
     # (start, width) of an ASCII mode-name table (A9/expanded heads), else None.
@@ -1168,10 +1273,12 @@ class Codeplug:
 
     @classmethod
     def parse(cls, body: bytes) -> "Codeplug":
-        cp = cls(body=body)
+        cp = cls(body=body, format_version=codeplug_version(body))
         cp._parse_header()
         cp._parse_modes()
-        cp._parse_zones()
+        # the older format versions' zones aren't mapped (the zone finder matches other data)
+        if cp.format_version is None or cp.format_version >= 115:
+            cp._parse_zones()
         return cp
 
     @property
@@ -1299,15 +1406,16 @@ class Codeplug:
 
     def _parse_modes(self) -> None:
         pt = mode_pointer_table(self.body)
-        if pt and _record_band(self.body, pt[2]) == "uhf":
-            # UHF: the VHF record layout with the UHF frequency codec
-            self.band = "uhf"
+        band = pt and _record_band(self.body, pt[2])
+        if band in ("uhf", "800"):
+            # UHF, 800 MHz: the VHF record layout with their own frequency codecs
+            self.band = band
             self._parse_modes_vhf([t - 3 for t in pt[2]])
             self._select_name_table(len(pt[2]))
             for m in self.modes:
                 m.name = self._name_for(m.number)
             return
-        if pt and _record_band(self.body, pt[2]) == "vhf":
+        if pt and band == "vhf":
             # RSS's own mode pointers (identical to the tag-run search on every
             # on-hand file, and robust when sections move, e.g. after a Zone
             # Operation re-pack, where the search can pick up a stray record)
@@ -1328,18 +1436,30 @@ class Codeplug:
         for n, off in enumerate(starts, 1):
             rec = b[off : off + VHF_REC_LEN]
             m = Mode(number=n, raw=rec, offset=off)
-            uhf = self.band == "uhf"
+            if is_trunked_record(b, off + 3):
+                # a trunked mode in a mixed table: listed with no values, never written
+                m.name = self._name_for(n)
+                self.modes.append(m)
+                continue
+            uhf, m800 = self.band == "uhf", self.band == "800"
             m.rx_mhz = (uhf_decode_rx(rec[6], rec[7], rec[8], rec[5]) if uhf
-                        else vhf_decode(rec[VHF_RX_OFF], rec[VHF_RX_OFF + 1], VHF_RX_COEF))
+                        else m800_decode_rx(rec[6], rec[7], rec[5]) if m800
+                        else vhf_decode_rx(rec[VHF_RX_OFF], rec[VHF_RX_OFF + 1], rec[VHF_RX_OFF + 2],
+                                           rec[VHF_RX_OFF - 1]))
+
+            def field(o):
+                if uhf:
+                    return uhf_decode_txta(rec[o], rec[o + 1], rec[o - 1], rec[o + 2])
+                if m800:
+                    return m800_decode_txta(rec[o], rec[o + 1], rec[o - 1])
+                return vhf_decode(rec[o], rec[o + 1], VHF_TX_COEF)
             # TX / T·A are "Blank" on an RX-only mode (e.g. NOAA weather): both
             # value bytes are zero (which would otherwise decode to the base
             # frequency). A programmed field always has a non-zero (lo, mid).
             if rec[VHF_TX_OFF] or rec[VHF_TX_OFF + 1]:
-                m.tx_mhz = (uhf_decode_txta(rec[10], rec[11], rec[9], rec[12]) if uhf
-                            else vhf_decode(rec[VHF_TX_OFF], rec[VHF_TX_OFF + 1], VHF_TX_COEF))
+                m.tx_mhz = field(VHF_TX_OFF)
             if rec[VHF_TA_OFF] or rec[VHF_TA_OFF + 1]:
-                m.ta_mhz = (uhf_decode_txta(rec[14], rec[15], rec[13], rec[16]) if uhf
-                            else vhf_decode(rec[VHF_TA_OFF], rec[VHF_TA_OFF + 1], VHF_TA_COEF))
+                m.ta_mhz = field(VHF_TA_OFF)
             m.rx_pl = vhf_pl_decode(rec[VHF_PL_RX_OFF], rec[VHF_PL_RX_OFF + 1], False)
             m.tx_pl = vhf_pl_decode(rec[VHF_PL_TX_OFF], rec[VHF_PL_TX_OFF + 1], True)
             m.rx_squelch_type = vhf_squelch_type(rec[VHF_PL_RX_OFF], rec[VHF_PL_RX_OFF + 1])
@@ -1361,6 +1481,9 @@ class Codeplug:
                 m.tx_power = "High" if (rec[VHF_TX_TAG_OFF] & VHF_POWER_BIT) else "Low"
             if m.ta_mhz is not None:
                 m.ta_power = "High" if (rec[VHF_TA_TAG_OFF] & VHF_POWER_BIT) else "Low"
+            if m800 and m.tx_mhz is None and m.ta_mhz is not None:
+                # simplex: RSS shows the T/A field as the TX
+                m.tx_mhz, m.tx_power, m.ta_mhz, m.ta_power = m.ta_mhz, m.ta_power, None, None
             m.name = self._name_for(n)
             self.modes.append(m)
 
@@ -1468,9 +1591,11 @@ class Codeplug:
         """
         out = bytearray(self.body)
         for m in self.modes:
+            # 800 MHz records (decoded only) and trunked records are never written
             if self.band in ("vhf", "uhf"):
-                self._write_mode_vhf(out, m)
-            else:
+                if not is_trunked_record(self.body, m.offset + 3):
+                    self._write_mode_vhf(out, m)
+            elif self.band != "800":
                 self._write_mode_900(out, m)
             self._write_name(out, m)
         self._fix_record_sums(out)
@@ -1485,17 +1610,15 @@ class Codeplug:
         return out
 
     def _fix_record_sums(self, out: bytearray) -> None:
-        """Each mode record ends with an 8-bit sum of its other bytes (at true
-        start + L - 1; on zones-off records whose scan list RSS appended, still
-        at +25). RSS doesn't check it on GET but recomputes it when it edits a
-        mode, so do the same for every record motreader changed (only where
-        the sum was valid to begin with)."""
+        """Each mode record ends with an 8-bit sum of its other bytes
+        (_sum_places). RSS doesn't check it on GET but recomputes it when it
+        edits a mode, so do the same for every record motreader changed (only
+        where the sum was valid to begin with)."""
         pt = mode_pointer_table(self.body)
         if pt is None:
             return
-        L = self.body[0x10A]
         for t in pt[2]:
-            for k in (L - 1, 25, 26):     # 26: 900 27-byte record + scan list
+            for k in _sum_places(self.body):
                 if t + k >= len(self.body):
                     continue
                 if sum(self.body[t:t + k]) & 0xFF != self.body[t + k]:
@@ -1559,6 +1682,23 @@ class Codeplug:
         if has_band:
             out[base + foff + 2] = vhf_tx_band_byte(freq)
 
+    def _write_field_vhf_rx(self, out: bytearray, m: Mode, freq) -> None:
+        """A VHF RX field, re-encoded only if its value changed: lo/mid, lo's
+        9th bit (view +5 b0) and the flag byte's step / 166.15 MHz bits."""
+        if freq is None:
+            return
+        r = m.raw
+        if freq == vhf_decode_rx(r[6], r[7], r[8], r[5]):
+            return
+        enc = vhf_encode_rx(freq)
+        if enc is None:
+            raise ValueError(f"mode {m.number}: VHF RX {freq} MHz can't be stored "
+                             "(it must be on a 5 or 6.25 kHz raster)")
+        a = m.offset + VHF_RX_OFF
+        out[a], out[a + 1] = enc[0], enc[1]
+        out[a - 1] = (out[a - 1] & ~0x01 & 0xFF) | enc[2]
+        out[a + 2] = (out[a + 2] & ~0x05 & 0xFF) | enc[3]
+
     def _write_flag_vhf(self, out: bytearray, m: Mode, off: int, bit: int,
                         want_set: Optional[bool]) -> None:
         """Set/clear a single option bit, preserving the rest of the byte.
@@ -1609,7 +1749,7 @@ class Codeplug:
             for foff, freq in ((VHF_RX_OFF, m.rx_mhz), (VHF_TX_OFF, m.tx_mhz), (VHF_TA_OFF, m.ta_mhz)):
                 self._write_field_uhf(out, m, foff, freq)
         else:
-            self._write_field_vhf(out, m, VHF_RX_OFF, m.rx_mhz, VHF_RX_COEF, False)
+            self._write_field_vhf_rx(out, m, m.rx_mhz)
             self._write_field_vhf(out, m, VHF_TX_OFF, m.tx_mhz, VHF_TX_COEF, True)
             self._write_field_vhf(out, m, VHF_TA_OFF, m.ta_mhz, VHF_TA_COEF, True)
         # option flags (strings -> desired bit state; polarity per notes/FORMAT.md)

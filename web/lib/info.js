@@ -13,7 +13,7 @@ import { valueLabel } from "./radiowide.js";
 
 const NOT_DECODED = "not decoded yet";
 const BAND_NAMES = /** @type {Record<string, string>} */ ({
-    vhf: "VHF", uhf: "UHF", "900": "900 MHz", "900?": "900 MHz (mode layout not recognised)", "": "unknown",
+    vhf: "VHF", uhf: "UHF", "800": "800 MHz", "900": "900 MHz", "900?": "Mode layout not recognized", "": "unknown",
 });
 
 /** Printable ASCII in `b`, other bytes shown as "·". */
@@ -47,7 +47,8 @@ export function generalInfo(d) {
         { label: "Modes", value: String(cp.modes.length) },
         {
             label: "Zones",
-            value: zoneOp === "Disabled" ? "none (Zone Operation off)" : String(cp.zones.length),
+            value: d.support.modesOnly ? "not decoded (older format version)"
+                : zoneOp === "Disabled" ? "none (Zone Operation off)" : String(cp.zones.length),
         },
     ];
 
@@ -78,7 +79,8 @@ export function generalInfo(d) {
         { label: "Signature", value: cp.signature || "not found" },
         {
             label: "Format version", value: d.support.version === null ? "unknown" : String(d.support.version),
-            note: d.support.editable ? "supported" : `read-only: ${d.support.reasons.join("; ")}`,
+            note: !d.support.editable ? `read-only: ${d.support.reasons.join("; ")}`
+                : d.support.modesOnly ? "an older version: only the modes are decoded and edited" : "supported",
         },
     ];
     if (sigOff >= 0) {

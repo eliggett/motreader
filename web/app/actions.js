@@ -60,7 +60,7 @@ export function loadCodeplug(/** @type {string} */ fileName, /** @type {Uint8Arr
         + `${cp.modes.length} modes, ${cp.zones.length} zones, ${doc.plain.length}-byte codeplug`);
     log.debug(`nonce ${Array.from(doc.plain.subarray(0, 13), (x) => x.toString(16).padStart(2, "0")).join(" ")}; `
         + `name table ${cp.ascii_names ? `ASCII at 0x${cp.ascii_names[0].toString(16)} x ${cp.ascii_names[1]}` : "6-bit at 0x266"}`);
-    if (cp.band === "900?") log.warn("900 MHz mode layout not recognised: frequencies are not decoded");
+    if (cp.band === "900?") log.warn("Mode layout not recognized: frequencies are not decoded");
     store.setDocument(doc, "load");
     attachIndex();
     void trunkingNotice(doc);
@@ -223,5 +223,5 @@ export async function about() {
 
 /** "VHF", "900 MHz", ... */
 export function bandName(/** @type {string} */ band) {
-    return ({ vhf: "VHF", uhf: "UHF", "900": "900 MHz", "900?": "900 MHz (layout not recognised)" })[band] ?? "unknown band";
+    return ({ vhf: "VHF", uhf: "UHF", "800": "800 MHz", "900": "900 MHz", "900?": "Mode layout not recognized" })[band] ?? "unknown band";
 }

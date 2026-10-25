@@ -19,6 +19,12 @@ export function empty(/** @type {string} */ text) {
 
 export const NO_DOC = "Import a codeplug to begin.";
 
+/** Why a tab is empty on an older format version (only its modes are decoded). */
+export function modesOnlyText(/** @type {import("../state.js").Document} */ doc) {
+    return `This codeplug is in the older format version ${doc.support.version}: motreader decodes and edits `
+        + "only its modes (on the Modes tab). Everything else is kept exactly as it is.";
+}
+
 /** A muted explanatory paragraph. */
 export function note(/** @type {string} */ text) {
     return h("p", { class: "note" }, text);

@@ -154,6 +154,14 @@ export function importTables(doc, files) {
     };
     const kinds = files.map((f) => ({ f, kind: tableKind(f) }));
     for (const { f, kind } of kinds) rep.files.push(`${f.name}: ${kind ? `${kind}${kind === "yaml" ? " (radio.yaml)" : ".csv"}` : "not recognised, ignored"}`);
+    if (doc.support.modesOnly) {
+        // an older format version: only its modes are decoded
+        for (const { f, kind } of kinds) {
+            if (kind === "modes") importModes(doc, f, apply, rep);
+            else if (kind) rep.notApplied.push(`${f.name}: only modes are edited in format version ${doc.support.version}`);
+        }
+        return rep;
+    }
 
     // radio.yaml first for Zone Operation (a re-pack: not supported here yet)
     /** @type {Record<string, any>} */

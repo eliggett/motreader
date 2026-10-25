@@ -8,7 +8,7 @@
 import { h, fill } from "../dom.js";
 import { SCREENS, FIELD_BY_KEY, EN, SIREN_CHOICES, REARM_CHOICES, HEAD_CHOICES, valueLabel } from "../../lib/radiowide.js";
 import { editRadioWide } from "../editing.js";
-import { empty, note, section, NO_DOC } from "./common.js";
+import { empty, note, section, NO_DOC, modesOnlyText } from "./common.js";
 import { listSections } from "./lists.js";
 
 /** @typedef {import("../state.js").Document} Document */
@@ -110,6 +110,7 @@ export function settingsTab(id, title, tab, extra) {
         id, title,
         render(el, doc) {
             if (!doc) return fill(el, empty(NO_DOC));
+            if (doc.support.modesOnly) return fill(el, empty(modesOnlyText(doc)));
             // keep the scroll position and focus across the redraw after an edit
             const scroller = el.closest("main");
             const top = scroller?.scrollTop ?? 0;

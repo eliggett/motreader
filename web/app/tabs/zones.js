@@ -8,7 +8,7 @@ import { h, fill } from "../dom.js";
 import { createGrid } from "../grid.js";
 import { editZoneName, editZoneModes } from "../editing.js";
 import { formatModeList } from "../../lib/zonefields.js";
-import { empty, note, NO_DOC } from "./common.js";
+import { empty, note, NO_DOC, modesOnlyText } from "./common.js";
 
 /** @typedef {import("../../lib/codeplug.js").Zone} Zone */
 /** @typedef {import("../state.js").Document} Document */
@@ -62,6 +62,7 @@ export default {
             cache = null;
             return fill(el, empty(NO_DOC));
         }
+        if (doc.support.modesOnly) return fill(el, empty(modesOnlyText(doc)));
         if (doc.radioWide.zone_operation === "Disabled") return fill(el, empty("Zone Operation is off on this radio: it has no zones."));
         if (!doc.cp.zones.length) return fill(el, empty("No zones were found in this codeplug."));
         if (cache?.doc !== doc) cache = build(doc);

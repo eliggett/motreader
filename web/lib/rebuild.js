@@ -11,9 +11,9 @@
  */
 import {
     NAME_TABLE_OFF, NAME_LEN_BYTES, packName, packMembership, modePointerTable,
-    vhfDecode, vhfEncode, vhfTxBandByte, VHF_RX_COEF, VHF_TX_COEF, VHF_SLOTS, M900_SLOTS,
+    vhfDecode, vhfEncode, vhfTxBandByte, vhfDecodeRx, vhfEncodeRx, VHF_TX_COEF, VHF_SLOTS, M900_SLOTS, isTrunkedRecord,
     decode900Fields, m900RxEncode, m900FreqEncode, M900_TX, M900_TA, MPL_BY_BITS, UNMUTE_BY_BITS, VALID_CARRY_900,
-    uhfDecodeRx, uhfDecodeTxTa, uhfEncodeRx, uhfEncodeTxTa,
+    uhfDecodeRx, uhfDecodeTxTa, uhfEncodeRx, uhfEncodeTxTa, codeplugVersion,
 } from "./codeplug.js";
 import { slotDecode, slotEncode, isDplCode } from "./tones.js";
 import { equal } from "./bytes.js";
@@ -58,10 +58,16 @@ function asciiFieldBytes(/** @type {string} */ name, /** @type {number} */ w) {
 }
 const asciiText = (/** @type {Uint8Array} */ b) => String.fromCharCode(...b).replace(/[ \x00]+$/, "");
 
-/** Write mode `m`'s values (record and name) into `out`, a copy of cp.body. */
+/**
+ * Write mode `m`'s values (record and name) into `out`, a copy of cp.body.
+ * 800 MHz records (decoded only) and trunked records are never written.
+ */
 export function writeMode(/** @type {Codeplug} */ cp, /** @type {Uint8Array} */ out, /** @type {Mode} */ m) {
-    if (cp.band === "vhf" || cp.band === "uhf") writeModeVhf(cp, out, m);
-    else writeMode900(cp, out, m);
+    if (cp.band === "vhf" || cp.band === "uhf") {
+        if (!isTrunkedRecord(cp.body, m.offset + 3)) writeModeVhf(cp, out, m);
+    } else if (cp.band !== "800") {
+        writeMode900(cp, out, m);
+    }
     writeName(cp, out, m);
 }
 
@@ -81,15 +87,25 @@ export function rebuild(/** @type {Codeplug} */ cp) {
     return out;
 }
 
+/**
+ * Where a record's 8-bit sum may be, relative to its true start: at L-1, or
+ * +25 / +26 on zones-off records with a scan list after them (26: a 900
+ * 27-byte record); on the older format versions at +23, before the scan list.
+ */
+function sumPlaces(/** @type {Uint8Array} */ body) {
+    const L = byteAt(body, 0x10A);
+    const v = codeplugVersion(body);
+    return v !== null && v < 115 ? [23] : [L - 1, 25, 26];
+}
+
 /** Body offsets of the mode records' 8-bit sums. */
 export function recordSumOffsets(/** @type {Uint8Array} */ body) {
     const pt = modePointerTable(body);
     /** @type {Set<number>} */
     const out = new Set();
     if (!pt) return out;
-    const L = byteAt(body, 0x10A);
     for (const t of pt[2]) {
-        for (const k of [L - 1, 25, 26]) {   // 26: 900 27-byte record + scan list
+        for (const k of sumPlaces(body)) {
             if (t + k < body.length && sum8(body, t, t + k) === body[t + k]) {
                 out.add(t + k);
                 break;
@@ -100,17 +116,15 @@ export function recordSumOffsets(/** @type {Uint8Array} */ body) {
 }
 
 /**
- * Each mode record ends with an 8-bit sum of its other bytes (at true start +
- * L-1, or +25 / +26 on zones-off records with a scan list after them). RSS
+ * Each mode record ends with an 8-bit sum of its other bytes (sumPlaces). RSS
  * doesn't check it on GET but recomputes it when it edits a mode, so do the
  * same for every record motreader changed, where the sum was valid to begin with.
  */
 function fixRecordSums(/** @type {Uint8Array} */ body, /** @type {Uint8Array} */ out) {
     const pt = modePointerTable(body);
     if (!pt) return;
-    const L = byteAt(body, 0x10A);
     for (const t of pt[2]) {
-        for (const k of [L - 1, 25, 26]) {
+        for (const k of sumPlaces(body)) {
             if (t + k >= body.length) continue;
             if (sum8(body, t, t + k) !== body[t + k]) continue;
             if (!equal(out.subarray(t, t + k), body.subarray(t, t + k))) out[t + k] = sum8(out, t, t + k);
@@ -160,6 +174,24 @@ function writeFieldVhf(/** @type {Uint8Array} */ out, /** @type {Mode} */ m, /**
     out[m.offset + foff] = lo;
     out[m.offset + foff + 1] = mid;
     if (hasBand) out[m.offset + foff + 2] = vhfTxBandByte(freq);
+}
+
+/**
+ * A VHF RX field, re-encoded only if its value changed: lo/mid, lo's 9th bit
+ * (view +5 b0) and the flag byte's step / 166.15 MHz bits.
+ * @param {Uint8Array} out @param {Mode} m @param {number | null} freq
+ */
+function writeFieldVhfRx(out, m, freq) {
+    if (freq === null || freq === undefined) return;
+    const r = m.raw;
+    if (freq === vhfDecodeRx(byteAt(r, 6), byteAt(r, 7), byteAt(r, 8), byteAt(r, 5))) return;
+    const enc = vhfEncodeRx(freq);
+    if (!enc) throw new InvalidValue(`mode ${m.number}: VHF RX ${freq} MHz can't be stored (it must be on a 5 or 6.25 kHz raster)`);
+    const a = m.offset + 6;
+    out[a] = enc[0];
+    out[a + 1] = enc[1];
+    out[a - 1] = (byteAt(out, a - 1) & (~0x01 & 0xFF)) | enc[2];
+    out[a + 2] = (byteAt(out, a + 2) & (~0x05 & 0xFF)) | enc[3];
 }
 
 /** Set or clear one option bit at view offset `off`, only on a real change. */
@@ -219,7 +251,7 @@ function writeModeVhf(cp, out, m) {
         writeFieldUhf(out, m, 10, m.tx_mhz);
         writeFieldUhf(out, m, 14, m.ta_mhz);
     } else {
-        writeFieldVhf(out, m, 6, m.rx_mhz, VHF_RX_COEF, false);
+        writeFieldVhfRx(out, m, m.rx_mhz);
         writeFieldVhf(out, m, 10, m.tx_mhz, VHF_TX_COEF, true);
         writeFieldVhf(out, m, 14, m.ta_mhz, VHF_TX_COEF, true);
     }

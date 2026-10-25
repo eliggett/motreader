@@ -28,8 +28,16 @@ the reverse-engineering tool and the reference:
   buttons, 7 export-time checks.
 
 UHF (2026-10-25): decoded, edited and exported (FORMAT §5a-UHF), validated
-in RSS. Codeplugs motreader can't edit safely (older format versions 101-114,
-inconsistent copies, all-trunked radios) open read-only (lib/support.js).
+in RSS. Codeplugs motreader can't edit safely (older format versions 101/102,
+inconsistent copies, all-trunked or mixed trunked radios, 800 MHz) open
+read-only (lib/support.js).
+
+Older format versions (2026-10-25, FORMAT §5): 112 and 114 open "modes only"
+(modes decoded and edited; zones, radio-wide, lists not decoded and left
+untouched), validated in RSS. VHF RX now takes the 6.25 kHz raster RSS also
+uses on current radios (FORMAT §5a; the old decoder misread such modes).
+800 MHz conventional modes decode (FORMAT §5a-800) but aren't edited; their
+trunked mode 1 used to decode as a conventional mode and was editable.
 
 Found while validating (fixed in Python too): an unedited rebuild zeroed tone
 slots that aren't tones (six codeplugs); VHF frequencies now use RSS's byte pair

@@ -78,6 +78,7 @@ function codeplug(/** @type {Uint8Array} */ body) {
         serial: cp.serial,
         model: cp.model,
         band: cp.band,
+        format_version: cp.format_version,
         ascii_names: cp.ascii_names,
         modes: plain(cp.modes),
         zones: plain(cp.zones),

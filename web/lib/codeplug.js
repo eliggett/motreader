@@ -383,12 +383,15 @@ export function zoneOperation(/** @type {Uint8Array} */ body) {
 // 0x10A. motreader's per-band record views start 11 (900) or 3 (VHF) bytes
 // before the true start.
 
+/** The pointer base of the older format versions (no extension block to derive it from). */
+const OLD_FORMAT_BASE = 0x5F53;
+
 /** [base, table offset, true record starts] or null. */
 export function modePointerTable(/** @type {Uint8Array} */ body) {
     if (body.length < 0x1E8) return null;
     const e = findExtBlock(body);
-    if (e === null) return null;
-    const base = be16(body, 0xE5) - e;
+    // older format versions (101-114) have no extension block: their pointers use the usual base
+    const base = e === null ? OLD_FORMAT_BASE : be16(body, 0xE5) - e;
     const tab = be16(body, 0xED) - base;
     const n = at(body, 0x109);
     const L = at(body, 0x10A);
@@ -406,9 +409,11 @@ function recordBand(/** @type {Uint8Array} */ body, /** @type {number[]} */ star
     const svhf = starts.filter((t) => [0xE9, 0xE8, 0x68].includes(at(body, t + 6))).length;
     // UHF: the VHF record with tags E9/EA (lo's 9th bit) and a UHF band byte and RX
     const suhf = starts.filter((t) => uhfRecord(body, t)).length;
+    const s800 = starts.filter((t) => m800Record(body, t)).length;
     const need = Math.max(Math.min(2, starts.length), Math.floor(starts.length / 2));   // a one-mode codeplug has one record
     if (s900 >= need) return "900";
     if (suhf >= need) return "uhf";
+    if (s800 >= need) return "800";
     if (svhf >= need) return "vhf";
     return null;
 }
@@ -515,6 +520,42 @@ export function vhfTxBandByte(/** @type {number} */ freq) {
     return 0x80 | ((v & 1) << 5) | (((v >> 1) & 1) << 2) | (((v >> 2) & 1) << 3);
 }
 
+// VHF RX (FORMAT §5a; RSS sweeps on 617ASQ and an AR-ORIG v112 radio): the
+// synthesizer count on a 5 kHz reference, or 6.25 kHz when the flag byte (+8)
+// has b0 set: freq = step*(127*(lo + 256*rec5.b0) + 128*mid) - 109.65 (the
+// IF, as UHF); view +5 b0 = lo's 9th bit. Flag b2 = 166.15 MHz and up. RSS
+// uses 5 kHz when the frequency is on that raster, else 6.25 kHz, else
+// refuses. Every 5 kHz value has the 9th bit set, so for those this is
+// VHF_RX_COEF's 0.635*lo + 0.64*mid + 52.91.
+export const VHF_RX_HIGH = 166.15;
+
+/** The reference RSS uses for a VHF RX `freq`: 5 kHz if on that raster, else 6.25 kHz, else null. */
+export function vhfRxStep(/** @type {number} */ freq) {
+    for (const step of [0.005, 0.00625]) {
+        const n = freq / step;
+        if (Math.abs(n - Math.round(n)) < 1e-6) return step;
+    }
+    return null;
+}
+
+/** A VHF RX field (lo, mid, flag byte, the byte at view +5 whose b0 is lo's 9th bit) -> MHz. */
+export function vhfDecodeRx(/** @type {number} */ lo, /** @type {number} */ mid, /** @type {number} */ flag, /** @type {number} */ hi) {
+    const step = flag & 1 ? 0.00625 : 0.005;
+    return pyRound(step * (127 * (lo + 256 * (hi & 1)) + 128 * mid) - UHF_RX_IF, 5);
+}
+
+/** [lo, mid, lo's 9th bit, flag bits] for a VHF RX frequency, or null if it can't be stored. */
+export function vhfEncodeRx(/** @type {number} */ freq) {
+    const step = vhfRxStep(freq);
+    if (step === null) return null;
+    const n = pyRound((freq + UHF_RX_IF) / step);
+    const np = Math.floor(n / 127);
+    const a = n - 127 * np;
+    const x = np - a;
+    if (x < 0 || x > 511) return null;
+    return /** @type {[number, number, number, number]} */ ([x & 0xFF, a, x >> 8, (step === 0.00625 ? 1 : 0) | (freq >= VHF_RX_HIGH ? 4 : 0)]);
+}
+
 // ---------------------------------------------------------------------------
 // UHF conventional (mapped with RSS on a 440-490 MHz A9 radio; FORMAT §5a).
 // The VHF record layout (same tags, tone slots, option bits) with its own
@@ -589,6 +630,35 @@ function uhfRecord(/** @type {Uint8Array} */ body, /** @type {number} */ t) {
         })();
 }
 
+// ---------------------------------------------------------------------------
+// 800 MHz conventional, decode only (FORMAT §5a-800; RSS's MODE SUMMARY of
+// two AR-ORIG radios). The VHF record layout with the UHF form of the codec
+// on a 12.5 kHz reference:
+//   RX: freq = 0.0125*(127*(lo + 256*rec5.b0) + 128*mid) + 109.65
+//   TX / T/A: freq = 0.0125*(127*(lo + 256 + 256*tag.b1) + 128*mid)
+// RSS shows TX = the TX field when programmed, else the T/A field (a simplex
+// mode), as on 900 MHz.
+const M800_STEP = 0.0125;
+const M800_BAND = /** @type {const} */ ([806.0, 870.0]);
+
+/** An 800 MHz RX field (lo, mid, the byte at view +5 whose b0 is lo's 9th bit) -> MHz. */
+export function m800DecodeRx(/** @type {number} */ lo, /** @type {number} */ mid, /** @type {number} */ hi) {
+    return pyRound(M800_STEP * (127 * (lo + 256 * (hi & 1)) + 128 * mid) + UHF_RX_IF, 5);
+}
+
+/** An 800 MHz TX / T/A field (lo, mid, tag) -> MHz. */
+export function m800DecodeTxTa(/** @type {number} */ lo, /** @type {number} */ mid, /** @type {number} */ tag) {
+    return pyRound(M800_STEP * (127 * (lo + 256 + 256 * ((tag >> 1) & 1)) + 128 * mid), 5);
+}
+
+/** Is the record at true start t an 800 MHz one: VHF tags, an RX that reads as 800 MHz and not as VHF? */
+function m800Record(/** @type {Uint8Array} */ body, /** @type {number} */ t) {
+    if (![0xE9, 0xE8, 0x68].includes(at(body, t + 6))) return false;
+    const rx = m800DecodeRx(at(body, t + 3), at(body, t + 4), at(body, t + 2));
+    const vhf = vhfDecodeRx(at(body, t + 3), at(body, t + 4), at(body, t + 5), at(body, t + 2));
+    return rx >= M800_BAND[0] && rx <= M800_BAND[1] && !(vhf >= 108.0 && vhf <= 180.0);
+}
+
 /** Record starts of the VHF conventional modes (may be empty). */
 export function findVhfRecords(/** @type {Uint8Array} */ body) {
     const starts = [];
@@ -612,7 +682,7 @@ export function findVhfRecords(/** @type {Uint8Array} */ body) {
         if (!anySet(rec)) return false;
         if (rec[9] === 0xE9 && rec[13] === 0xA9) return true;
         // RX-only mode (blank TX/T·A): accept only on a plausible VHF RX frequency
-        const rx = vhfDecode(at(rec, VHF_RX_OFF), at(rec, VHF_RX_OFF + 1), VHF_RX_COEF);
+        const rx = vhfDecodeRx(at(rec, VHF_RX_OFF), at(rec, VHF_RX_OFF + 1), at(rec, VHF_RX_OFF + 2), at(rec, VHF_RX_OFF - 1));
         return rx >= 108.0 && rx <= 180.0;
     };
     let s = /** @type {number} */ (best[0]);
@@ -750,13 +820,17 @@ export function find900Table(/** @type {Uint8Array} */ body) {
  * @typedef {{
  *   body: Uint8Array,
  *   signature: string, serial: string, model: string,
- *   band: "" | "vhf" | "uhf" | "900" | "900?",
+ *   band: "" | "vhf" | "uhf" | "800" | "900" | "900?",
+ *   format_version: number | null,
  *   modes: Mode[], zones: Zone[],
  *   ascii_names: [number, number] | null,
  *   zone_sections: ZoneSections | null,
  *   trunked_mode1: boolean,
  * }} Codeplug
- *   `trunked_mode1`: mode 1 is the 566AYA-layout special record (no tone slots).
+ *   `trunked_mode1`: mode 1 is a trunked record: the 566AYA-layout special one
+ *   (no tone slots), or a trunked record in a VHF-layout table (no values).
+ *   `format_version`: the codeplug format version in the header (115, 116; older
+ *   radios 101-114), or null.
  */
 
 const SIGNATURE = "COPYRIGHT MOTOROLA INC.,1987";
@@ -765,13 +839,26 @@ const SIGNATURE = "COPYRIGHT MOTOROLA INC.,1987";
 export function parseCodeplug(/** @type {Uint8Array} */ body) {
     /** @type {Codeplug} */
     const cp = {
-        body, signature: "", serial: "", model: "", band: "", modes: [], zones: [], ascii_names: null,
-        zone_sections: null, trunked_mode1: false,
+        body, signature: "", serial: "", model: "", band: "", format_version: codeplugVersion(body), modes: [], zones: [],
+        ascii_names: null, zone_sections: null, trunked_mode1: false,
     };
     parseHeader(cp);
     parseModes(cp);
-    parseZones(cp);
+    // the older format versions' zones aren't mapped (their zone finder matches other data)
+    if (cp.format_version === null || cp.format_version >= 115) parseZones(cp);
     return cp;
+}
+
+/**
+ * The codeplug format version: the three digits after the serial in the
+ * header ("617ASQ126600 115A" -> 115), or null.
+ */
+export function codeplugVersion(/** @type {Uint8Array} */ body) {
+    const text = latin1(body.subarray(0, Math.min(body.length, 0x200)));
+    const i = text.indexOf(SIGNATURE);
+    if (i < 0) return null;
+    const m = /^[0-9A-Z]{10}\d\d (\d{3})/.exec(text.slice(i + 0x1D, i + 0x1D + 17));
+    return m ? Number(m[1]) : null;
 }
 
 /** @param {Codeplug} cp */
@@ -796,8 +883,7 @@ export function modeName(/** @type {Codeplug} */ cp, /** @type {number} */ n) {
 /**
  * The trunked modes, display only: number and name. RSS's mode table is
  * read leniently here (trunked records break the regular stride the strict
- * reader expects); a trunked record is marked by its length byte, 0x25 (37)
- * at true start +1, where conventional records never have it.
+ * reader expects); trunked records are told apart by isTrunkedRecord.
  * @returns {{ number: number, name: string }[]}
  */
 export function trunkedModes(/** @type {Codeplug} */ cp) {
@@ -811,7 +897,7 @@ export function trunkedModes(/** @type {Codeplug} */ cp) {
     const out = [];
     for (let i = 0; i < n; i++) {
         const t = be16(body, tab + 2 * i) - base;
-        if (t > tab && t + 37 <= body.length && body[t + 1] === 0x25) out.push({ number: i + 1, name: nameFor(cp, i + 1) });
+        if (t > tab && t + 37 <= body.length && isTrunkedRecord(body, t)) out.push({ number: i + 1, name: nameFor(cp, i + 1) });
     }
     return out;
 }
@@ -854,16 +940,17 @@ function selectNameTable(cp, nModes) {
 /** @param {Codeplug} cp */
 function parseModes(cp) {
     const pt = modePointerTable(cp.body);
-    if (pt && recordBand(cp.body, pt[2]) === "uhf") {
-        // UHF: the VHF record layout with the UHF frequency codec
-        cp.band = "uhf";
+    const band = pt && recordBand(cp.body, pt[2]);
+    if (pt && (band === "uhf" || band === "800")) {
+        // UHF, 800 MHz: the VHF record layout with their own frequency codecs
+        cp.band = band;
         parseModesVhf(cp, pt[2].map((t) => t - 3));
         selectNameTable(cp, pt[2].length);
         for (const m of cp.modes) m.name = nameFor(cp, m.number);
         return;
     }
     // RSS's own pointers when they say VHF (robust after section moves), else the tag search
-    const vhf = pt && recordBand(cp.body, pt[2]) === "vhf" ? pt[2].map((t) => t - 3) : findVhfRecords(cp.body);
+    const vhf = pt && band === "vhf" ? pt[2].map((t) => t - 3) : findVhfRecords(cp.body);
     if (vhf.length) {
         cp.band = "vhf";
         parseModesVhf(cp, vhf);
@@ -875,14 +962,18 @@ function parseModes(cp) {
 }
 
 /**
- * Decode the values of a VHF (or UHF: same layout, `uhf`) record (26 bytes) into mode `m`.
- * @param {Mode} m @param {Uint8Array} rec @param {boolean} [uhf]
+ * Decode the values of a record in the VHF layout (26-byte view; VHF, UHF or
+ * 800 MHz by `band`) into mode `m`.
+ * @param {Mode} m @param {Uint8Array} rec @param {string} [band]
  */
-function decodeVhfRecord(m, rec, uhf = false) {
-    m.rx_mhz = uhf ? uhfDecodeRx(at(rec, 6), at(rec, 7), at(rec, 8), at(rec, 5)) : vhfDecode(at(rec, VHF_RX_OFF), at(rec, VHF_RX_OFF + 1), VHF_RX_COEF);
+function decodeVhfRecord(m, rec, band = "vhf") {
+    m.rx_mhz = band === "uhf" ? uhfDecodeRx(at(rec, 6), at(rec, 7), at(rec, 8), at(rec, 5))
+        : band === "800" ? m800DecodeRx(at(rec, 6), at(rec, 7), at(rec, 5))
+        : vhfDecodeRx(at(rec, VHF_RX_OFF), at(rec, VHF_RX_OFF + 1), at(rec, VHF_RX_OFF + 2), at(rec, VHF_RX_OFF - 1));
     // TX / T·A are blank on an RX-only mode (both value bytes zero)
-    const field = (/** @type {number} */ o) => (uhf
+    const field = (/** @type {number} */ o) => (band === "uhf"
         ? uhfDecodeTxTa(at(rec, o), at(rec, o + 1), at(rec, o - 1), at(rec, o + 2))
+        : band === "800" ? m800DecodeTxTa(at(rec, o), at(rec, o + 1), at(rec, o - 1))
         : vhfDecode(at(rec, o), at(rec, o + 1), VHF_TX_COEF));
     m.tx_mhz = at(rec, VHF_TX_OFF) || at(rec, VHF_TX_OFF + 1) ? field(VHF_TX_OFF) : null;
     m.ta_mhz = at(rec, VHF_TA_OFF) || at(rec, VHF_TA_OFF + 1) ? field(VHF_TA_OFF) : null;
@@ -896,6 +987,10 @@ function decodeVhfRecord(m, rec, uhf = false) {
     m.mpl_type = /** @type {string} */ (MPL_BY_BITS[at(rec, 3) & 0x60]);
     m.tx_power = m.tx_mhz !== null ? (at(rec, 9) & 0x40 ? "High" : "Low") : null;
     m.ta_power = m.ta_mhz !== null ? (at(rec, 13) & 0x40 ? "High" : "Low") : null;
+    if (band === "800" && m.tx_mhz === null && m.ta_mhz !== null) {
+        // simplex: RSS shows the T/A field as the TX
+        [m.tx_mhz, m.tx_power, m.ta_mhz, m.ta_power] = [m.ta_mhz, m.ta_power, null, null];
+    }
 }
 
 /**
@@ -940,19 +1035,34 @@ function decode900Record(m, b, off, stride, special) {
  */
 export function readModeBack(cp, body, m) {
     const back = newMode(m.number, body.slice(m.offset, m.offset + m.raw.length), m.offset, m.name);
-    if (cp.band === "vhf" || cp.band === "uhf") decodeVhfRecord(back, back.raw, cp.band === "uhf");
+    if (cp.band === "vhf" || cp.band === "uhf" || cp.band === "800") {
+        if (!isTrunkedRecord(body, m.offset + 3)) decodeVhfRecord(back, back.raw, cp.band);
+    }
     else decode900Record(back, body, m.offset, m.raw.length, cp.trunked_mode1 && m.number === 1);
     return back;
 }
+
+/**
+ * A trunked record in RSS's mode table: its length byte, 0x25 (37), at true
+ * start +1, after 0x1F / 0x20. A conventional record starts with a flag byte
+ * that has bit 7 set (0x84, 0x94, 0xB4 on every sample).
+ */
+export const isTrunkedRecord = (/** @type {Uint8Array} */ body, /** @type {number} */ t) =>
+    body[t + 1] === 0x25 && /** @type {number} */ (body[t]) < 0x80;
 
 /** @param {Codeplug} cp @param {number[]} starts */
 function parseModesVhf(cp, starts) {
     starts.forEach((off, i) => {
         const n = i + 1;
         const m = newMode(n, cp.body.slice(off, off + VHF_REC_LEN), off);
-        decodeVhfRecord(m, m.raw, cp.band === "uhf");
-        m.name = nameFor(cp, n);
         cp.modes.push(m);
+        m.name = nameFor(cp, n);
+        if (isTrunkedRecord(cp.body, off + 3)) {
+            // a trunked mode in a mixed table: listed with no values, never written
+            if (n === 1) cp.trunked_mode1 = true;
+            return;
+        }
+        decodeVhfRecord(m, m.raw, cp.band);
     });
 }
 

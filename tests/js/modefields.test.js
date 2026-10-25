@@ -20,9 +20,10 @@ test("VHF edits store, snap and export cleanly", { skip: !has("A617ASQ1.266") },
     assert.equal(cp.modes[1]?.name, "TEST 2", "6-bit names are upper case");
     assert.equal(setModeField(cp, 2, "rx_mhz", "146.52").note, null);
     assert.equal(cp.modes[1]?.rx_mhz, 146.52);
-    // RX resolution is 5 kHz: 146.5225 isn't storable exactly
-    const r = setModeField(cp, 2, "rx_mhz", "146.5225");
-    assert.match(r.note ?? "", /stored as/);
+    // RX is on a 5 or 6.25 kHz raster (RSS refuses the rest)
+    assert.throws(() => setModeField(cp, 2, "rx_mhz", "146.5225"), /5 or 6.25 kHz raster/);
+    assert.equal(setModeField(cp, 2, "rx_mhz", "146.50625").note, null);
+    assert.equal(cp.modes[1]?.rx_mhz, 146.50625);
     setModeField(cp, 2, "tx_squelch", "DPL d411");
     assert.equal(fieldText(/** @type {any} */ (cp.modes[1]), "tx_squelch"), "DPL D411");
     setModeField(cp, 2, "rx_squelch", "pl 100");
