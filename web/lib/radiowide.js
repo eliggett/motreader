@@ -433,7 +433,7 @@ export const HEAD_CHOICES = /** @type {const} */ (["Standard", "Enhanced", "Rota
  * @type {Record<string, Record<string, string>>}
  */
 export const VALUE_LABELS = {
-    control_head_type: { Standard: "Basic (A4)", Enhanced: "Enhanced (A5)", Rotary: "Rotary (A7)", S9000e: "S9000e (A9)" },
+    control_head_type: { Standard: "Basic (A5)", Enhanced: "Enhanced (A7)", Rotary: "Rotary (A4)", S9000e: "S9000e (A9)" },
 };
 
 /** `value` of field `key` as shown. */
@@ -475,8 +475,8 @@ function encodeSiren(/** @type {Uint8Array} */ out, /** @type {Blocks} */ blk, /
 function encodeHead(/** @type {Uint8Array} */ out, /** @type {Blocks} */ blk, /** @type {RadioWide} */ orig, /** @type {unknown} */ v) {
     const was = orig.control_head_type;
     if (!HEAD_CHOICES.includes(/** @type {any} */ (was)) || !HEAD_CHOICES.some((c) => c.toLowerCase() === String(v).trim().toLowerCase())) {
-        throw new InvalidValue("radio_wide.control_head_type: only Basic (A4, RSS's Standard) / Enhanced (A5) / "
-            + "Rotary (A7) can be swapped (RSS can't change to or from the S9000e (A9) head)");
+        throw new InvalidValue("radio_wide.control_head_type: only Basic (A5, RSS's Standard) / Enhanced (A7) / "
+            + "Rotary (A4) can be swapped (RSS can't change to or from the S9000e (A9) head)");
     }
     const want = pick("control_head_type", HEAD_CHOICES, v);
     const { chb: c, ext: e } = blk;
