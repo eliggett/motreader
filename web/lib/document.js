@@ -5,7 +5,7 @@
  */
 import { splitArchive } from "./archive.js";
 import { decryptBody } from "./crypto.js";
-import { parseCodeplug } from "./codeplug.js";
+import { parseCodeplug, trunkedModes } from "./codeplug.js";
 import { decode as decodeRadioWide, encode as encodeRadioWide, FIELD_BY_KEY } from "./radiowide.js";
 import { trunkingInfo, TrunkingUnsupported } from "./trunking.js";
 import { MODE_FIELDS, fieldText } from "./modefields.js";
@@ -27,6 +27,7 @@ import { assessSupport } from "./support.js";
  *   mpls: import("./lists.js").Mpl[],
  *   listProblem: string | null,
  *   support: import("./support.js").Support,
+ *   trunked: { number: number, name: string }[],
  *   original: {
  *     modes: Record<string, string>[], zones: { name: string, modes: string }[],
  *     radioWide: import("./radiowide.js").RadioWide, phones: string[], mpls: string[],
@@ -70,7 +71,7 @@ export function openDocument(/** @type {string} */ fileName, /** @type {Uint8Arr
     /** @type {CodeplugDocument} */
     const doc = {
         fileName, raw, banner: a.banner, plain, cp, radioWide, trunk, index: null,
-        radioWideEdits: {}, phones, mpls, listProblem, support: assessSupport(cp),
+        radioWideEdits: {}, phones, mpls, listProblem, support: assessSupport(cp), trunked: trunkedModes(cp),
         original: {
             modes: cp.modes.map(modeTexts),
             zones: cp.zones.map((z) => ({ name: z.name, modes: z.modes.join(" ") })),

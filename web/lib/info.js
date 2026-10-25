@@ -51,8 +51,10 @@ export function generalInfo(d) {
         },
     ];
 
+    const nt = d.trunked.length;
     const trunk = d.trunk.info
         ? `yes: mode 1 is trunked (max systems ${d.trunk.info.systems}, max subfleets ${d.trunk.info.subfleets})`
+        : nt ? `yes: ${nt} trunked mode${nt === 1 ? "" : "s"} (shown, not decoded)`
         : d.trunk.unsupported ? "yes, in a layout motreader can't remove" : "no";
     /** @type {InfoRow[]} */
     const features = [

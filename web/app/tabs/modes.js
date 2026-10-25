@@ -48,12 +48,22 @@ function build(doc) {
         rowClass: (m) => (isTrunkedMode(cp, m) ? "trunked" : ""),
     });
     const el = h("div", {},
+        doc.trunked.length > 1 ? trunkedNote(doc) : null,
         note(`${cp.modes.length} modes. Arrow keys move, Enter or typing edits, Escape cancels; `
             + "Edit opens one mode as a form. Changed cells are highlighted."
             + (cp.trunked_mode1 ? " Mode 1 is the trunked mode and isn't editable." : "")
             + (editable ? "" : " This codeplug's 900 MHz mode layout isn't recognised, so modes are read-only.")),
         grid.el);
     return { doc, grid, el };
+}
+
+/** The trunked modes, listed by name (trunking is preserved, not decoded or edited). */
+function trunkedNote(/** @type {Document} */ doc) {
+    const t = doc.trunked;
+    return h("div", { class: "block" },
+        h("p", { class: "note" }, `${t.length} trunked mode${t.length === 1 ? "" : "s"} (trunking is kept exactly as it is; `
+            + "motreader doesn't decode or edit it):"),
+        h("p", { class: "trunked-list" }, t.map((m) => `${m.number} ${m.name || "(no name)"}`).join(", ")));
 }
 
 /** @type {import("./common.js").Tab} */
@@ -65,7 +75,9 @@ export default {
             cache = null;
             return fill(el, empty(NO_DOC));
         }
-        if (!doc.cp.modes.length) return fill(el, empty("No modes were found in this codeplug."));
+        if (!doc.cp.modes.length) {
+            return fill(el, doc.trunked.length ? trunkedNote(doc) : empty("No modes were found in this codeplug."));
+        }
         if (cache?.doc !== doc) cache = build(doc);
         else cache.grid.refresh();
         if (cache.el.parentElement !== el) fill(el, cache.el);

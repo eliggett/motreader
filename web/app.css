@@ -214,3 +214,4 @@ table.grid td.members-edit { font-family: var(--mono); min-width: 9rem; }
 }
 .import-report ul { margin: 0.25rem 0 0.75rem; padding-left: 1.2rem; font-size: 0.9rem; }
 .notice { padding: 0.5rem 1rem; background: rgb(224 179 65 / 0.14); border-bottom: 1px solid var(--warn); color: var(--warn); }
+.trunked-list { font-family: var(--mono); color: var(--muted); margin-top: 0; }

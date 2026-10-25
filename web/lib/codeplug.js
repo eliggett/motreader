@@ -788,6 +788,34 @@ function parseHeader(cp) {
     if (s) cp.serial = s[0].slice(0, 10);
 }
 
+/** Mode `n`'s name from the codeplug's name table (6-bit, or the A9 ASCII table). */
+export function modeName(/** @type {Codeplug} */ cp, /** @type {number} */ n) {
+    return nameFor(cp, n);
+}
+
+/**
+ * The trunked modes, display only: number and name. RSS's mode table is
+ * read leniently here (trunked records break the regular stride the strict
+ * reader expects); a trunked record is marked by its length byte, 0x25 (37)
+ * at true start +1, where conventional records never have it.
+ * @returns {{ number: number, name: string }[]}
+ */
+export function trunkedModes(/** @type {Codeplug} */ cp) {
+    const body = cp.body;
+    const e = findExtBlock(body);
+    if (e === null || body.length < 0x1E8) return [];
+    const base = be16(body, 0xE5) - e;
+    const tab = be16(body, 0xED) - base;
+    const n = at(body, 0x109);
+    if (!(tab >= 0x1E8 && tab + 2 * n < body.length)) return [];
+    const out = [];
+    for (let i = 0; i < n; i++) {
+        const t = be16(body, tab + 2 * i) - base;
+        if (t > tab && t + 37 <= body.length && body[t + 1] === 0x25) out.push({ number: i + 1, name: nameFor(cp, i + 1) });
+    }
+    return out;
+}
+
 /** @param {Codeplug} cp @param {number} n */
 function nameFor(cp, n) {
     if (cp.ascii_names) {

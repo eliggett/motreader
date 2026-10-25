@@ -223,5 +223,5 @@ export async function about() {
 
 /** "VHF", "900 MHz", ... */
 export function bandName(/** @type {string} */ band) {
-    return ({ vhf: "VHF", "900": "900 MHz", "900?": "900 MHz (layout not recognised)" })[band] ?? "unknown band";
+    return ({ vhf: "VHF", uhf: "UHF", "900": "900 MHz", "900?": "900 MHz (layout not recognised)" })[band] ?? "unknown band";
 }
