@@ -55,6 +55,9 @@ export function assessSupport(cp) {
         reasons.push(cp.modes.length || !pt ? "its mode records are in a layout motreader doesn't decode (e.g. UHF)"
             : "no conventional modes were recognised: the band (e.g. UHF) or the mode type (e.g. all trunked) isn't decoded yet");
     }
+    if (cp.band === "uhf" && cp.modes.some((m) => (m.raw[12] ?? 0) & 2 || (m.raw[16] ?? 0) & 2)) {
+        reasons.push("some UHF frequencies are stored in a 2.5 kHz form motreader doesn't decode yet");
+    }
     const n = body[0x109] ?? 0;
     if (pt && cp.modes.length !== n && !reasons.length) {
         reasons.push(`${cp.modes.length} modes were decoded but the codeplug has ${n} (e.g. several trunked modes)`);

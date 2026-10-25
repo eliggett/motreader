@@ -11,7 +11,7 @@
  * refused with a reason, so export never meets a value it can't write.
  */
 import { InvalidValue } from "./errors.js";
-import { readModeBack } from "./codeplug.js";
+import { readModeBack, uhfStep } from "./codeplug.js";
 import { writeMode } from "./rebuild.js";
 import { CTCSS_TONES, DPL_CODES } from "./tones.js";
 
@@ -77,7 +77,7 @@ export function fieldText(/** @type {Mode} */ m, /** @type {string} */ key) {
     if (f.kind === "squelch") return squelchText(m, /** @type {"rx" | "tx" | "ta"} */ (f.slot));
     const v = /** @type {any} */ (m)[key];
     if (v === null || v === undefined) return "";
-    return f.kind === "mhz" ? Number(v).toFixed(4) : String(v);
+    return f.kind === "mhz" ? Number(v).toFixed(5) : String(v);
 }
 
 /** Is a trunked mode 1 (not a conventional record; not editable here)? */
@@ -180,6 +180,14 @@ export function setModeField(cp, n, key, text) {
         }
     }
 
+    if (cp.band === "uhf" && f.kind === "mhz" && want[/** @type {"rx_mhz"} */ (key)] !== null
+        && uhfStep(/** @type {number} */ (want[/** @type {"rx_mhz"} */ (key)])) === null) {
+        throw new InvalidValue(`${text} MHz isn't on a 6.25 or 5 kHz raster, which UHF frequencies use`);
+    }
+    if (cp.band === "uhf" && (key === "tx_power" || key === "ta_power") && want[key] === "High"
+        && /** @type {number} */ (m[key === "tx_power" ? "tx_mhz" : "ta_mhz"]) > 470.0) {
+        throw new InvalidValue("RSS allows only Low power above 470 MHz");
+    }
     if (key === "ta_mhz" && cp.band === "900" && m.ta_mhz === null && want.ta_mhz !== null) {
         throw new InvalidValue("adding a talk-around frequency to a simplex 900 MHz mode isn't supported yet");
     }
@@ -201,14 +209,14 @@ export function setModeField(cp, n, key, text) {
         }
         if (asked !== null && got !== null && Math.abs(got - asked) > 0.00005) {
             // on the field's raster but not stored as asked: the synthesizer bytes can't hold it
-            const step = cp.band === "vhf" ? (key === "rx_mhz" ? 0.005 : 0.0025) : 0.0125;
+            const step = cp.band === "vhf" ? (key === "rx_mhz" ? 0.005 : 0.0025) : cp.band === "uhf" ? 0.005 : 0.0125;
             const onRaster = Math.abs(asked / step - Math.round(asked / step)) < 1e-6;
             if (onRaster || Math.abs(got - asked) > 0.01) {
                 throw new InvalidValue(`${asked} MHz can't be stored in this field: the radio's synthesizer `
                     + `can't be set to it${cp.band === "vhf" ? " (RSS itself stores a wrong frequency for it)" : ""}; `
-                    + `the nearest it holds is ${got.toFixed(4)} MHz`);
+                    + `the nearest it holds is ${got.toFixed(5)} MHz`);
             }
-            note = `stored as ${got.toFixed(4)} MHz, the nearest the radio holds`;
+            note = `stored as ${got.toFixed(5)} MHz, the nearest the radio holds`;
         }
         /** @type {any} */ (want)[key] = got;
         // other frequencies must read back unchanged (e.g. 900 MHz simplex <-> repeater)
@@ -231,5 +239,8 @@ export function setModeField(cp, n, key, text) {
     // a power setting appears with its frequency
     if (key === "tx_mhz" && m.tx_mhz !== null && m.tx_power === null) m.tx_power = back.tx_power;
     if (key === "ta_mhz") m.ta_power = m.ta_mhz === null ? null : m.ta_power ?? back.ta_power;
+    // UHF above 470 MHz: RSS (and the encoder) force power Low
+    if (cp.band === "uhf" && key === "tx_mhz" && back.tx_power === "Low") m.tx_power = "Low";
+    if (cp.band === "uhf" && key === "ta_mhz" && back.ta_power === "Low") m.ta_power = "Low";
     return { note };
 }

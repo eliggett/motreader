@@ -404,8 +404,11 @@ function recordBand(/** @type {Uint8Array} */ body, /** @type {number[]} */ star
     // RX tag 0xA0 at +2 (b4 set = the mode scans with SCAN TYPE Talkgroup)
     const s900 = starts.filter((t) => (at(body, t + 2) & 0xEF) === 0xA0 && at(body, t + 13) === 0x8C).length;
     const svhf = starts.filter((t) => [0xE9, 0xE8, 0x68].includes(at(body, t + 6))).length;
+    // UHF: the VHF record with tags E9/EA (lo's 9th bit) and a UHF band byte and RX
+    const suhf = starts.filter((t) => uhfRecord(body, t)).length;
     const need = Math.max(Math.min(2, starts.length), Math.floor(starts.length / 2));   // a one-mode codeplug has one record
     if (s900 >= need) return "900";
+    if (suhf >= need) return "uhf";
     if (svhf >= need) return "vhf";
     return null;
 }
@@ -510,6 +513,80 @@ export function vhfStorable(/** @type {number} */ freq, /** @type {Coef} */ coef
 export function vhfTxBandByte(/** @type {number} */ freq) {
     const v = Math.min(7, Math.max(3, Math.floor((pyRound(freq * 10000) - 1260000) / 60000)));
     return 0x80 | ((v & 1) << 5) | (((v >> 1) & 1) << 2) | (((v >> 2) & 1) << 3);
+}
+
+// ---------------------------------------------------------------------------
+// UHF conventional (mapped with RSS on a 440-490 MHz A9 radio; FORMAT §5a).
+// The VHF record layout (same tags, tone slots, option bits) with its own
+// codec: the same 127/128 dual-modulus synthesizer, N = 127*Np + A, A = mid,
+// on a 6.25 kHz or 5 kHz reference:
+//   TX / T/A: freq = step*(127*(lo + 256 + 256*tag.b1) + 128*mid); tag b1 =
+//     lo's 9th bit (b0 its complement); band byte 0x80 | b0 = 5 kHz | b2 =
+//     467 MHz and up (b1: a 2.5 kHz form RSS sometimes writes; not decoded)
+//   RX: freq = step*(127*(lo + 512 + 256*rec5.b0) + 128*mid) - 109.65 (first
+//     IF); view +5 b0 = lo's 9th bit; flag byte (+8) b0 = 5 kHz | b2 = 467 MHz
+//     and up | b3 (RSS sets it on save)
+// RSS uses 6.25 kHz when the frequency is on that raster, else 5 kHz. Above
+// 470 MHz RSS forces TX / T/A power Low.
+export const UHF_RX_IF = 109.65;
+const UHF_BAND = /** @type {const} */ ([400.0, 520.0]);
+
+/** The reference RSS uses for `freq`: 6.25 kHz if on that raster, else 5 kHz, else null. */
+export function uhfStep(/** @type {number} */ freq) {
+    for (const step of [0.00625, 0.005]) {
+        const n = freq / step;
+        if (Math.abs(n - Math.round(n)) < 1e-6) return step;
+    }
+    return null;
+}
+
+/** A UHF RX field (lo, mid, flag byte, the byte at view +5 whose b0 is lo's 9th bit) -> MHz. */
+export function uhfDecodeRx(/** @type {number} */ lo, /** @type {number} */ mid, /** @type {number} */ flag, /** @type {number} */ hi) {
+    const step = flag & 1 ? 0.005 : 0.00625;
+    return pyRound(step * (127 * (lo + 512 + 256 * (hi & 1)) + 128 * mid) - UHF_RX_IF, 5);
+}
+
+/** A UHF TX / T/A field -> MHz, or null for RSS's 2.5 kHz form (not decoded). */
+export function uhfDecodeTxTa(/** @type {number} */ lo, /** @type {number} */ mid, /** @type {number} */ tag, /** @type {number} */ band) {
+    if (band & 2) return null;
+    const step = band & 1 ? 0.005 : 0.00625;
+    return pyRound(step * (127 * (lo + 256 + 256 * ((tag >> 1) & 1)) + 128 * mid), 5);
+}
+
+/** [lo, mid, lo's 9th bit, flag bits] for a UHF RX frequency, or null if it can't be stored. */
+export function uhfEncodeRx(/** @type {number} */ freq) {
+    const step = uhfStep(freq);
+    if (step === null) return null;
+    const n = pyRound((freq + UHF_RX_IF) / step);
+    const np = Math.floor(n / 127);
+    const a = n - 127 * np;
+    const x = np - a - 512;
+    if (x < 0 || x > 511) return null;
+    return /** @type {[number, number, number, number]} */ ([x & 0xFF, a, x >> 8, 0x08 | (step === 0.005 ? 1 : 0) | (freq >= 467.0 ? 4 : 0)]);
+}
+
+/** [lo, mid, lo's 9th bit, band byte] for a UHF TX / T/A frequency, or null. */
+export function uhfEncodeTxTa(/** @type {number} */ freq) {
+    const step = uhfStep(freq);
+    if (step === null) return null;
+    const n = pyRound(freq / step);
+    const np = Math.floor(n / 127);
+    const a = n - 127 * np;
+    const x = np - a - 256;
+    if (x < 0 || x > 511) return null;
+    return /** @type {[number, number, number, number]} */ ([x & 0xFF, a, x >> 8, 0x80 | (step === 0.005 ? 1 : 0) | (freq >= 467.0 ? 4 : 0)]);
+}
+
+/**
+ * Is the record at true start t UHF? TX tag E9/EA, a TX band byte 0x80..0x87
+ * (VHF's always has bit 3 or 5 set) and an RX that reads as UHF.
+ */
+function uhfRecord(/** @type {Uint8Array} */ body, /** @type {number} */ t) {
+    return [0xE9, 0xEA].includes(at(body, t + 6)) && (at(body, t + 9) & 0xF8) === 0x80
+        && (() => {
+            const f = uhfDecodeRx(at(body, t + 3), at(body, t + 4), at(body, t + 5), at(body, t + 2));
+            return f >= UHF_BAND[0] && f <= UHF_BAND[1];
+        })();
 }
 
 /** Record starts of the VHF conventional modes (may be empty). */
@@ -673,7 +750,7 @@ export function find900Table(/** @type {Uint8Array} */ body) {
  * @typedef {{
  *   body: Uint8Array,
  *   signature: string, serial: string, model: string,
- *   band: "" | "vhf" | "900" | "900?",
+ *   band: "" | "vhf" | "uhf" | "900" | "900?",
  *   modes: Mode[], zones: Zone[],
  *   ascii_names: [number, number] | null,
  *   zone_sections: ZoneSections | null,
@@ -749,6 +826,14 @@ function selectNameTable(cp, nModes) {
 /** @param {Codeplug} cp */
 function parseModes(cp) {
     const pt = modePointerTable(cp.body);
+    if (pt && recordBand(cp.body, pt[2]) === "uhf") {
+        // UHF: the VHF record layout with the UHF frequency codec
+        cp.band = "uhf";
+        parseModesVhf(cp, pt[2].map((t) => t - 3));
+        selectNameTable(cp, pt[2].length);
+        for (const m of cp.modes) m.name = nameFor(cp, m.number);
+        return;
+    }
     // RSS's own pointers when they say VHF (robust after section moves), else the tag search
     const vhf = pt && recordBand(cp.body, pt[2]) === "vhf" ? pt[2].map((t) => t - 3) : findVhfRecords(cp.body);
     if (vhf.length) {
@@ -762,14 +847,17 @@ function parseModes(cp) {
 }
 
 /**
- * Decode the values of a VHF record (26 bytes) into mode `m`.
- * @param {Mode} m @param {Uint8Array} rec
+ * Decode the values of a VHF (or UHF: same layout, `uhf`) record (26 bytes) into mode `m`.
+ * @param {Mode} m @param {Uint8Array} rec @param {boolean} [uhf]
  */
-function decodeVhfRecord(m, rec) {
-    m.rx_mhz = vhfDecode(at(rec, VHF_RX_OFF), at(rec, VHF_RX_OFF + 1), VHF_RX_COEF);
+function decodeVhfRecord(m, rec, uhf = false) {
+    m.rx_mhz = uhf ? uhfDecodeRx(at(rec, 6), at(rec, 7), at(rec, 8), at(rec, 5)) : vhfDecode(at(rec, VHF_RX_OFF), at(rec, VHF_RX_OFF + 1), VHF_RX_COEF);
     // TX / T·A are blank on an RX-only mode (both value bytes zero)
-    m.tx_mhz = at(rec, VHF_TX_OFF) || at(rec, VHF_TX_OFF + 1) ? vhfDecode(at(rec, VHF_TX_OFF), at(rec, VHF_TX_OFF + 1), VHF_TX_COEF) : null;
-    m.ta_mhz = at(rec, VHF_TA_OFF) || at(rec, VHF_TA_OFF + 1) ? vhfDecode(at(rec, VHF_TA_OFF), at(rec, VHF_TA_OFF + 1), VHF_TX_COEF) : null;
+    const field = (/** @type {number} */ o) => (uhf
+        ? uhfDecodeTxTa(at(rec, o), at(rec, o + 1), at(rec, o - 1), at(rec, o + 2))
+        : vhfDecode(at(rec, o), at(rec, o + 1), VHF_TX_COEF));
+    m.tx_mhz = at(rec, VHF_TX_OFF) || at(rec, VHF_TX_OFF + 1) ? field(VHF_TX_OFF) : null;
+    m.ta_mhz = at(rec, VHF_TA_OFF) || at(rec, VHF_TA_OFF + 1) ? field(VHF_TA_OFF) : null;
     [m.rx_squelch_type, m.rx_pl] = slotDecode(at(rec, 17), at(rec, 18), false, false);
     [m.tx_squelch_type, m.tx_pl] = slotDecode(at(rec, 19), at(rec, 20), true, true);
     [m.ta_squelch_type, m.ta_pl] = slotDecode(at(rec, 21), at(rec, 22), true, true);
@@ -824,7 +912,7 @@ function decode900Record(m, b, off, stride, special) {
  */
 export function readModeBack(cp, body, m) {
     const back = newMode(m.number, body.slice(m.offset, m.offset + m.raw.length), m.offset, m.name);
-    if (cp.band === "vhf") decodeVhfRecord(back, back.raw);
+    if (cp.band === "vhf" || cp.band === "uhf") decodeVhfRecord(back, back.raw, cp.band === "uhf");
     else decode900Record(back, body, m.offset, m.raw.length, cp.trunked_mode1 && m.number === 1);
     return back;
 }
@@ -834,7 +922,7 @@ function parseModesVhf(cp, starts) {
     starts.forEach((off, i) => {
         const n = i + 1;
         const m = newMode(n, cp.body.slice(off, off + VHF_REC_LEN), off);
-        decodeVhfRecord(m, m.raw);
+        decodeVhfRecord(m, m.raw, cp.band === "uhf");
         m.name = nameFor(cp, n);
         cp.modes.push(m);
     });

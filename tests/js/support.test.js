@@ -29,7 +29,6 @@ test("unsupported codeplugs open read-only with a reason", { skip: !existsSync(j
         ["AR-ORIG/A604HMW0.158", /format version 101/],
         ["AR-ORIG/A624HQE9.680", /format version 112/],
         ["AR-ORIG/A604HQN2.287", /format version 114/],
-        ["AR-ORIG/A221ASJ0.121", /UHF/],
         ["AR-ORIG/B617AVE0.527", /mode table|layout/],
         ["ARCHIVE-20250412/b604aun0.331", /mode table/],
     ]);
@@ -40,4 +39,5 @@ test("unsupported codeplugs open read-only with a reason", { skip: !existsSync(j
         assert.match(s.reasons.join("; "), why, p);
     }
     assert.ok(open("AR-ORIG/A617AVE0.527").support.editable, "a supported trunked VHF sample stays editable");
+    assert.ok(open("AR-ORIG/A221ASJ0.121").support.editable, "the UHF sample is editable since the UHF codec");
 });

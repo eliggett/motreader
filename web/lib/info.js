@@ -13,7 +13,7 @@ import { valueLabel } from "./radiowide.js";
 
 const NOT_DECODED = "not decoded yet";
 const BAND_NAMES = /** @type {Record<string, string>} */ ({
-    vhf: "VHF", "900": "900 MHz", "900?": "900 MHz (mode layout not recognised)", "": "unknown",
+    vhf: "VHF", uhf: "UHF", "900": "900 MHz", "900?": "900 MHz (mode layout not recognised)", "": "unknown",
 });
 
 /** Printable ASCII in `b`, other bytes shown as "·". */

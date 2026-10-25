@@ -567,6 +567,85 @@ def vhf_tx_band_byte(freq: float) -> int:
     return 0x80 | (v & 1) << 5 | (v >> 1 & 1) << 2 | (v >> 2 & 1) << 3
 
 
+# ---------------------------------------------------------------------------
+# UHF conventional (2026-10-25; mapped with RSS on a 440-490 MHz A9 radio,
+# tools/scenario_freq_sweep.py; FORMAT §5a-uhf). The record is the VHF one
+# (same tags, tone slots, option bits); only the frequency codec differs. Both
+# fields program the same 127/128 dual-modulus synthesizer as VHF, N = 127*Np
+# + A with A = mid (the swallow count), on a 6.25 kHz or a 5 kHz reference:
+#
+#   TX / T/A: freq = step * (127*(lo + 256 + 256*tag.b1) + 128*mid)
+#             tag (view +9 / +13): b1 = the 9th bit of lo, b0 = its complement
+#             band byte (+12 / +16): 0x80 | b0 = 5 kHz step | b2 = 467 MHz and up
+#             (b1 = a 2.5 kHz form RSS sometimes writes; not decoded)
+#   RX:       freq = step * (127*(lo + 512 + 256*rec5.b0) + 128*mid) - 109.65
+#             (the first IF); view +5 b0 = lo's 9th bit; flag byte (+8):
+#             b0 = 5 kHz step | b2 = 467 MHz and up | b3 (RSS sets it on save)
+#
+# RSS uses the 6.25 kHz reference when the frequency is on it, else 5 kHz;
+# other values it refuses. Above 470 MHz RSS forces TX / T/A power Low (tag
+# bit 6 cleared).
+UHF_RX_IF = 109.65
+UHF_BAND = (400.0, 520.0)
+
+
+def uhf_step(freq: float):
+    """The reference RSS uses for freq: 6.25 kHz if it's on that raster, else
+    5 kHz, else None (not storable)."""
+    for step in (0.00625, 0.005):
+        n = freq / step
+        if abs(n - round(n)) < 1e-6:
+            return step
+    return None
+
+
+def uhf_decode_rx(lo: int, mid: int, flag: int, hi: int) -> float:
+    """hi = the byte at view +5, whose bit 0 is lo's 9th bit."""
+    step = 0.005 if flag & 1 else 0.00625
+    return round(step * (127 * (lo + 512 + 256 * (hi & 1)) + 128 * mid) - UHF_RX_IF, 5)
+
+
+def uhf_decode_txta(lo: int, mid: int, tag: int, band: int):
+    if band & 2:
+        return None                       # RSS's 2.5 kHz form: not decoded
+    step = 0.005 if band & 1 else 0.00625
+    return round(step * (127 * (lo + 256 + 256 * ((tag >> 1) & 1)) + 128 * mid), 5)
+
+
+def uhf_encode_rx(freq: float):
+    """(lo, mid, lo's 9th bit, flag bits) for an RX frequency, or None."""
+    step = uhf_step(freq)
+    if step is None:
+        return None
+    n = round((freq + UHF_RX_IF) / step)
+    np_, a = divmod(n, 127)
+    x = np_ - a - 512
+    if not 0 <= x <= 511:
+        return None
+    return x & 0xFF, a, x >> 8, 0x08 | (1 if step == 0.005 else 0) | (4 if freq >= 467.0 else 0)
+
+
+def uhf_encode_txta(freq: float):
+    """(lo, mid, lo's 9th bit, band byte) for a TX / T/A frequency, or None."""
+    step = uhf_step(freq)
+    if step is None:
+        return None
+    n = round(freq / step)
+    np_, a = divmod(n, 127)
+    x = np_ - a - 256
+    if not 0 <= x <= 511:
+        return None
+    return x & 0xFF, a, x >> 8, 0x80 | (1 if step == 0.005 else 0) | (4 if freq >= 467.0 else 0)
+
+
+def _uhf_record(body: bytes, t: int) -> bool:
+    """The record at true start t is UHF: TX tag E9/EA, a TX band byte of
+    0x80..0x87 (VHF's always has bit 3 or 5 set: 0xA4/0x88/0xA8/0x8C/0xAC) and
+    an RX that reads as UHF."""
+    return (body[t + 6] in (0xE9, 0xEA) and body[t + 9] & 0xF8 == 0x80
+            and UHF_BAND[0] <= uhf_decode_rx(body[t + 3], body[t + 4], body[t + 5], body[t + 2]) <= UHF_BAND[1])
+
+
 def find_vhf_records(body: bytes) -> list[int]:
     """Return record-start offsets for VHF conventional modes (may be empty).
 
@@ -1026,9 +1105,13 @@ def _record_band(body: bytes, starts) -> Optional[str]:
     # RX tag 0xA0 at +2 (b4 set = the mode scans with SCAN TYPE Talkgroup)
     s900 = sum(body[t + 2] & 0xEF == 0xA0 and body[t + 13] == 0x8C for t in starts)
     svhf = sum(body[t + 6] in (0xE9, 0xE8, 0x68) for t in starts)
+    # UHF: the VHF record with tags E9/EA (lo's 9th bit) and an RX that only reads as UHF
+    suhf = sum(_uhf_record(body, t) for t in starts)
     need = max(min(2, len(starts)), len(starts) // 2)   # a one-mode codeplug has one record
     if s900 >= need:
         return "900"
+    if suhf >= need:
+        return "uhf"
     if svhf >= need:
         return "vhf"
     return None
@@ -1216,6 +1299,14 @@ class Codeplug:
 
     def _parse_modes(self) -> None:
         pt = mode_pointer_table(self.body)
+        if pt and _record_band(self.body, pt[2]) == "uhf":
+            # UHF: the VHF record layout with the UHF frequency codec
+            self.band = "uhf"
+            self._parse_modes_vhf([t - 3 for t in pt[2]])
+            self._select_name_table(len(pt[2]))
+            for m in self.modes:
+                m.name = self._name_for(m.number)
+            return
         if pt and _record_band(self.body, pt[2]) == "vhf":
             # RSS's own mode pointers (identical to the tag-run search on every
             # on-hand file, and robust when sections move, e.g. after a Zone
@@ -1237,14 +1328,18 @@ class Codeplug:
         for n, off in enumerate(starts, 1):
             rec = b[off : off + VHF_REC_LEN]
             m = Mode(number=n, raw=rec, offset=off)
-            m.rx_mhz = vhf_decode(rec[VHF_RX_OFF], rec[VHF_RX_OFF + 1], VHF_RX_COEF)
+            uhf = self.band == "uhf"
+            m.rx_mhz = (uhf_decode_rx(rec[6], rec[7], rec[8], rec[5]) if uhf
+                        else vhf_decode(rec[VHF_RX_OFF], rec[VHF_RX_OFF + 1], VHF_RX_COEF))
             # TX / T·A are "Blank" on an RX-only mode (e.g. NOAA weather): both
             # value bytes are zero (which would otherwise decode to the base
             # frequency). A programmed field always has a non-zero (lo, mid).
             if rec[VHF_TX_OFF] or rec[VHF_TX_OFF + 1]:
-                m.tx_mhz = vhf_decode(rec[VHF_TX_OFF], rec[VHF_TX_OFF + 1], VHF_TX_COEF)
+                m.tx_mhz = (uhf_decode_txta(rec[10], rec[11], rec[9], rec[12]) if uhf
+                            else vhf_decode(rec[VHF_TX_OFF], rec[VHF_TX_OFF + 1], VHF_TX_COEF))
             if rec[VHF_TA_OFF] or rec[VHF_TA_OFF + 1]:
-                m.ta_mhz = vhf_decode(rec[VHF_TA_OFF], rec[VHF_TA_OFF + 1], VHF_TA_COEF)
+                m.ta_mhz = (uhf_decode_txta(rec[14], rec[15], rec[13], rec[16]) if uhf
+                            else vhf_decode(rec[VHF_TA_OFF], rec[VHF_TA_OFF + 1], VHF_TA_COEF))
             m.rx_pl = vhf_pl_decode(rec[VHF_PL_RX_OFF], rec[VHF_PL_RX_OFF + 1], False)
             m.tx_pl = vhf_pl_decode(rec[VHF_PL_TX_OFF], rec[VHF_PL_TX_OFF + 1], True)
             m.rx_squelch_type = vhf_squelch_type(rec[VHF_PL_RX_OFF], rec[VHF_PL_RX_OFF + 1])
@@ -1373,7 +1468,7 @@ class Codeplug:
         """
         out = bytearray(self.body)
         for m in self.modes:
-            if self.band == "vhf":
+            if self.band in ("vhf", "uhf"):
                 self._write_mode_vhf(out, m)
             else:
                 self._write_mode_900(out, m)
@@ -1478,10 +1573,45 @@ class Codeplug:
         else:
             out[base + off] &= (~bit & 0xFF)
 
+    def _write_field_uhf(self, out: bytearray, m: Mode, foff: int, freq) -> None:
+        """A UHF frequency field, re-encoded only if its value changed. RX:
+        lo/mid + the flag byte's step and band bits; TX/TA: lo/mid, lo's 9th
+        bit in the tag, the band byte, and power forced Low above 470 MHz."""
+        if freq is None:
+            return
+        rx = foff == VHF_RX_OFF
+        r = m.raw
+        cur = (uhf_decode_rx(r[6], r[7], r[8], r[5]) if rx
+               else uhf_decode_txta(r[foff], r[foff + 1], r[foff - 1], r[foff + 2]))
+        if freq == cur:
+            return
+        a = m.offset + foff
+        if rx:
+            enc = uhf_encode_rx(freq)
+            if enc is None:
+                raise ValueError(f"mode {m.number}: UHF RX {freq} MHz can't be stored")
+            out[a], out[a + 1] = enc[0], enc[1]
+            out[a - 1] = (out[a - 1] & ~0x01 & 0xFF) | enc[2]
+            out[a + 2] = (out[a + 2] & ~0x0D & 0xFF) | enc[3]
+            return
+        enc = uhf_encode_txta(freq)
+        if enc is None:
+            raise ValueError(f"mode {m.number}: UHF TX/T·A {freq} MHz can't be stored")
+        lo, mid, bit9, band = enc
+        out[a], out[a + 1], out[a + 2] = lo, mid, band
+        tag = (out[a - 1] & ~0x03 & 0xFF) | (0x02 if bit9 else 0x01)
+        if freq > 470.0:
+            tag &= ~VHF_POWER_BIT & 0xFF        # RSS: Low power only above 470 MHz
+        out[a - 1] = tag
+
     def _write_mode_vhf(self, out: bytearray, m: Mode) -> None:
-        self._write_field_vhf(out, m, VHF_RX_OFF, m.rx_mhz, VHF_RX_COEF, False)
-        self._write_field_vhf(out, m, VHF_TX_OFF, m.tx_mhz, VHF_TX_COEF, True)
-        self._write_field_vhf(out, m, VHF_TA_OFF, m.ta_mhz, VHF_TA_COEF, True)
+        if self.band == "uhf":
+            for foff, freq in ((VHF_RX_OFF, m.rx_mhz), (VHF_TX_OFF, m.tx_mhz), (VHF_TA_OFF, m.ta_mhz)):
+                self._write_field_uhf(out, m, foff, freq)
+        else:
+            self._write_field_vhf(out, m, VHF_RX_OFF, m.rx_mhz, VHF_RX_COEF, False)
+            self._write_field_vhf(out, m, VHF_TX_OFF, m.tx_mhz, VHF_TX_COEF, True)
+            self._write_field_vhf(out, m, VHF_TA_OFF, m.ta_mhz, VHF_TA_COEF, True)
         # option flags (strings -> desired bit state; polarity per notes/FORMAT.md)
         def on(v, yes):
             return None if v is None else (v.strip().lower() == yes)
