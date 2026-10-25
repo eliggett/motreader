@@ -9,6 +9,7 @@ import { log } from "./log.js";
 import { setModeField, MODE_FIELD_BY_KEY, fieldText } from "../lib/modefields.js";
 import { setZoneName, setZoneModes, formatModeList } from "../lib/zonefields.js";
 import { setRadioWide, changes } from "../lib/document.js";
+import { setPhone, setMpl } from "../lib/listfields.js";
 import { InvalidValue } from "../lib/errors.js";
 
 /** @typedef {{ error?: string, note?: string }} EditResult */
@@ -74,6 +75,20 @@ export function editZoneModes(/** @type {number} */ n, /** @type {string} */ tex
         const cp = /** @type {import("./state.js").Document} */ (store.get()).cp;
         setZoneModes(cp, n, text);
         return `modes ${formatModeList(cp.zones[n - 1]?.modes ?? [])}`;
+    });
+}
+
+/** Set phone `n`'s "name" or "dial" from text. */
+export function editPhone(/** @type {number} */ n, /** @type {"name" | "dial"} */ key, /** @type {string} */ text) {
+    return run(`Phone ${n} ${key === "dial" ? "number" : key} = ${JSON.stringify(text)}`, () => {
+        setPhone(/** @type {import("./state.js").Document} */ (store.get()), n, key, text);
+    });
+}
+
+/** Set MPL `n`'s "name" or a slot ("rx" / "tx" / "ta", e.g. "TPL 100.0"). */
+export function editMpl(/** @type {number} */ n, /** @type {string} */ key, /** @type {string} */ text) {
+    return run(`MPL ${n} ${key === "name" ? "name" : key.toUpperCase()} = ${JSON.stringify(text)}`, () => {
+        setMpl(/** @type {import("./state.js").Document} */ (store.get()), n, key, text);
     });
 }
 

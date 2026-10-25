@@ -18,15 +18,21 @@ the reverse-engineering tool and the reference:
   with no warning, show the edits, and re-save byte-identically
   (`tools/scenario_validate_export.py`, `tools/compare_resave.py`; captures in
   `notes/ground-truth/vhf_band_rss/`).
-- Milestones done: 1 skeleton, 2 read-only, 3 editing + Export Codeplug. Next:
-  4 CSV/YAML import/export, 5 structural ops (modes/zones add/delete, scan,
-  trunk removal), 6 control head buttons, 7 export-time checks.
+- **CSV/YAML**: `tools/py_tables.py` + `tests/js/tables-parity.test.js` — the web
+  app's modes.csv / phones.csv / mpl.csv / radio.yaml equal the CLI's (minus the
+  scan parts not yet in the web app), and the same edited files imported by the
+  CLI and the web app give byte-identical archives.
+- Milestones done: 1 skeleton, 2 read-only, 3 editing + Export Codeplug, 4
+  CSV/YAML + phone/MPL lists. Next: 5 structural ops (modes/zones
+  add/delete/move, scan lists, trunk removal, Zone Operation), 6 control head
+  buttons, 7 export-time checks.
 
 Found while validating (fixed in Python too): an unedited rebuild zeroed tone
 slots that aren't tones (six codeplugs); VHF frequencies now use RSS's byte pair
 (smallest swallow count) and RSS's band byte (6 MHz bands; the old rule was
 wrong above 156 MHz); TX/TA above 165.74 MHz that the synthesizer can't hold are
-refused (RSS silently stores a wrong frequency). FORMAT §5a.
+refused (RSS silently stores a wrong frequency). FORMAT §5a. Editing the TX of
+a 900 MHz split mode with no talk-around no longer empties the mode.
 
 ## TL;DR
 

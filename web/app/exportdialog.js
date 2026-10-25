@@ -38,6 +38,8 @@ export async function exportDialog() {
     const what = [
         ch.modes.length ? `modes ${formatModeList(ch.modes)}` : "",
         ch.zones.length ? `zones ${formatModeList(ch.zones)}` : "",
+        ch.phones.length ? `phones ${formatModeList(ch.phones)}` : "",
+        ch.mpls.length ? `MPL ${formatModeList(ch.mpls)}` : "",
         ch.radioWide.length ? `radio-wide: ${ch.radioWide.join(", ")}` : "",
     ].filter(Boolean).join("; ");
 

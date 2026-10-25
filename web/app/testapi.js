@@ -23,6 +23,7 @@ import * as modal from "./modal.js";
 import * as actions from "./actions.js";
 import * as editing from "./editing.js";
 import { exportArchive } from "../lib/export.js";
+import { exportTables } from "../lib/tables.js";
 import { changes } from "../lib/document.js";
 import { lastDownload } from "./files.js";
 import { currentDialog } from "./modal.js";
@@ -102,6 +103,16 @@ export function installTestApi(/** @type {Promise<void>} */ ready) {
             const d = store.get();
             return d && changes(d);
         },
+        /** Import CSV/YAML text files ([{ name, text }]) as Import CSV/YAML does; returns the report. */
+        importTables: (/** @type {{ name: string, text: string }[]} */ files) => actions.applyTables(files),
+        /** The CSV/YAML Export CSV / Export YAML would write: [{ name, text }]. */
+        exportTables: () => {
+            const d = store.get();
+            return d && exportTables(d);
+        },
+        /** Edit phone `n` ("name" / "dial") or MPL `n` ("name" / "rx" / "tx" / "ta"). */
+        setPhone: (/** @type {number} */ n, /** @type {"name" | "dial"} */ key, /** @type {string} */ text) => editing.editPhone(n, key, text),
+        setMpl: (/** @type {number} */ n, /** @type {string} */ key, /** @type {string} */ text) => editing.editMpl(n, key, text),
         /** Build the archive as Export would, without the dialog. */
         exported() {
             const d = store.get();

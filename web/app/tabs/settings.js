@@ -9,6 +9,7 @@ import { h, fill } from "../dom.js";
 import { SCREENS, FIELD_BY_KEY, EN, SIREN_CHOICES, REARM_CHOICES, HEAD_CHOICES, valueLabel } from "../../lib/radiowide.js";
 import { editRadioWide } from "../editing.js";
 import { empty, note, section, NO_DOC } from "./common.js";
+import { listSections } from "./lists.js";
 
 /** @typedef {import("../state.js").Document} Document */
 
@@ -121,7 +122,7 @@ export function settingsTab(id, title, tab, extra) {
 }
 
 export const radioWideTab = settingsTab("radiowide", "Radio-Wide", "radiowide");
-export const conventionalTab = settingsTab("conventional", "Conventional", "conventional");
+export const conventionalTab = settingsTab("conventional", "Conventional", "conventional", listSections);
 export const headTab = settingsTab("head", "Control Head", "head", () => [
     section("Buttons", h("p", { class: "note" }, "Control head button assignment arrives in a later milestone.")),
 ]);

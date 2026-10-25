@@ -202,3 +202,4 @@ table.grid td.members-edit { font-family: var(--mono); min-width: 9rem; }
   .form, .mode-editor .form { grid-template-columns: 1fr; }
   .form-row > label { margin-top: 0.4rem; }
 }
+.import-report ul { margin: 0.25rem 0 0.75rem; padding-left: 1.2rem; font-size: 0.9rem; }

@@ -7,7 +7,8 @@
 import { h } from "./dom.js";
 import { store } from "./state.js";
 import { log } from "./log.js";
-import { pickFiles } from "./files.js";
+import { pickFiles, download } from "./files.js";
+import { importTables as importTableFiles, exportTables } from "../lib/tables.js";
 import { alertModal, openModal, confirmModal } from "./modal.js";
 import { openDocument } from "../lib/document.js";
 import { isArchive } from "../lib/archive.js";
@@ -104,20 +105,80 @@ async function trunkingNotice(/** @type {import("./state.js").Document} */ doc) 
     }
 }
 
+/**
+ * Import CSV/YAML: modes.csv, phones.csv, mpl.csv and radio.yaml in the CLI's
+ * formats (any of them; recognised by header, so renamed copies work).
+ */
 export async function importTables() {
-    await notYet("Import CSV/YAML");
+    const doc = store.get();
+    if (!doc) return;
+    const picked = await pickFiles(".csv,.yaml,.yml,text/csv", true);
+    if (!picked.length) {
+        log.debug("Import CSV/YAML cancelled");
+        return;
+    }
+    const files = picked.map((f) => ({ name: f.name, text: new TextDecoder().decode(f.bytes) }));
+    await applyTables(files);
+}
+
+/** Apply CSV/YAML text files to the open document and show what happened. */
+export async function applyTables(/** @type {import("../lib/tables.js").TextFile[]} */ files) {
+    const doc = store.get();
+    if (!doc) return null;
+    let rep;
+    try {
+        rep = importTableFiles(doc, files);
+    } catch (e) {
+        log.error(`Import failed: ${e instanceof Error ? e.stack ?? e.message : e}`);
+        await alertModal("Import failed", `The files couldn't be imported: ${errText(e)}`);
+        return null;
+    }
+    store.update(() => {}, "edit");
+    for (const f of rep.files) log.info(`Import: ${f}`);
+    for (const a of rep.applied) log.info(`Import: ${a}`);
+    for (const r of rep.refused) log.warn(`Import refused: ${r}`);
+    for (const n of rep.notApplied) log.warn(`Import: not applied: ${n}`);
+    const list = (/** @type {string[]} */ xs, max = 30) => h("ul", {}, xs.slice(0, max).map((x) => h("li", {}, x)),
+        xs.length > max ? h("li", {}, `... and ${xs.length - max} more (all are in the log)`) : null);
+    void alertModal("Import CSV/YAML", h("div", { class: "import-report" },
+        h("p", {}, `${rep.applied.length} change${rep.applied.length === 1 ? "" : "s"} applied`
+            + (rep.applied.length ? " (highlighted in the tabs; nothing is written until you export)." : ": the files match the codeplug.")),
+        rep.refused.length ? h("div", { class: "warn-box" }, h("p", {}, `${rep.refused.length} value(s) refused:`), list(rep.refused)) : null,
+        rep.notApplied.length ? h("div", {}, h("p", {}, "Not applied (not supported by the web app yet):"), list(rep.notApplied)) : null,
+        h("p", { class: "note" }, rep.files.join("; "))));
+    return rep;
+}
+
+/** Export CSV: modes.csv, phones.csv (and mpl.csv), in the CLI's format. */
+export async function exportCsv() {
+    const files = await tablesOrAlert();
+    for (const f of files?.filter((x) => x.name.endsWith(".csv")) ?? []) download(f.text, f.name, "text/csv");
+    if (files) log.info(`Exported ${files.filter((x) => x.name.endsWith(".csv")).map((f) => f.name).join(", ")}`);
+}
+
+/** Export YAML: radio.yaml, in the CLI's format. */
+export async function exportYaml() {
+    const f = (await tablesOrAlert())?.find((x) => x.name === "radio.yaml");
+    if (!f) return;
+    download(f.text, f.name, "application/yaml");
+    log.info("Exported radio.yaml");
+}
+
+/** The open document's CSV/YAML, or null after telling the user why not. */
+async function tablesOrAlert() {
+    const doc = store.get();
+    if (!doc) return null;
+    try {
+        return exportTables(doc);
+    } catch (e) {
+        log.warn(`Export failed: ${errText(e)}`);
+        await alertModal("Export failed", `The codeplug can't be written: ${errText(e)}`);
+        return null;
+    }
 }
 
 export async function exportCodeplug() {
     await exportDialog();
-}
-
-export async function exportYaml() {
-    await notYet("Export YAML");
-}
-
-export async function exportCsv() {
-    await notYet("Export CSV");
 }
 
 /** The About dialog; its text lives in about.html so it can be edited on its own. */
@@ -134,11 +195,6 @@ export async function about() {
         body = "About text unavailable.";
     }
     await openModal({ title: "About motreader", body });
-}
-
-async function notYet(/** @type {string} */ what) {
-    log.warn(`${what}: not available yet`);
-    await alertModal(what, `${what} arrives in a later milestone.`);
 }
 
 /** "VHF", "900 MHz", ... */
