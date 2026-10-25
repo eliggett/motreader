@@ -25,6 +25,24 @@ def _ci(d, name):
     return os.path.join(d, name)
 
 
+def _record_from_archive(t, serial):
+    """A DBF record for an archive the index doesn't list (some sample sets
+    have archives without entries): A + serial[:7] + "." + serial[7:], with the
+    model read from the archive's header."""
+    fn = f"A{serial[:7]}.{serial[7:]}"
+    path = _ci(SRC_ARCH, fn)
+    if not os.path.exists(path) or not t.records:
+        return None
+    from motreader.archive import Archive
+    from motreader.crypto import decrypt_body
+    body = decrypt_body(Archive.load(path).body)
+    i = body.find(b"COPYRIGHT MOTOROLA INC.,1987")
+    model = body[i + 0x48:i + 0x54].decode("latin-1") if i >= 0 else ""
+    rec = dict(t.records[0])
+    rec.update(SERIAL=serial, FILENAME=fn, MODEL=model, CUSTOMER="")
+    return rec
+
+
 def main():
     serial = sys.argv[1].upper()
     dst_c = sys.argv[2]
@@ -40,7 +58,9 @@ def main():
     t = read_dbf(src_dbf)
     rec = next((r for r in t.records if r["SERIAL"].strip() == serial), None)
     if rec is None:
-        sys.exit(f"serial {serial} not in {src_dbf}")
+        rec = _record_from_archive(t, serial)
+    if rec is None:
+        sys.exit(f"serial {serial} not in {src_dbf}, and no archive A{serial[:6]}?.??? found")
     fn = rec["FILENAME"].strip()
 
     # fresh single-entry ARCHIVE dir
