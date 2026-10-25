@@ -1,0 +1,144 @@
+/* motreader: dark theme. Colours are tokens on :root; change them here. */
+
+:root {
+  color-scheme: dark;
+  --bg: #15171a;
+  --panel: #1d2024;
+  --raised: #262a30;
+  --border: #353a42;
+  --text: #dde1e6;
+  --muted: #8b939e;
+  --accent: #4f9cf0;
+  --accent-text: #0b1420;
+  --warn: #e0b341;
+  --error: #ef6b6b;
+  --debug: #7f8792;
+  --mono: ui-monospace, "DejaVu Sans Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --log-height: 11rem;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; margin: 0; }
+
+body {
+  display: grid;
+  grid-template-rows: auto auto 1fr var(--log-height);
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.4 var(--sans);
+}
+
+button {
+  font: inherit;
+  color: var(--text);
+  background: var(--raised);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.3rem 0.75rem;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+button:disabled { opacity: 0.45; cursor: default; }
+button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+
+.spacer { flex: 1; }
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.5rem 1rem;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.toolbar .group { display: flex; gap: 0.35rem; }
+.brand { font-weight: 600; letter-spacing: 0.02em; }
+.doc-name { color: var(--muted); font-family: var(--mono); }
+
+/* Tabs */
+.tabs {
+  display: flex;
+  overflow-x: auto;
+  gap: 0.15rem;
+  padding: 0.4rem 1rem 0;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.tabs button {
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  background: transparent;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.tabs button[aria-selected="true"] {
+  background: var(--bg);
+  color: var(--text);
+  border-color: var(--border);
+  margin-bottom: -1px;
+}
+
+/* Tab panels */
+main { overflow: auto; min-height: 0; }
+.panel { padding: 1rem; }
+.empty { color: var(--muted); }
+.note { color: var(--muted); margin-top: 0; }
+
+table.info { border-collapse: collapse; margin-bottom: 1rem; }
+table.info th { text-align: left; font-weight: normal; color: var(--muted); padding: 0.2rem 1.5rem 0.2rem 0; }
+table.info td { font-family: var(--mono); padding: 0.2rem 0; }
+
+pre.hexdump { font: 13px/1.35 var(--mono); margin: 0; }
+
+/* Log panel */
+.log {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+}
+.log-bar { display: flex; align-items: center; gap: 1rem; padding: 0.3rem 1rem; border-bottom: 1px solid var(--border); }
+.log-bar label { color: var(--muted); }
+.log-bar button { padding: 0.1rem 0.6rem; }
+.log-entries {
+  flex: 1;
+  overflow: auto;
+  margin: 0;
+  padding: 0.3rem 1rem;
+  list-style: none;
+  font: 12px/1.45 var(--mono);
+}
+.log-entries li { white-space: pre-wrap; }
+.log-debug { color: var(--debug); }
+.log-warn { color: var(--warn); }
+.log-error { color: var(--error); }
+
+/* Modal dialogs */
+dialog.modal {
+  min-width: min(28rem, calc(100vw - 2rem));
+  max-width: min(40rem, calc(100vw - 2rem));
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+}
+dialog.modal.wide { max-width: min(64rem, calc(100vw - 2rem)); }
+dialog.modal::backdrop { background: rgb(0 0 0 / 0.6); }
+dialog.modal h2 { margin: 0 0 0.75rem; font-size: 1.1rem; }
+.modal-body { max-height: 65vh; overflow: auto; }
+.modal-buttons { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }
+.modal-body a { color: var(--accent); }
+
+@media (max-width: 40rem) {
+  :root { --log-height: 8rem; }
+  .toolbar { padding: 0.5rem; }
+  .panel { padding: 0.75rem; }
+}

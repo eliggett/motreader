@@ -41,9 +41,15 @@ the archive format and the body scrambler.
 ## Layout
 
 ```
-motreader/      library (dbf, archive, crypto, codeplug, cli)
-tools/          reverse-engineering helpers (pyghidra scripts, analysis)
-tests/          pytest round-trip tests
+motreader/      Python library (dbf, archive, crypto, codeplug, cli)
+web/            the web app (static: open index.html via any web server)
+  lib/          format core in plain JS, no browser or Node APIs
+  app/          the UI; tabs/ holds one module per tab
+  vendor/       vendored third-party JS (see vendor/VENDOR.md)
+server/         HTTPS test server for web/ (local testing only)
+tools/          reverse-engineering helpers (pyghidra scripts, analysis),
+                fetch_vendor.sh, cdp.mjs (headless-Chrome driver)
+tests/          pytest round-trip tests; tests/js/ are the web app's Node tests
 notes/          format documentation
 samples/        (gitignored) copies of archives used while developing
 ```
@@ -56,6 +62,26 @@ Ghidra 12 headless against `SPECTRA1.EXE`.
 ```
 PYTHONPATH=. python -m pytest tests -q
 ```
+
+### Web app
+
+The web app is plain JavaScript modules: no build step, the files in `web/`
+are what gets served. Types are JSDoc comments checked by TypeScript's
+checker, which never emits anything. Needs Node 22+ for the tests and tools
+(Node 24 LTS lives in `~/.local/opt`, linked from `~/.local/bin`).
+
+```
+npm install                 # once: the dev-only checker (typescript, @types/node)
+npm test                    # Node tests over tests/js/
+npm run check               # type check web/lib, web/app, tests/js
+npm run serve               # HTTPS on https://localhost:4443/ (run server/gen_keys.sh once first)
+node tools/cdp.mjs --load ARCHIVE 'mr.tab("hex")' 'mr.text()'   # drive it headless
+```
+
+`window.mr` in the page is the test API (`web/app/testapi.js`): load a file
+from bytes, switch tabs, read the visible text, inspect and answer dialogs,
+read the log. Third-party code is copied into `web/vendor/` by
+`tools/fetch_vendor.sh`, pinned by version and checksum.
 
 ## Safety note
 

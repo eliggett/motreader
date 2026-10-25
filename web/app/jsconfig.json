@@ -1,0 +1,6 @@
+{
+  // The UI: browser APIs plus the format core.
+  "extends": "../../jsconfig.base.json",
+  "compilerOptions": { "lib": ["ES2023", "DOM", "DOM.Iterable"], "types": [] },
+  "include": ["**/*.js", "../lib/**/*.js"]
+}

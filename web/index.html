@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>motreader</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Crect width=%2716%27 height=%2716%27 rx=%273%27 fill=%27%234f9cf0%27/%3E%3Cpath d=%27M4 12V4l4 5 4-5v8%27 stroke=%27%230b1420%27 stroke-width=%271.8%27 fill=%27none%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="app.css">
+<script type="module" src="app/main.js"></script>
+</head>
+<body>
+<header class="toolbar">
+  <span class="brand">motreader</span>
+  <span id="doc-name" class="doc-name"></span>
+  <span class="spacer"></span>
+  <div class="group" aria-label="Import">
+    <button data-action="import-codeplug" class="primary">Import Codeplug</button>
+    <button data-action="import-tables">Import CSV/YAML</button>
+  </div>
+  <div class="group" aria-label="Export">
+    <button data-action="export-codeplug">Export Codeplug</button>
+    <button data-action="export-yaml">Export YAML</button>
+    <button data-action="export-csv">Export CSV</button>
+  </div>
+  <button data-action="about">About</button>
+</header>
+<nav id="tabs" class="tabs"></nav>
+<main id="main"></main>
+<footer id="log" class="log"></footer>
+<noscript>motreader needs JavaScript.</noscript>
+</body>
+</html>
