@@ -1515,6 +1515,8 @@ class Codeplug:
 
         code = (want_code or "").strip()
         wt = (want_type or "").strip()
+        if orig_type is None and want_type is None and not code:
+            return   # a slot that isn't a tone (it decodes to no type) and wasn't edited: keep it
         if code[:1] == "D" and code[1:] in DPL_PAIR_BY_CODE:      # DPL code
             if wt in ("DPL", "INV.DPL"):
                 des_type = wt                         # explicit polarity

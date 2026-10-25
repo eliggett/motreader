@@ -459,6 +459,31 @@ export function vhfDecode(/** @type {number} */ lo, /** @type {number} */ mid, /
     return pyRound(c0 * lo + c1 * mid + k, 4);
 }
 
+/** Best (lo, mid) in 0..255 for `freq` under a VHF field's coefficients. */
+export function vhfEncode(/** @type {number} */ freq, /** @type {Coef} */ coef) {
+    const [c0, c1, k] = coef;
+    /** @type {[number, number, number] | null} */
+    let best = null;
+    for (let mid = 0; mid < 256; mid++) {
+        const lo = pyRound((freq - k - c1 * mid) / c0);
+        if (lo < 0 || lo > 255) continue;
+        const err = Math.abs(c0 * lo + c1 * mid + k - freq);
+        if (!best || err < best[0]) best = [err, lo, mid];
+    }
+    return /** @type {[number, number]} */ (best ? [best[1], best[2]] : [0, 0]);
+}
+
+/**
+ * VCO band byte for a new TX/TA value (it doesn't change the displayed
+ * frequency): 144-148 -> 0xA4, 150-155 -> 0x88, 160+ -> 0xA8. An unchanged
+ * field keeps its original byte; this is only for brand-new values.
+ */
+export function vhfTxBandByte(/** @type {number} */ freq) {
+    if (freq < 149.0) return 0xA4;
+    if (freq < 157.0) return 0x88;
+    return 0xA8;
+}
+
 /** Record starts of the VHF conventional modes (may be empty). */
 export function findVhfRecords(/** @type {Uint8Array} */ body) {
     const starts = [];
@@ -498,8 +523,8 @@ export function findVhfRecords(/** @type {Uint8Array} */ body) {
 // 109.65 at +14/+15. TX (+17 carry, +18, +19) and T/A (+21, +22, +23):
 // 0.0125*(255*lo + 256*mid) + 816*(carry & 1).
 const MODE_TABLE_OFF = 0x0D26;
-const M900_TX = /** @type {const} */ ([17, 18, 19]);
-const M900_TA = /** @type {const} */ ([21, 22, 23]);
+export const M900_TX = /** @type {const} */ ([17, 18, 19]);
+export const M900_TA = /** @type {const} */ ([21, 22, 23]);
 const M900_STEP = 0.0125;
 const M900_HIGH = 816.0;
 const M900_RX_BASE = 109.65;
@@ -518,6 +543,55 @@ function m900RxDecode(rec) {
 function m900FreqDecode(rec, field) {
     const [carry, lo, mid] = field;
     return pyRound(M900_STEP * (255 * at(rec, lo) + 256 * at(rec, mid)) + M900_HIGH * (at(rec, carry) & 1), 4);
+}
+
+/** (lo, mid) with 255*lo + 256*mid == target, if any. */
+function exactLoMid(/** @type {number} */ target) {
+    if (target < 0 || target > 255 * 255 + 256 * 255) return null;
+    for (let mid = 0; mid < 256; mid++) {
+        const rem = target - 256 * mid;
+        if (rem >= 0 && rem % 255 === 0 && rem / 255 <= 255) return /** @type {[number, number]} */ ([rem / 255, mid]);
+    }
+    return null;
+}
+
+/** (lo, mid) encoding a 900 MHz RX frequency (no carry byte). */
+export function m900RxEncode(/** @type {number} */ freq) {
+    const exact = exactLoMid(pyRound((freq - M900_RX_BASE) / M900_STEP));
+    if (exact) return exact;
+    /** @type {[number, number, number] | null} */
+    let best = null;
+    for (let mid = 0; mid < 256; mid++) {
+        for (let lo = 0; lo < 256; lo++) {
+            const e = Math.abs(M900_STEP * (255 * lo + 256 * mid) + M900_RX_BASE - freq);
+            if (!best || e < best[0]) best = [e, lo, mid];
+        }
+    }
+    const b = /** @type {[number, number, number]} */ (best);
+    return /** @type {[number, number]} */ ([b[1], b[2]]);
+}
+
+/**
+ * (lo, mid, carry) encoding a 900 MHz TX/TA frequency. The carry byte's
+ * other bits are kept; bit 0 (+816 MHz) is chosen so an exact (lo, mid) exists.
+ */
+export function m900FreqEncode(/** @type {number} */ freq, /** @type {number} */ carryByte) {
+    for (const bit of [carryByte & 1, (carryByte & 1) ^ 1]) {
+        const exact = exactLoMid(pyRound((freq - M900_HIGH * bit) / M900_STEP));
+        if (exact) return /** @type {[number, number, number]} */ ([exact[0], exact[1], (carryByte & ~1) | bit]);
+    }
+    /** @type {[number, number, number, number] | null} */
+    let best = null;
+    for (const bit of [0, 1]) {
+        for (let mid = 0; mid < 256; mid++) {
+            for (let lo = 0; lo < 256; lo++) {
+                const e = Math.abs(M900_STEP * (255 * lo + 256 * mid) + M900_HIGH * bit - freq);
+                if (!best || e < best[0]) best = [e, lo, mid, (carryByte & ~1) | bit];
+            }
+        }
+    }
+    const b = /** @type {[number, number, number, number]} */ (best);
+    return /** @type {[number, number, number]} */ ([b[1], b[2], b[3]]);
 }
 
 const plausible900 = (/** @type {number | null} */ f) => (f !== null && f >= M900_BAND[0] && f <= M900_BAND[1] ? f : null);

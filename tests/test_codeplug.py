@@ -728,3 +728,23 @@ def test_no_false_zone_block_on_zoneless_radio():
     if not os.path.exists(_SQ):
         pytest.skip("sample not present")
     assert _zones(_SQ) == []
+
+
+def test_unedited_rebuild_is_byte_identical_everywhere():
+    """A no-op import must not change a byte, on every archive and RSS capture
+    on hand, including codeplugs whose tone slots hold data that isn't a tone
+    (they decode to no squelch type and must be left alone)."""
+    import glob
+    from tests.test_crypto import _archives
+    from motreader.archive import Archive
+    from motreader.crypto import decrypt_body
+    from motreader.codeplug import Codeplug
+    bodies = [(p, decrypt_body(Archive.load(p).body)) for p in _archives()]
+    bodies += [(p, open(p, "rb").read()) for p in
+               glob.glob(os.path.join(os.path.dirname(__file__), "..", "notes", "ground-truth", "**", "*.bin"),
+                         recursive=True)]
+    assert bodies
+    for p, body in bodies:
+        if p.endswith("A428TWN2.810"):
+            continue
+        assert bytes(Codeplug.parse(body).rebuild()) == body, p

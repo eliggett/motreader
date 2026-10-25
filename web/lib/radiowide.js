@@ -14,6 +14,7 @@
  * `FIELDS` is the schema: one entry per setting, in RSS screen order, with
  * its location, how it is stored and when RSS shows it.
  */
+import { InvalidValue } from "./errors.js";
 
 /** @typedef {"hdr" | "ext" | "chb"} Area */
 /**
@@ -371,3 +372,296 @@ export const SCREENS = [
         ["ch_medium_backlight", "Medium Backlight"], ["ch_high_backlight", "High Backlight"],
     ] },
 ];
+
+// ---------------------------------------------------------------------------
+// Encoding (template-patch). Port of radiowide.encode and its helpers.
+
+/** @param {Uint8Array} out @param {number} a @param {number} bit @param {boolean} v */
+function setBit(out, a, bit, v) {
+    out[a] = v ? byte(out, a) | (1 << bit) : byte(out, a) & (~(1 << bit) & 0xFF);
+}
+/** @param {Uint8Array} out @param {number} a @param {boolean} hi @param {number} n */
+function setNib(out, a, hi, n) {
+    out[a] = hi ? (byte(out, a) & 0x0F) | (n << 4) : (byte(out, a) & 0xF0) | n;
+}
+
+/** Python `float(v)` for the values a field can be given. */
+function toFloat(/** @type {unknown} */ v) {
+    if (typeof v === "number") return v;
+    if (typeof v === "boolean") return v ? 1 : 0;
+    if (typeof v === "string" && /^\s*[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?\s*$/.test(v)) return Number(v);
+    return null;
+}
+/** Python `int(v)`: integers, whole-number text, or a float (truncated). */
+function toInt(/** @type {string} */ key, /** @type {unknown} */ v) {
+    if (typeof v === "number" && Number.isFinite(v)) return Math.trunc(v);
+    if (typeof v === "boolean") return v ? 1 : 0;
+    if (typeof v === "string" && /^\s*[+-]?\d+\s*$/.test(v)) return parseInt(v, 10);
+    throw new InvalidValue(`radio_wide.${key}: expected a whole number, got ${JSON.stringify(v)}`);
+}
+/** Loose equality for edited values (numbers as numbers, else text ignoring case). */
+function same(/** @type {unknown} */ a, /** @type {unknown} */ b) {
+    const fa = toFloat(a);
+    const fb = toFloat(b);
+    if (fa !== null && fb !== null) return fa === fb;
+    return String(a ?? "None").trim().toLowerCase() === String(b ?? "None").trim().toLowerCase();
+}
+/** Enabled/Disabled (and on/off, yes/no, true/false, 1/0). */
+function parseBool(/** @type {string} */ key, /** @type {unknown} */ v) {
+    if (typeof v === "boolean") return v;
+    const s = String(v).trim().toLowerCase();
+    if (["enabled", "enable", "on", "yes", "true", "1"].includes(s)) return true;
+    if (["disabled", "disable", "off", "no", "false", "0"].includes(s)) return false;
+    throw new InvalidValue(`radio_wide.${key}: expected Enabled/Disabled, got ${JSON.stringify(v)}`);
+}
+/** The matching choice (ignoring case), or throw. */
+function pick(/** @type {string} */ key, /** @type {readonly string[]} */ choices, /** @type {unknown} */ v) {
+    const want = String(v).trim().toLowerCase();
+    const c = choices.find((x) => x.toLowerCase() === want);
+    if (c === undefined) throw new InvalidValue(`radio_wide.${key}: expected one of ${choices.join(", ")}, got ${JSON.stringify(v)}`);
+    return c;
+}
+
+export const SIREN_CHOICES = /** @type {const} */ (["Disabled", "PA only", "Siren/PA"]);
+export const REARM_CHOICES = /** @type {const} */ (["Disabled", "Enabled", "Permanent"]);
+export const HEAD_CHOICES = /** @type {const} */ (["Standard", "Enhanced", "Rotary"]);
+const CHB_W = 0x1C;
+
+/**
+ * CHB+0x1C/+0x1D = W, RSS's control-head summary word: the 16-bit sum S of
+ * CHB bytes [+0x12, +0x1B), bit-interleaved MSB-first as s7 s15 s6 s14 ... s0 s8.
+ */
+export function chbSummaryWord(/** @type {Uint8Array} */ body, /** @type {number} */ c) {
+    let s = 0;
+    for (let i = c + 0x12; i < c + 0x1B; i++) s += byte(body, i);
+    let acc = 0;
+    for (let k = 0; k < 8; k++) acc = (acc << 2) | (((s >> (7 - k)) & 1) << 1) | ((s >> (15 - k)) & 1);
+    return acc;
+}
+
+/** Siren/P.A. Options: hdr 0x17C b7, CHB+0x14 b2, CHB+0x5E b7, CHB+0x5F b7 (PA only). */
+function encodeSiren(/** @type {Uint8Array} */ out, /** @type {Blocks} */ blk, /** @type {unknown} */ v) {
+    const want = pick("siren_pa_options", SIREN_CHOICES, v);
+    const c = blk.chb;
+    if (c === null) throw new InvalidValue("radio_wide.siren_pa_options: control-head block not found");
+    const isOn = want !== "Disabled";
+    setBit(out, 0x17C, 7, isOn);
+    setBit(out, c + 0x14, 2, isOn);
+    setBit(out, c + 0x5E, 7, isOn);
+    setBit(out, c + 0x5F, 7, want === "PA only");
+}
+
+/**
+ * Control Head Type, as RSS does it: Enhanced/Rotary set 0x1CD b3 and CHB+0x17
+ * b1, CHB+0x46 |= 0x0C and reset the options byte ext+0x6C to 0x63; Rotary
+ * also sets 0x10D b4, forces Phone/DTMF Encode to List and turns Volume Set
+ * Tone off (and Mode Change Tone, with no zones); leaving Rotary restores
+ * Phone/DTMF Encode to the model default. S9000e (A9) can't be changed.
+ */
+function encodeHead(/** @type {Uint8Array} */ out, /** @type {Blocks} */ blk, /** @type {RadioWide} */ orig, /** @type {unknown} */ v) {
+    const was = orig.control_head_type;
+    if (!HEAD_CHOICES.includes(/** @type {any} */ (was)) || !HEAD_CHOICES.some((c) => c.toLowerCase() === String(v).trim().toLowerCase())) {
+        throw new InvalidValue("radio_wide.control_head_type: only Standard / Enhanced / Rotary can be swapped "
+            + "(RSS can't change to or from S9000e)");
+    }
+    const want = pick("control_head_type", HEAD_CHOICES, v);
+    const { chb: c, ext: e } = blk;
+    if (c === null || e === null) throw new InvalidValue("radio_wide.control_head_type: control-head/ext block not found");
+    const fancy = want !== "Standard";
+    setBit(out, 0x1CD, 3, fancy);
+    setBit(out, c + 0x17, 1, fancy);
+    if (fancy) {
+        out[c + 0x46] = byte(out, c + 0x46) | 0x0C;
+        out[e + 0x6C] = 0x63;
+    }
+    const rotary = want === "Rotary";
+    setBit(out, 0x10D, 4, rotary);
+    if (rotary) {
+        setBit(out, 0x10D, 6, false);
+        setBit(out, 0x10E, 4, false);
+        if (byte(out, 0x1DD) === 0) setBit(out, 0x10E, 0, false);
+    } else if (was === "Rotary") {
+        setBit(out, 0x10D, 6, !((byte(out, 0x10D) >> 1) & 1));
+    }
+}
+
+/** Recompute the derived bytes of every touched block: ext sum; CHB summary word, then CHB sum. */
+function finish(/** @type {Uint8Array} */ out, /** @type {Blocks} */ blk, /** @type {Set<string>} */ touched) {
+    const { ext: e, chb: c } = blk;
+    if (touched.has("ext") && e !== null) {
+        const L = byte(out, e);
+        out[e + L - 1] = sum8(out, e, e + L - 1);
+    }
+    if (touched.has("chb") && c !== null) {
+        const w = chbSummaryWord(out, c);
+        out[c + CHB_W] = w >> 8;
+        out[c + CHB_W + 1] = w & 0xFF;
+        out[c + CHB_CK] = sum8(out, c + CHB_SUM_LO, c + CHB_CK);
+    }
+    return out;
+}
+
+/** Fields whose value decides whether others are shown. */
+const GATES = new Set(FIELDS.flatMap((f) => (f.when ? [f.when[0]] : [])));
+const ORDER = /** @type {Record<string, number>} */ ({ control_head_type: 0, siren_pa_options: 1, scan_off_hub: 1 });
+
+/**
+ * Apply edited radio-wide values (key -> value, in RSS wording) to a copy of
+ * `body`. Change-gated per field against the decoded original: unchanged or
+ * absent values leave their bytes alone; a block's checksum is recomputed
+ * only if one of its bytes changed. Throws `InvalidValue` for a bad value.
+ * @param {Uint8Array} body
+ * @param {Record<string, unknown>} values
+ */
+export function encode(body, values) {
+    const out = new Uint8Array(body);
+    let orig = decode(body);
+    const blk = blocks(body);
+    /** @type {Set<string>} */
+    const touched = new Set();
+    // the head type first, then Siren/P.A. Options (enabling it reveals the
+    // siren settings, which may be edited in the same call)
+    const items = Object.entries(values).sort(([a], [b]) => (ORDER[a] ?? 2) - (ORDER[b] ?? 2));
+    const base = { ...orig };   // the template's values, before side effects
+    for (const [key, v] of items) {
+        const f = FIELD_BY_KEY.get(key);
+        // only what changed vs the template is applied, so side effects of a
+        // head-type / siren change stand unless those fields were edited too
+        if (key in base && same(v, base[key]) && !(key in ORDER)) continue;
+        if (!f || v === null || v === undefined || !(key in orig)) continue;
+        const a = /** @type {number} */ (loc(f.area, f.off, blk));
+        const width = f.width ?? 1;
+        const scale = f.scale ?? 1;
+        switch (f.kind) {
+            case "bit": {
+                const isOn = parseBool(key, v);
+                if (EN[isOn ? 1 : 0] === orig[key]) continue;
+                if (f.editable === false) throw new InvalidValue(`radio_wide.${key} is read-only`);
+                setBit(out, a, f.bit ?? 0, isOn !== Boolean(f.invert));
+                for (const [area, off, bit] of f.mirrors ?? []) {
+                    const m = loc(area, off, blk);
+                    if (m !== null) {
+                        setBit(out, m, bit, isOn);
+                        touched.add(area);
+                    }
+                }
+                if (GATES.has(key)) orig = decode(finish(new Uint8Array(out), blk, new Set(touched)));
+                break;
+            }
+            case "enum": {
+                const want = String(v).trim();
+                if (want === orig[key]) continue;
+                const choices = /** @type {string[]} */ (f.choices);
+                const n = choices.findIndex((c) => c.toLowerCase() === want.toLowerCase());
+                if (n < 0) throw new InvalidValue(`radio_wide.${key}: expected one of ${choices.filter((c) => !c.startsWith("?")).join(", ")}, got ${JSON.stringify(v)}`);
+                if (f.editable === false) throw new InvalidValue(`radio_wide.${key} is read-only`);
+                if (want.startsWith("?")) throw new InvalidValue(`radio_wide.${key}: ${JSON.stringify(v)} is not a valid choice`);
+                const mask = /** @type {number} */ (f.mask);
+                const bit = f.bit ?? 0;
+                out[a] = (byte(out, a) & (~(mask << bit) & 0xFF)) | (n << bit);
+                break;
+            }
+            case "busywait": {
+                const inf = String(v).trim().toLowerCase() === "infinite";
+                const val = inf ? "Infinite" : toFloat(v);
+                if (val === null) throw new InvalidValue(`radio_wide.${key}: expected seconds or Infinite, got ${JSON.stringify(v)}`);
+                if (val === orig[key]) continue;
+                setBit(out, BUSY_FLAG[0], BUSY_FLAG[1], inf);
+                if (!inf) {
+                    const half = /** @type {number} */ (val) * 2;
+                    if (half !== Math.trunc(half) || !(half > 0 && half <= 0xFF)) throw new InvalidValue(`radio_wide.${key}: ${JSON.stringify(v)} not a 0.5 s step`);
+                    out[a] = half;
+                } else {
+                    out[a] = 0;
+                }
+                break;
+            }
+            case "siren": {
+                if (String(v).trim().toLowerCase() === String(orig[key]).toLowerCase()) continue;
+                encodeSiren(out, blk, v);
+                touched.add("chb");
+                orig = decode(finish(out, blk, touched));   // reveals the siren settings
+                continue;
+            }
+            case "rearm": {
+                if (String(v).trim().toLowerCase() === String(orig[key]).toLowerCase()) continue;
+                const want = pick(key, REARM_CHOICES, v);
+                setBit(out, a, 0, want !== "Disabled");           // CHB+0x18 b0
+                setBit(out, a - 0x18 + 0x13, 0, want === "Permanent");
+                touched.add("chb");
+                continue;
+            }
+            case "headtype": {
+                if (String(v).trim().toLowerCase() === String(orig[key]).toLowerCase()) continue;
+                encodeHead(out, blk, orig, v);
+                touched.add("chb").add("ext");
+                orig = decode(finish(out, blk, touched));
+                continue;
+            }
+            case "dial": {
+                const s = String(v).trim();
+                if (s === orig[key]) continue;
+                const nibs = f.nibs ?? [];
+                const n = nibs.length;
+                if (s.length > n || [...s].some((c) => !"0123456789*#".includes(c))) {
+                    throw new InvalidValue(`radio_wide.${key}: expected up to ${n} of 0-9 * #, got ${JSON.stringify(v)}`);
+                }
+                const padded = f.rjust ? s.padStart(n) : s.padEnd(n);
+                nibs.forEach(([ar, o, hi], i) => {
+                    const c = /** @type {string} */ (padded[i]);
+                    setNib(out, /** @type {number} */ (loc(ar, o, blk)), hi, c === " " ? 0xF : DIAL_CHARS.indexOf(c));
+                    touched.add(ar);
+                });
+                break;
+            }
+            case "word": {
+                const n = toInt(key, v);
+                if (n === orig[key]) continue;
+                if (n % scale || !(Math.floor(n / scale) >= 0 && Math.floor(n / scale) <= 0xFFFF)) {
+                    throw new InvalidValue(`radio_wide.${key}: ${n} not a multiple of ${scale} in range`);
+                }
+                const w = Math.floor(n / scale);
+                out[a] = w >> 8;
+                out[a + 1] = w & 0xFF;
+                break;
+            }
+            case "nibble":
+            case "hinibble":
+            case "byte": {
+                let n = toInt(key, v);
+                if (n === orig[key]) continue;
+                if (n % scale) throw new InvalidValue(`radio_wide.${key}: ${n} is not a multiple of ${scale}`);
+                n = Math.floor(n / scale);
+                if (f.editable === false) throw new InvalidValue(`radio_wide.${key} is read-only`);
+                const hi = f.kind === "byte" ? 0xFF : 0x0F;
+                if (n < 0 || n > hi) throw new InvalidValue(`radio_wide.${key}: ${n} out of range 0..${hi}`);
+                if (f.kind === "nibble") out[a] = (byte(out, a) & 0xF0) | n;
+                else if (f.kind === "hinibble") out[a] = (byte(out, a) & 0x0F) | (n << 4);
+                else out[a] = n;
+                break;
+            }
+            case "bcd": {
+                let s = String(v).trim();
+                if (/^\d+$/.test(s)) s = s.padStart(2 * width, "0");
+                if (s === orig[key]) continue;
+                if (!(/^\d+$/.test(s) && s.length === 2 * width)) throw new InvalidValue(`radio_wide.${key}: expected ${2 * width} digits, got ${JSON.stringify(v)}`);
+                for (let i = 0; i < width; i++) out[a + i] = parseInt(s.slice(2 * i, 2 * i + 2), 16);
+                break;
+            }
+            case "bcdf": {
+                const s = String(v).trim();
+                if (s === orig[key]) continue;
+                if (!(/^\d+$/.test(s) && s.length >= 1 && s.length <= 2 * width)) {
+                    throw new InvalidValue(`radio_wide.${key}: expected 1..${2 * width} digits, got ${JSON.stringify(v)}`);
+                }
+                const t = s.padEnd(2 * width, "f");
+                for (let i = 0; i < width; i++) out[a + i] = parseInt(t.slice(2 * i, 2 * i + 2), 16);
+                break;
+            }
+            default:
+                continue;
+        }
+        touched.add(f.area);
+    }
+    return finish(out, blk, touched);
+}
