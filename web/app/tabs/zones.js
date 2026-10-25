@@ -26,7 +26,7 @@ function build(doc) {
             { id: "number", label: "#", cls: "num", text: (z) => String(z.number) },
             {
                 id: "name", label: "Name", cls: "name", text: (z) => z.name,
-                editor: (z) => ({ type: "text", maxLength: z.name_enc === "ascii" ? z.name_w : 8 }),
+                editor: (z) => ({ type: "text", maxLength: z.name_enc === "ascii" ? z.name_w : 8, upper: true }),
                 changed: (z) => z.name !== was(z)?.name,
             },
             {

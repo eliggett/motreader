@@ -9,9 +9,13 @@
  * `onEdit`, whose message (a refusal or a note) shows in the status line
  * under the table. Changed cells are highlighted.
  */
-import { h } from "./dom.js";
+import { h, upperCaseAsTyped } from "./dom.js";
 
-/** @typedef {{ type: "text", maxLength?: number } | { type: "select", options: readonly string[] }} Editor */
+/**
+ * @typedef {{ type: "text", maxLength?: number, upper?: boolean }
+ *   | { type: "select", options: readonly string[], labels?: Record<string, string> }} Editor
+ *   `upper`: turn lower case into upper case as it is typed; `labels`: option text by value.
+ */
 /**
  * @template R
  * @typedef {{
@@ -113,10 +117,12 @@ export function createGrid(spec) {
         let input;
         if (ed.type === "select") {
             const options = ed.options.includes(cur) || cur === "" ? ed.options : [cur, ...ed.options];
-            input = h("select", {}, options.map((o) => h("option", { value: o, selected: o === cur }, o)));
+            input = h("select", {}, options.map((o) => h("option", { value: o, selected: o === cur }, ed.labels?.[o] ?? o)));
             input.addEventListener("change", () => commit(0, 0));
         } else {
-            input = h("input", { type: "text", value: initial ?? cur, maxlength: ed.maxLength ?? false, spellcheck: "false" });
+            const text = h("input", { type: "text", value: initial ?? cur, maxlength: ed.maxLength ?? false, spellcheck: "false" });
+            if (ed.upper) upperCaseAsTyped(text);
+            input = text;
         }
         input.addEventListener("keydown", (e) => {
             const k = /** @type {KeyboardEvent} */ (e);

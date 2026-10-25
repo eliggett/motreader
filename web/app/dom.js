@@ -43,6 +43,19 @@ export function fill(/** @type {Element} */ el, /** @type {(Child | Child[])[]} 
     append(el, children);
 }
 
+/** Turn lower case into upper case as the user types (keeping the cursor). */
+export function upperCaseAsTyped(/** @type {HTMLInputElement} */ input) {
+    const fix = () => {
+        const up = input.value.toUpperCase();
+        if (up === input.value) return;
+        const [a, b] = [input.selectionStart, input.selectionEnd];
+        input.value = up;
+        input.setSelectionRange(a, b);
+    };
+    input.addEventListener("input", fix);
+    fix();
+}
+
 /** `document.querySelector` that throws instead of returning null. */
 export function $(/** @type {string} */ sel, /** @type {ParentNode} */ root = document) {
     const el = root.querySelector(sel);

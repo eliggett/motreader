@@ -6,6 +6,7 @@
 import { hex, latin1 } from "./bytes.js";
 import { nonce } from "./crypto.js";
 import { BANNER_LONG } from "./archive.js";
+import { valueLabel } from "./radiowide.js";
 
 /** @typedef {{ label: string, value: string, note?: string }} InfoRow */
 /** @typedef {{ title: string, rows: InfoRow[] }} InfoSection */
@@ -42,7 +43,7 @@ export function generalInfo(d) {
         { label: "Customer", value: rec?.CUSTOMER || "—", note: rec ? undefined : fromDbf ?? undefined },
         { label: "Date programmed", value: rec?.DATEPGM || "—", note: rec ? "from SPECTRAM.DBF (the date RSS last saved it)" : fromDbf ?? undefined },
         { label: "Radio band", value: BAND_NAMES[cp.band] ?? cp.band },
-        { label: "Control head", value: String(rw.control_head_type ?? "unknown") },
+        { label: "Control head", value: rw.control_head_type ? valueLabel("control_head_type", rw.control_head_type) : "unknown" },
         { label: "Modes", value: String(cp.modes.length) },
         {
             label: "Zones",

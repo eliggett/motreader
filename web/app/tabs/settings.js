@@ -6,7 +6,7 @@
  * settings with Siren/P.A. off) is left out; read-only ones are plain text.
  */
 import { h, fill } from "../dom.js";
-import { SCREENS, FIELD_BY_KEY, EN, SIREN_CHOICES, REARM_CHOICES, HEAD_CHOICES } from "../../lib/radiowide.js";
+import { SCREENS, FIELD_BY_KEY, EN, SIREN_CHOICES, REARM_CHOICES, HEAD_CHOICES, valueLabel } from "../../lib/radiowide.js";
 import { editRadioWide } from "../editing.js";
 import { empty, note, section, NO_DOC } from "./common.js";
 
@@ -50,11 +50,11 @@ function fieldRow(/** @type {Document} */ doc, /** @type {string} */ key, /** @t
     const choices = choicesOf(f, v);
     let control;
     if (f.editable === false || (f.kind === "headtype" && !choices)) {
-        control = h("span", { class: "ro-value", id }, cur);
-        if (f.kind === "headtype" && !choices) msg.textContent = "the S9000e (A9) head can't be changed";
+        control = h("span", { class: "ro-value", id }, valueLabel(key, cur));
+        if (f.kind === "headtype" && !choices) msg.textContent = "RSS can't change the S9000e (A9) head";
     } else if (choices) {
         const sel = h("select", { id },
-            (choices.includes(cur) ? choices : [cur, ...choices]).map((c) => h("option", { value: c, selected: c === cur }, c)));
+            (choices.includes(cur) ? choices : [cur, ...choices]).map((c) => h("option", { value: c, selected: c === cur }, valueLabel(key, c))));
         sel.addEventListener("change", () => apply(sel.value));
         control = sel;
     } else {

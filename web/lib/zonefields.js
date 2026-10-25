@@ -40,15 +40,13 @@ export function formatModeList(/** @type {number[]} */ modes) {
 export function setZoneName(/** @type {Codeplug} */ cp, /** @type {number} */ n, /** @type {string} */ text) {
     const z = cp.zones[n - 1];
     if (!z) throw new InvalidValue(`no zone ${n}`);
-    const rule = nameRule(cp);
-    const width = z.name_enc === "ascii" ? z.name_w : rule.width;
-    const name = z.name_enc === "ascii" ? text.replace(/\s+$/, "") : text.toUpperCase().replace(/\s+$/, "");
+    const name = nameRule(cp, z.name_enc === "ascii" ? z.name_w : 8).check(text);
     if (!name.trim()) throw new InvalidValue("a zone needs a name");
-    if (name.length > width) throw new InvalidValue(`a zone name holds at most ${width} characters`);
-    // the structural zone finder recognises names by these characters, so keep to them
-    if (!/^[A-Za-z0-9][A-Za-z0-9 /-]*$/.test(name) || !/[A-Z]/.test(name)) {
-        throw new InvalidValue("a zone name starts with a letter or digit, has at least one capital letter, "
-            + "and uses only letters, digits, spaces, / and -");
+    // without RSS's zone pointers the zones are found by a search that recognises
+    // names by these characters, so such codeplugs keep to them
+    if (!cp.zone_sections && (!/^[A-Z0-9][A-Z0-9 /-]*$/.test(name) || !/[A-Z]/.test(name))) {
+        throw new InvalidValue("on this codeplug a zone name must start with a letter or digit, contain a letter, "
+            + "and use only letters, digits, spaces, / and -");
     }
     z.name = name;
 }

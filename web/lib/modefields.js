@@ -90,12 +90,35 @@ export function applies(/** @type {Codeplug} */ cp, /** @type {Mode} */ m, /** @
     return true;
 }
 
-/** The longest name a mode can have, and which characters it may use. */
-export function nameRule(/** @type {Codeplug} */ cp) {
-    return cp.ascii_names
-        ? { width: cp.ascii_names[1], test: /^[\x20-\x7E]*$/, what: "printable ASCII" }
-        // 6-bit packed: characters 0x20..0x5F (upper case, digits, punctuation)
-        : { width: 8, test: /^[\x20-\x5F]*$/, what: "upper-case letters, digits, spaces and punctuation" };
+/**
+ * Characters a name may use (owner's rule): A-Z, 0-9, space and
+ * - + / = # * ` ) ( @ $ % \ _ (no periods). Lower case is turned into upper case.
+ */
+export const NAME_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -+/=#*`)(@$%\\_";
+
+/**
+ * The longest name a mode (or zone) can have, and which characters it may
+ * use. The 6-bit packed names of standard heads hold characters 0x20..0x5F,
+ * so the backtick (0x60) fits only on the A9 head's ASCII names.
+ */
+export function nameRule(/** @type {Codeplug} */ cp, width = cp.ascii_names ? cp.ascii_names[1] : 8) {
+    const chars = cp.ascii_names ? NAME_CHARS : NAME_CHARS.replace("`", "");
+    return {
+        width,
+        chars,
+        /** The name as stored (upper case, trailing spaces dropped), or throws. */
+        check(/** @type {string} */ text) {
+            const name = text.toUpperCase().replace(/\s+$/, "");
+            if (name.length > width) throw new InvalidValue(`a name holds at most ${width} characters`);
+            const bad = [...new Set([...name].filter((c) => !chars.includes(c)))];
+            if (bad.length) {
+                throw new InvalidValue(`a name can't use ${bad.map((c) => (c === " " ? "space" : `"${c}"`)).join(" ")}`
+                    + (bad.includes("`") ? " (the backtick only fits on the A9 head's names)" : "")
+                    + ": use A-Z, 0-9, space and - + / = # * ) ( @ $ % \\ _");
+            }
+            return name;
+        },
+    };
 }
 
 /**
@@ -106,13 +129,8 @@ export function nameRule(/** @type {Codeplug} */ cp) {
 function parse(cp, f, text) {
     const t = text.trim();
     switch (f.kind) {
-        case "name": {
-            const rule = nameRule(cp);
-            const name = cp.ascii_names ? text.replace(/\s+$/, "") : text.toUpperCase().replace(/\s+$/, "");
-            if (name.length > rule.width) throw new InvalidValue(`a name holds at most ${rule.width} characters`);
-            if (!rule.test.test(name)) throw new InvalidValue(`a name may only use ${rule.what}`);
-            return { name };
-        }
+        case "name":
+            return { name: nameRule(cp).check(text) };
         case "mhz": {
             if (t === "") return { [f.key]: null };
             if (!/^\d+(\.\d*)?$|^\.\d+$/.test(t)) throw new InvalidValue(`"${text}" is not a frequency in MHz`);

@@ -47,6 +47,13 @@ motreader).
 | SAVE is refused with "Codeplug Has Exceeded Radio Memory By N Bytes. Modes And/Or Features Must Be Disabled" when a structural change outgrows the radio (604ATY, 128 modes: SCAN TYPE → Talkgroup was over by 1939 bytes). A UI that adds modes/features needs the radio's memory size. | blocks |
 | A9 head: RSS warns "Bad control head checksum." on GET if the ASCII name block changes without its checksum. motreader keeps it valid. | warns |
 
+## Names (modes, zones)
+
+| Rule | Kind |
+|---|---|
+| Owner's rule for the web app: A-Z, 0-9, space and `- + / = # * \` ) ( @ $ % \ _`; no periods; lower case is turned into upper case as it is typed. Standard heads (6-bit names, characters 0x20-0x5F) can't hold the backtick; the A9 head's ASCII names can. 8 characters (A9: 11). | refused by the web app |
+| Zone names on a codeplug whose zones are found by the structural search (no RSS zone pointers) must also start with a letter or digit and use only letters, digits, space, / and -, or the search won't find them again. | refused by the web app |
+
 ## Modes (modes.csv) — frequencies
 
 | Rule | Kind |

@@ -32,7 +32,7 @@ function build(doc) {
             text: (m) => fieldText(m, f.key),
             editor: (m) => {
                 if (!editable || isTrunkedMode(cp, m) || !applies(cp, m, f)) return null;
-                if (f.kind === "name") return { type: "text", maxLength: nameRule(cp).width };
+                if (f.kind === "name") return { type: "text", maxLength: nameRule(cp).width, upper: true };
                 if (f.kind === "mhz") return { type: "text" };
                 return { type: "select", options: f.kind === "squelch" ? SQUELCH_CHOICES : /** @type {readonly string[]} */ (f.choices) };
             },

@@ -76,10 +76,10 @@ test("an unedited export is the original file", { skip: !has("a221azn0.035") }, 
 
 test("A9 name edits carry the head checksum", { skip: !has("a221azn0.035") }, () => {
     const d = open("a221azn0.035");
-    setModeField(d.cp, 2, "name", "Lower ok 11");
+    setModeField(d.cp, 2, "name", "Lower ok 1`");
     const res = exportArchive(d);
     assert.deepEqual(res.problems, []);
-    assert.equal(openDocument(d.fileName, res.bytes).cp.modes[1]?.name, "Lower ok 11");
+    assert.equal(openDocument(d.fileName, res.bytes).cp.modes[1]?.name, "LOWER OK 1`", "upper-cased; the A9 head holds a backtick");
     assert.ok(res.changed.length > 11, "name bytes and the checksum word");
 });
 
@@ -88,4 +88,15 @@ test("a VHF TX the synthesizer can't hold is refused, not snapped", { skip: !has
     assert.throws(() => setModeField(cp, 2, "tx_mhz", "165.75"), /synthesizer/);
     setModeField(cp, 2, "tx_mhz", "165.0");
     assert.equal(cp.modes[1]?.tx_mhz, 165.0);
+});
+
+test("names: A-Z 0-9 space - + / = # * ` ) ( @ $ % \\ _, upper-cased, no periods", { skip: !has("A617ASQ1.266") }, () => {
+    const { cp } = open("A617ASQ1.266");
+    setModeField(cp, 2, "name", "a+b/c=#*");
+    assert.equal(cp.modes[1]?.name, "A+B/C=#*");
+    setModeField(cp, 2, "name", ")(@$%\\_ ");
+    assert.equal(cp.modes[1]?.name, ")(@$%\\_");
+    assert.throws(() => setModeField(cp, 2, "name", "146.520"), /can't use "\."/);
+    assert.throws(() => setModeField(cp, 2, "name", "HI!"), /can't use "!"/);
+    assert.throws(() => setModeField(cp, 2, "name", "TICK`"), /only fits on the A9/, "6-bit names can't hold a backtick");
 });

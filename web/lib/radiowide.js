@@ -425,6 +425,20 @@ function pick(/** @type {string} */ key, /** @type {readonly string[]} */ choice
 export const SIREN_CHOICES = /** @type {const} */ (["Disabled", "PA only", "Siren/PA"]);
 export const REARM_CHOICES = /** @type {const} */ (["Disabled", "Enabled", "Permanent"]);
 export const HEAD_CHOICES = /** @type {const} */ (["Standard", "Enhanced", "Rotary"]);
+
+/**
+ * How values are shown, where RSS's word alone isn't the clearest: the
+ * control heads with their Motorola codes (RSS's "Standard" is the Basic
+ * head). The stored and exported value stays RSS's word.
+ * @type {Record<string, Record<string, string>>}
+ */
+export const VALUE_LABELS = {
+    control_head_type: { Standard: "Basic (A4)", Enhanced: "Enhanced (A5)", Rotary: "Rotary (A7)", S9000e: "S9000e (A9)" },
+};
+
+/** `value` of field `key` as shown. */
+export const valueLabel = (/** @type {string} */ key, /** @type {unknown} */ value) =>
+    VALUE_LABELS[key]?.[String(value)] ?? String(value);
 const CHB_W = 0x1C;
 
 /**
@@ -461,8 +475,8 @@ function encodeSiren(/** @type {Uint8Array} */ out, /** @type {Blocks} */ blk, /
 function encodeHead(/** @type {Uint8Array} */ out, /** @type {Blocks} */ blk, /** @type {RadioWide} */ orig, /** @type {unknown} */ v) {
     const was = orig.control_head_type;
     if (!HEAD_CHOICES.includes(/** @type {any} */ (was)) || !HEAD_CHOICES.some((c) => c.toLowerCase() === String(v).trim().toLowerCase())) {
-        throw new InvalidValue("radio_wide.control_head_type: only Standard / Enhanced / Rotary can be swapped "
-            + "(RSS can't change to or from S9000e)");
+        throw new InvalidValue("radio_wide.control_head_type: only Basic (A4, RSS's Standard) / Enhanced (A5) / "
+            + "Rotary (A7) can be swapped (RSS can't change to or from the S9000e (A9) head)");
     }
     const want = pick("control_head_type", HEAD_CHOICES, v);
     const { chb: c, ext: e } = blk;

@@ -5,7 +5,7 @@
  * each through the same checks as the grid; a refused value keeps the dialog
  * open with the reason beside the field.
  */
-import { h } from "./dom.js";
+import { h, upperCaseAsTyped } from "./dom.js";
 import { openModal } from "./modal.js";
 import { store } from "./state.js";
 import { editMode } from "./editing.js";
@@ -55,6 +55,7 @@ export async function openModeEditor(/** @type {number} */ n) {
             });
         }
         input.id = `me-${f.key}`;
+        if (f.kind === "name" && input instanceof HTMLInputElement) upperCaseAsTyped(input);
         input.addEventListener("input", updateWarning);
         const msg = h("span", { class: "field-msg" });
         inputs.set(f.key, { input, msg });
