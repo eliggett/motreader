@@ -3,7 +3,7 @@ __pycache__/
 *.pyc
 *.pem
 ._*
-
+*.swp
 
 # Saved third-party web pages (reference only, not ours to redistribute)
 /notes/*.html
