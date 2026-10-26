@@ -113,8 +113,8 @@ async function trunkingNotice(/** @type {import("./state.js").Document} */ doc) 
             h("p", {}, `${doc.fileName} has trunking: mode 1 is a trunked mode `
                 + `(max systems ${doc.trunk.info.systems}, max subfleets ${doc.trunk.info.subfleets}).`),
             h("p", {}, "motreader keeps the trunking data exactly as it is. It doesn't edit trunking."),
-            h("p", {}, "Removing trunking (turning mode 1 into a conventional mode) is possible on this "
-                + "codeplug and will be offered here in a later version.")));
+            h("p", {}, "Trunking can be removed on this codeplug (mode 1 becomes a conventional mode): "
+                + "use Remove trunking… on the Modes tab.")));
     } else if (doc.trunk.unsupported) {
         log.warn(`This codeplug has trunking motreader can't remove: ${doc.trunk.unsupported}`);
         await alertModal("Trunking", h("div", {},
@@ -157,7 +157,9 @@ export async function applyTables(/** @type {import("../lib/tables.js").TextFile
         await alertModal("Import failed", `The files couldn't be imported: ${errText(e)}`);
         return null;
     }
-    store.update(() => {}, "edit");
+    // a Zone Operation switch or a scan list type change re-packs: a new document
+    if (rep.doc === doc) store.update(() => {}, "edit");
+    else store.setDocument(rep.doc, "restructure");
     for (const f of rep.files) log.info(`Import: ${f}`);
     for (const a of rep.applied) log.info(`Import: ${a}`);
     for (const r of rep.refused) log.warn(`Import refused: ${r}`);

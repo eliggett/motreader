@@ -48,7 +48,7 @@ export function buildBody(doc, radioWideEdits = {}) {
  * @typedef {{
  *   bytes: Uint8Array,        // the archive file
  *   plain: Uint8Array,        // its decrypted body
- *   changed: number[],        // body offsets that differ from the original
+ *   changed: number[],        // body offsets that differ from the file as imported (over the shorter length)
  *   problems: string[],       // round-trip mismatches (empty = verified)
  * }} ExportResult
  */
@@ -92,5 +92,5 @@ export function exportArchive(doc, radioWideEdits = {}) {
             if (JSON.stringify(x) !== JSON.stringify(back[i])) problems.push(`${what} ${x.number} reads back as ${JSON.stringify(back[i])}`);
         });
     }
-    return { bytes, plain, changed: diff(doc.plain, plain), problems };
+    return { bytes, plain, changed: diff(doc.importedPlain ?? doc.plain, plain), problems };
 }

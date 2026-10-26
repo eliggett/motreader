@@ -890,6 +890,17 @@ message: the A9 head (zone names in the string pool, A9 pointers into it shift),
 trunked codeplugs, and more than 120 user modes (RSS also rewrites the scan
 bitmaps at ext+0x20/+0x22 with recomputed content).
 
+**Off → on drops only the per-mode lists the records carry (2026-10-25).** A
+900 radio's records carry per-mode scan lists after RSS's zones off, but not
+once both CONVENTIONAL lists are Op Select (617ASN's 3-mode backup in
+ARCHIVE-bk: zones off, Op Select, L = 26). zones_on used to cut E bytes per
+record anyway (a corrupt codeplug); it now takes E from the zones-off scan
+layout (2 + W with a Mode Slave list, else 0), which agrees with every RSS
+capture. On that backup the switch (plus an added zone) GET-loads with no
+warning; RSS's re-save differs only in the radio-wide conventional list after
+the records (`ff 00 c0` -> `00 00 00`): with zones on RSS clears that unused
+list when it saves (the 617ASQ tail byte above is the same normalization).
+
 ### 5h. Removing trunking (TRUNKED DUAL MODE) — 566AYA done (trunking.py)
 
 The repeater-builder workaround (notes/Miscellaneous Spectra Topics.html,
@@ -969,8 +980,19 @@ RSS keeps everything in mode order: a mode inserted after N becomes N+1.
 | zones-off per-mode scan lists | 2 + ceil(n/8) bytes after each 26/27-byte 900 record: every record grows / shrinks (604AUN 48 -> 49: 35 -> 36 bytes) |
 | counts | 0x109, 0x110, ext +7 / +8, ext+0x86 (conventional modes) |
 | mode numbers in the header | 0x10F home mode, 0x1B6, 0x1C1 (deleted mode -> 0) |
-| pointers | header 0xDD/E5/E7/ED; ext +0x18 +0x1A +0x1C +0x20 +0x22 +0x25 +0x27 +0x29 +0x2B +0x2D +0x41 +0x50 +0x54/56/58 |
+| pointers | header 0xDD/E5/E7/ED; ext +0x18 +0x1A +0x1C +0x20 +0x22 +0x25 +0x27 +0x29 +0x2B +0x2D +0x41 +0x47 +0x49 +0x50 +0x54/56/58 |
 | sums / size | ext, membership, pointer table, mode list, 0xC9, FF padding |
+
+**MPL tables (2026-10-25).** ext +0x47 / +0x49 point at the MPL code table
+(6 bytes per entry) and the MPL name table (6-bit, 6 bytes per entry) right
+after it; both are 0 with MPL off (Number of MPL 0), as on every radio the
+captures above were made on, which is why they weren't seen moving. On a
+standard head the MPL tables sit after the 6-bit mode names, so an add /
+delete moves them: without moving the pointers RSS read the MPL list 6 bytes
+off (566AYA with trunking removed, a mode added: MPL 1 came back as
+"GXB$Z(3H" and RSS re-saved the list shifted). With +0x47 / +0x49 moved, RSS
+re-saves the result byte-identically. (A9 head: +0x49 = 0, the MPL names are in
+the head block, and nothing before the records moves.)
 
 motreader matches RSS byte-exact on all nine captured operations except one
 deliberate byte: after a delete RSS leaves the old last mode's membership bit

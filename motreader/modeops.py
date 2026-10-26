@@ -47,8 +47,10 @@ from .codeplug import (Codeplug, mode_pointer_table, zone_sections, pack_name,
                        NAME_TABLE_OFF)
 from . import radiowide as RW
 
+# ext words pointing at sections; +0x47 / +0x49 = the MPL code / name tables
+# (0 with MPL off), which sit after the 6-bit mode names on standard heads
 EXT_PTRS = (0x18, 0x1A, 0x1C, 0x20, 0x22, 0x25, 0x27, 0x29, 0x2B, 0x2D, 0x41,
-            0x50, 0x54, 0x56, 0x58)
+            0x47, 0x49, 0x50, 0x54, 0x56, 0x58)
 HDR_PTRS = (0xDD, 0xE5, 0xE7, 0xED)
 MODE_REFS = (0x10F, 0x1B6, 0x1C1)   # header bytes holding a mode number
 MAX_MODES = 0x1D5                   # model limit (radio address 0x6128)

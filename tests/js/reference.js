@@ -15,6 +15,8 @@ import { parseCodeplug, modePointerTable, zoneOperation, zoneSections } from "..
 import { decode as decodeRadioWide, findExtBlock, findChbBlock } from "../../web/lib/radiowide.js";
 import { trunkingInfo } from "../../web/lib/trunking.js";
 import { decodePhones, decodeMpls } from "../../web/lib/lists.js";
+import { decode as decodeZoneScan } from "../../web/lib/scanlist.js";
+import { decode as decodeConvScan } from "../../web/lib/convscan.js";
 import { ROOT, GROUND_TRUTH, SPECTRA } from "./util.js";
 
 /** Every codeplug sample on hand: ground-truth bodies, then archives and DBFs. */
@@ -89,6 +91,8 @@ function codeplug(/** @type {Uint8Array} */ body) {
         chb_block: findChbBlock(body),
         radio_wide: decodeRadioWide(body, cp.band),
         trunking: trunk,
+        zone_scan: plain(decodeZoneScan(body)),
+        conv_scan: plain(decodeConvScan(body)),
     };
 }
 

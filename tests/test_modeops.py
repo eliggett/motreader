@@ -201,3 +201,28 @@ def test_a9_mode_buttons_are_not_renumbered_like_rss(tag, kw):
     assert _diff(got, want) == []
     key1 = [b.function for b in decode_buttons(Codeplug.parse(got)) if b.button == "1"]
     assert key1 == ["Mode 30"]
+
+
+@pytest.mark.parametrize("fn,op", [
+    ("a566aya0.014", lambda b: M.add_mode(__import__("motreader.trunking", fromlist=["x"]).remove_trunking(b), 3, zones=[1])),
+    ("a566aya0.014", lambda b: M.delete_mode(__import__("motreader.trunking", fromlist=["x"]).remove_trunking(b), 5)),
+    ("a221azn0.035", lambda b: M.add_mode(b, 3, zones=[1])),
+])
+def test_mode_ops_move_the_mpl_tables(fn, op):
+    """ext +0x47 / +0x49 point at the MPL code / name tables, after the 6-bit
+    mode names: a mode added or deleted moves them (RSS re-saved 566AYA with
+    the MPL list shifted and its first entry garbage when they didn't)."""
+    from motreader import lists
+    from motreader.radiowide import find_ext_block
+    p = os.path.join(ARCHIVE_DIR, fn)
+    if not os.path.exists(p):
+        pytest.skip("archive not present")
+    body = decrypt_body(Archive.load(p).body)
+    out = op(body)
+    cp = Codeplug.parse(out)
+    e, base = find_ext_block(out), mode_pointer_table(out)[0]
+    mpl = lists.find_mpl_table(cp)
+    assert ((out[e + 0x47] << 8) | out[e + 0x48]) - base == mpl
+    if cp.ascii_names is None:          # (A9: the MPL names live in the head block)
+        assert ((out[e + 0x49] << 8) | out[e + 0x4A]) - base == mpl + 6 * out[0x119]
+    assert lists.decode_mpls(cp) == lists.decode_mpls(Codeplug.parse(body))

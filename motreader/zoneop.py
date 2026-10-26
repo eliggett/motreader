@@ -167,7 +167,8 @@ def zones_on(body: bytes, scan_list_bytes: int | None = None, flag_byte: int = 0
     """Zone Operation Disabled -> Enabled: one zone "ZONE  01" with every mode,
     home zone 1 (what RSS requires before it will pack). scan_list_bytes = the
     per-mode scan list to drop from each record (default: what this model
-    appends, i.e. scan_list_len, if the records carry one)."""
+    appends, i.e. scan_list_len, if the records carry one: taken from the
+    zones-off scan layout, so records without per-mode lists stay whole)."""
     cp = Codeplug.parse(body)
     lay = _Layout(body)
     _check(cp, lay)
@@ -175,7 +176,14 @@ def zones_on(body: bytes, scan_list_bytes: int | None = None, flag_byte: int = 0
         return body
     n, e = lay.n, lay.ext
     if scan_list_bytes is None:
-        scan_list_bytes = scan_list_len(body, lay) if cp.band == "900" else 0
+        # the per-mode lists the records actually carry: none when both CONVENTIONAL
+        # lists are Op Select (a 900 radio can be switched there after RSS's zones off)
+        from . import convscan
+        cl = convscan.layout(body)
+        if cl is not None:
+            scan_list_bytes = 2 + cl.W if cl.per_mode else 0
+        else:
+            scan_list_bytes = scan_list_len(body, lay) if cp.band == "900" else 0
     E = scan_list_bytes
     W = -(-n // 8)
     names = pack_name("ZONE  01")

@@ -3,13 +3,17 @@
  * CSV and YAML, in the motreader CLI's formats (motreader/cli.py export /
  * import), so files move freely between the web app and the CLI:
  *
- *   modes.csv   one row per mode (the editable columns, then raw_hex)
+ *   modes.csv   one row per mode (the editable columns, the zones-off scan
+ *               columns when Zone Operation is off, then raw_hex)
  *   phones.csv  the phone list          mpl.csv  the MPL list (when enabled)
- *   radio.yaml  identity, radio_wide settings, zones (name, modes)
+ *   radio.yaml  identity, radio_wide settings, conventional_scan (zones off),
+ *               zones (name, modes, scan)
  *
- * Not yet in the web app: buttons.csv, the zones-off scan columns of
- * modes.csv, radio.yaml conventional_scan and zones[].scan. Import reports
- * them as not applied rather than guessing.
+ * Not yet in the web app: buttons.csv. Import reports it as not applied
+ * rather than guessing. As the CLI import does, a Zone Operation switch or a
+ * zones-off scan list / scan type change re-packs the codeplug first, and the
+ * zones / scan lists of the old layout aren't applied then (re-export to edit
+ * them).
  */
 import { dump, load } from "../vendor/js-yaml/js-yaml.mjs";
 import { parseCodeplug } from "./codeplug.js";
@@ -20,9 +24,13 @@ import { buildBody } from "./export.js";
 import { BANNER_LONG } from "./archive.js";
 import { MODE_FIELD_BY_KEY, fieldText, squelchText, setModeField } from "./modefields.js";
 import { setZoneName, setZoneModes } from "./zonefields.js";
-import { setRadioWide } from "./document.js";
+import { setRadioWide, restructure } from "./document.js";
 import { setPhone, setMpl, mplSquelchText } from "./listfields.js";
 import { isDplCode } from "./tones.js";
+import { decode as decodeConvScan, encode as encodeConvScan, setListTypes, setScanType } from "./convscan.js";
+import { decode as decodeZoneScan, encode as encodeZoneScan, zoneScan } from "./scanlist.js";
+import { zonesOn, zonesOff } from "./zoneop.js";
+import { equal } from "./bytes.js";
 import { InvalidValue } from "./errors.js";
 
 /** @typedef {import("./document.js").CodeplugDocument} CodeplugDocument */
@@ -34,7 +42,7 @@ export const MODE_COLUMNS = [
     "mdc_ptt_id", "phone_encode", "mpl_type", "audio_compander", "adaptive_splatter",
     "reverse_burst_toc", "unmute_mute_type",
 ];
-/** modes.csv columns for the zones-off scan settings (CLI only, for now). */
+/** modes.csv columns for the zones-off scan settings (present with Zone Operation off). */
 export const SCAN_COLUMNS = ["scan", "scan_button_control", "coded_squelch_scan", "talkback_scan",
     "scan_priority_1", "scan_priority_2", "scan_list"];
 const OPTION_COLUMNS = ["tx_power", "ta_power", "up_xtal_shift", "mdc_ptt_id", "phone_encode", "mpl_type",
@@ -51,11 +59,19 @@ const hex = (/** @type {Uint8Array} */ b) => Array.from(b, (x) => x.toString(16)
  */
 export function tablesOfBody(banner, body) {
     const cp = parseCodeplug(body);
-    const modes = [MODE_COLUMNS.concat("raw_hex"), ...cp.modes.map((m) => [
+    const [conv, mscan] = decodeConvScan(body);
+    const byMode = new Map(mscan.map((r) => [r.mode, r]));
+    const pri = (/** @type {unknown} */ p) => (p === null || p === undefined ? "" : String(p));
+    const scanCells = (/** @type {import("./convscan.js").ModeScan | undefined} */ sc) => (sc
+        ? [sc.scan, sc.scan_button_control, sc.coded_squelch_scan, sc.talkback_scan, pri(sc.priority_1), pri(sc.priority_2),
+            sc.modes === null ? "" : sc.modes.join(" ")]
+        : SCAN_COLUMNS.map(() => ""));
+    const modes = [[...MODE_COLUMNS, ...(conv ? SCAN_COLUMNS : []), "raw_hex"], ...cp.modes.map((m) => [
         String(m.number), m.name, pyCell(m.rx_mhz, true), pyCell(m.tx_mhz, true), pyCell(m.ta_mhz, true),
         m.rx_pl ?? "", m.tx_pl ?? "", m.ta_pl ?? "",
         m.rx_squelch_type ?? "", m.tx_squelch_type ?? "", m.ta_squelch_type ?? "",
         ...OPTION_COLUMNS.map((k) => /** @type {string | null} */ (/** @type {any} */ (m)[k]) ?? ""),
+        ...(conv ? scanCells(byMode.get(m.number)) : []),
         hex(m.raw),
     ])];
     /** @type {TextFile[]} */
@@ -80,11 +96,25 @@ export function tablesOfBody(banner, body) {
     };
     const rw = decodeRadioWide(body, cp.band);
     if (Object.keys(rw).length) radio.radio_wide = rw;
+    if (conv) {
+        const { modes: listed, ...rest } = conv;
+        radio.conventional_scan = listed === null ? rest : conv;
+    }
     if (cp.zones.length) {
-        radio.zones = cp.zones.map((z) => ({
-            number: z.number, name: z.name, modes: z.modes,
-            mode_names: z.modes.map((n) => cp.modes[n - 1]?.name ?? `MODE ${n}`),
-        }));
+        const scans = new Map(decodeZoneScan(body).map((z) => [z.zone, z]));
+        radio.zones = cp.zones.map((z) => {
+            /** @type {Record<string, unknown>} */
+            const row = {
+                number: z.number, name: z.name, modes: z.modes,
+                mode_names: z.modes.map((n) => cp.modes[n - 1]?.name ?? `MODE ${n}`),
+            };
+            const sc = scans.get(z.number);
+            if (sc) {
+                const { zone: _zone, ...scan } = sc;
+                row.scan = scan;
+            }
+            return row;
+        });
     }
     // Python writes these as floats (10 s -> "10.0")
     const text = toYaml(radio).replace(/^( {2}mdc_channel_busy_wait_s: )(\d+)$/m, "$1$2.0");
@@ -110,9 +140,10 @@ export function exportTables(doc) {
 // Import
 
 /**
- * @typedef {{ applied: string[], refused: string[], notApplied: string[], files: string[] }} ImportReport
+ * @typedef {{ applied: string[], refused: string[], notApplied: string[], files: string[], doc: CodeplugDocument }} ImportReport
  *   applied: changes made; refused: values that can't be stored (with why);
- *   notApplied: things recognised but not supported here yet; files: what each file was taken for.
+ *   notApplied: things recognised but not supported here yet; files: what each file was taken for;
+ *   doc: the document with the changes (a new one when the import re-packed the codeplug).
  */
 
 /** What kind of table a file is, from its name and header row. */
@@ -141,7 +172,7 @@ function same(/** @type {unknown} */ a, /** @type {unknown} */ b) {
  */
 export function importTables(doc, files) {
     /** @type {ImportReport} */
-    const rep = { applied: [], refused: [], notApplied: [], files: [] };
+    const rep = { applied: [], refused: [], notApplied: [], files: [], doc };
     /** Run one edit, recording it. */
     const apply = (/** @type {string} */ what, /** @type {() => { note?: string | null } | void} */ fn) => {
         try {
@@ -150,6 +181,21 @@ export function importTables(doc, files) {
         } catch (e) {
             if (!(e instanceof InvalidValue)) throw e;
             rep.refused.push(`${what}: ${e.message}`);
+        }
+    };
+    /** A structural change (re-pack), when `fn` changes the bytes; false if refused or no change. */
+    const repack = (/** @type {string} */ what, /** @type {(b: Uint8Array) => Uint8Array} */ fn) => {
+        try {
+            const body = buildBody(doc, doc.radioWideEdits);
+            const out = fn(body);
+            if (out.length === body.length && equal(out, body)) return false;
+            doc = rep.doc = restructure(doc, what, () => out);
+            rep.applied.push(what);
+            return true;
+        } catch (e) {
+            if (!(e instanceof InvalidValue)) throw e;
+            rep.refused.push(`${what}: ${e.message}`);
+            return false;
         }
     };
     const kinds = files.map((f) => ({ f, kind: tableKind(f) }));
@@ -163,7 +209,6 @@ export function importTables(doc, files) {
         return rep;
     }
 
-    // radio.yaml first for Zone Operation (a re-pack: not supported here yet)
     /** @type {Record<string, any>} */
     let radio = {};
     for (const { f } of kinds.filter((k) => k.kind === "yaml")) {
@@ -175,20 +220,66 @@ export function importTables(doc, files) {
         }
     }
     const rwIn = /** @type {Record<string, unknown>} */ ({ ...(radio.radio_wide ?? {}) });
-    if (rwIn.zone_operation !== undefined && !same(rwIn.zone_operation, doc.radioWide.zone_operation)) {
-        rep.notApplied.push(`radio_wide.zone_operation ${doc.radioWide.zone_operation} -> ${rwIn.zone_operation}: switching Zone Operation `
-            + "re-packs the codeplug, which the web app can't do yet (the motreader CLI can)");
+    // Zone Operation first: switching it re-packs the whole codeplug; the zones
+    // of the old export then describe the old layout and aren't applied
+    let zoneSwitched = false;
+    const wantZo = rwIn.zone_operation;
+    if (wantZo !== undefined && wantZo !== null && !same(wantZo, doc.radioWide.zone_operation)) {
+        const on = String(wantZo) === "Enabled";
+        zoneSwitched = repack(`Zone Operation ${on ? "on" : "off"}`, (b) => (on ? zonesOn(b) : zonesOff(b)));
+        if (zoneSwitched) {
+            rep.notApplied.push("radio.yaml zones / home_zone: not applied after the Zone Operation switch (re-export to edit them)");
+            delete rwIn.home_zone;
+        }
     }
     delete rwIn.zone_operation;
-    if (radio.conventional_scan) rep.notApplied.push("radio.yaml conventional_scan: zones-off scan settings aren't edited by the web app yet");
+    // zones off: list types / SCAN TYPE re-pack the mode records, so they go first too
+    const wantCs = !zoneSwitched ? radio.conventional_scan : null;
+    let scanSwitched = false;
+    if (wantCs && typeof wantCs === "object") {
+        const [cur] = safeConvDecode(buildBody(doc, doc.radioWideEdits));
+        if (cur) {
+            const st = String(wantCs.scan_type ?? cur.scan_type);
+            const nl = String(wantCs.non_priority_list ?? cur.non_priority_list);
+            const pl = String(wantCs.priority_list ?? cur.priority_list);
+            scanSwitched = repack("conventional scan list / scan type", (b) => {
+                if (cur.scan_type === "Talkgroup" && st !== "Talkgroup") b = setScanType(b, st);
+                return setScanType(setListTypes(b, nl, pl), st);
+            });
+            if (scanSwitched) rep.notApplied.push("scan lists in modes.csv / radio.yaml: not applied after the list type change (re-export to edit them)");
+        }
+    }
 
+    /** @type {Partial<import("./convscan.js").ModeScan>[]} */
+    const scanRows = [];
     for (const { f, kind } of kinds) {
-        if (kind === "modes") importModes(doc, f, apply, rep);
+        if (kind === "modes") importModes(doc, f, apply, rep, scanRows);
         else if (kind === "phones") importPhones(doc, f, apply, rep);
         else if (kind === "mpl") importMpls(doc, f, apply, rep);
         else if (kind === "buttons") rep.notApplied.push(`${f.name}: control head buttons aren't edited by the web app yet`);
     }
-    if (Array.isArray(radio.zones)) importZones(doc, radio.zones, apply, rep);
+    if (Array.isArray(radio.zones) && doc.cp.zones.length && !zoneSwitched) importZones(doc, radio.zones, apply, rep);
+    // zones off: per-mode SCAN settings / Mode Slave lists and the radio-wide (Op Select) list, in place
+    if ((wantCs && !zoneSwitched) || scanRows.length) {
+        const [cur, curRows] = safeConvDecode(buildBody(doc, doc.radioWideEdits));
+        if (cur) {
+            if (scanSwitched) {   // after a re-pack the lists of the old export don't apply: keep the new ones
+                for (const r of scanRows) {
+                    const k = curRows[/** @type {number} */ (r.mode) - 1];
+                    if (k) Object.assign(r, { priority_1: k.priority_1, priority_2: k.priority_2, modes: k.modes });
+                }
+            }
+            const conv = wantCs && !scanSwitched && !zoneSwitched ? { ...cur, ...pick(wantCs, Object.keys(cur)) } : null;
+            repack("scan settings", (b) => encodeConvScan(b, /** @type {import("./convscan.js").ConvScan | null} */ (conv), scanRows));
+        }
+    }
+    // zone scan lists + ZONE SCAN OPTIONS (radio.yaml zones[].scan), in place
+    if (Array.isArray(radio.zones) && doc.cp.zones.length && !zoneSwitched) {
+        const fields = Object.keys(zoneScan(0)).filter((k) => k !== "zone");
+        const scans = radio.zones.filter((z) => z && z.scan && z.number !== undefined && z.number !== null)
+            .map((z) => ({ ...zoneScan(Number(z.number)), ...pick(z.scan, fields) }));
+        if (scans.length) repack("zone scan lists", (b) => encodeZoneScan(b, /** @type {import("./scanlist.js").ZoneScan[]} */ (scans)));
+    }
     for (const [key, v] of Object.entries(rwIn)) {
         if (v === null || v === undefined || same(v, doc.radioWide[key])) continue;
         apply(`radio_wide.${key} = ${JSON.stringify(v)}`, () => setRadioWide(doc, key, v));
@@ -196,17 +287,57 @@ export function importTables(doc, files) {
     return rep;
 }
 
+/** The keys of `o` that are in `keys`. */
+function pick(/** @type {Record<string, unknown>} */ o, /** @type {string[]} */ keys) {
+    return Object.fromEntries(Object.entries(o ?? {}).filter(([k]) => keys.includes(k)));
+}
+
+/** convscan.decode, or [null, []] when the layout isn't handled. */
+function safeConvDecode(/** @type {Uint8Array} */ body) {
+    try {
+        return decodeConvScan(body);
+    } catch (e) {
+        if (e instanceof InvalidValue) return /** @type {[null, []]} */ ([null, []]);
+        throw e;
+    }
+}
+
+/**
+ * A modes.csv row's scan columns as a ModeScan (as the CLI reads them; null
+ * values are left alone), or null.
+ * @param {Record<string, string>} row @param {number} mode
+ * @returns {Partial<import("./convscan.js").ModeScan> | null}
+ */
+function scanRowOf(row, mode) {
+    if (!SCAN_COLUMNS.slice(0, 4).some((c) => row[c])) return null;
+    const pri = (/** @type {string | undefined} */ v) => {
+        const t = (v ?? "").trim();
+        return !t ? null : /^\d+$/.test(t) ? Number(t) : t;
+    };
+    const lst = row.scan_list;
+    return /** @type {any} */ ({
+        mode, scan: row.scan || null, scan_button_control: row.scan_button_control || null,
+        coded_squelch_scan: row.coded_squelch_scan || null, talkback_scan: row.talkback_scan || null,
+        priority_1: /** @type {any} */ (pri(row.scan_priority_1)), priority_2: /** @type {any} */ (pri(row.scan_priority_2)),
+        modes: lst === undefined ? null : lst.replace(/,/g, " ").split(/\s+/).filter(Boolean).map(Number),
+    });
+}
+
 /** @typedef {(what: string, fn: () => { note?: string | null } | void) => void} Apply */
 
-/** modes.csv rows -> mode edits. @param {CodeplugDocument} doc @param {TextFile} f @param {Apply} apply @param {ImportReport} rep */
-function importModes(doc, f, apply, rep) {
-    const { header, rows } = parseCsvObjects(f.text);
+/**
+ * modes.csv rows -> mode edits; the zones-off scan columns are collected in
+ * `scanRows` (applied after, as the CLI does).
+ * @param {CodeplugDocument} doc @param {TextFile} f @param {Apply} apply @param {ImportReport} rep
+ * @param {Partial<import("./convscan.js").ModeScan>[]} [scanRows]
+ */
+function importModes(doc, f, apply, rep, scanRows = []) {
+    const { rows } = parseCsvObjects(f.text);
     const { cp } = doc;
-    if (header.some((h) => SCAN_COLUMNS.includes(h)) && rows.some((r) => SCAN_COLUMNS.some((c) => r[c]))) {
-        rep.notApplied.push(`${f.name}: the scan columns (zones-off scan settings) aren't edited by the web app yet`);
-    }
     for (const row of rows) {
         const n = Number(row.mode);
+        const sr = Number.isInteger(n) ? scanRowOf(row, n) : null;
+        if (sr) scanRows.push(sr);
         const m = cp.modes[n - 1];
         if (!Number.isInteger(n) || !m) {
             rep.refused.push(`${f.name}: mode ${row.mode}: no such mode (this codeplug has ${cp.modes.length})`);
@@ -246,11 +377,10 @@ function importModes(doc, f, apply, rep) {
 /** radio.yaml zones -> zone edits. @param {CodeplugDocument} doc @param {any[]} zones @param {Apply} apply @param {ImportReport} rep */
 function importZones(doc, zones, apply, rep) {
     const { cp } = doc;
-    if (zones.some((z) => z && z.scan)) rep.notApplied.push("radio.yaml zones[].scan: zone scan lists aren't edited by the web app yet");
     for (const zr of zones) {
         const z = cp.zones[Number(zr?.number) - 1];
         if (!z) {
-            rep.refused.push(`radio.yaml zone ${zr?.number}: no such zone (adding zones isn't supported here yet)`);
+            rep.refused.push(`radio.yaml zone ${zr?.number}: no such zone (add it on the Zones tab, then import again)`);
             continue;
         }
         if (zr.name !== undefined && zr.name !== null && String(zr.name) !== z.name) {

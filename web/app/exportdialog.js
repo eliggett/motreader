@@ -36,6 +36,7 @@ export async function exportDialog() {
     }
     const ch = changes(doc);
     const what = [
+        ...ch.ops,
         ch.modes.length ? `modes ${formatModeList(ch.modes)}` : "",
         ch.zones.length ? `zones ${formatModeList(ch.zones)}` : "",
         ch.phones.length ? `phones ${formatModeList(ch.phones)}` : "",
@@ -69,7 +70,9 @@ export async function exportDialog() {
             { label: "Zones", value: doc.cp.zones.length },
             { label: "Decrypted codeplug", value: `${result.plain.length} bytes` },
             { label: "Changes", value: what || "none: the file will be identical to the one imported" },
-            { label: "Bytes changed", value: result.changed.length },
+            result.plain.length === doc.importedPlain.length
+                ? { label: "Bytes changed", value: result.changed.length }
+                : { label: "Size", value: `${doc.importedPlain.length} → ${result.plain.length} bytes (re-packed)` },
         ]),
         problems,
         h("div", { class: "form-row" }, h("label", { for: "export-name" }, "File name"), nameInput, nameMsg),

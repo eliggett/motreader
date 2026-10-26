@@ -2,8 +2,9 @@
 /**
  * Modes: the mode list as an editable grid, plus an Edit button per row for
  * the single-mode editor. Columns that don't apply to this radio (900 MHz-only
- * options on a VHF radio) are left out. Mode add/delete/move/duplicate come
- * with the structural milestone.
+ * options on a VHF radio) are left out. Above the grid: add / duplicate /
+ * delete the active mode, trunk removal and undo (each re-packs the codeplug).
+ * With Zone Operation off, the per-mode scan settings show as Scan columns.
  */
 import { h, fill } from "../dom.js";
 import { createGrid } from "../grid.js";
@@ -11,6 +12,9 @@ import { editMode } from "../editing.js";
 import { openModeEditor } from "../modeeditor.js";
 import { MODE_FIELDS, SQUELCH_CHOICES, fieldText, applies, nameRule, isTrunkedMode } from "../../lib/modefields.js";
 import { empty, note, NO_DOC } from "./common.js";
+import { structureBar, addModeDialog, duplicateMode, deleteModeAsk, removeTrunkingAsk, modeScanDialog, modeScanText, structureBlocked } from "../structure.js";
+import { restructureDoc } from "../editing.js";
+import { convScans, setModeScan } from "../../lib/structure.js";
 
 /** @typedef {import("../../lib/codeplug.js").Mode} Mode */
 /** @typedef {import("../state.js").Document} Document */
@@ -18,9 +22,11 @@ import { empty, note, NO_DOC } from "./common.js";
 /** @type {{ doc: Document, grid: ReturnType<typeof createGrid<Mode>>, el: HTMLElement } | null} */
 let cache = null;
 
-/** @param {Document} doc */
-function build(doc) {
+/** @param {Document} doc @param {readonly [number, string] | null} [keep]  the active cell to keep */
+function build(doc, keep = null) {
     const { cp } = doc;
+    const [conv, scans] = convScans(doc);
+    const blocked = structureBlocked(doc);
     const editable = cp.band !== "900?";
     const fields = MODE_FIELDS.filter((f) => cp.modes.some((m) => applies(cp, m, f)) || f.kind === "mhz");
     /** @type {import("../grid.js").Column<Mode>[]} */
@@ -38,16 +44,34 @@ function build(doc) {
             },
             changed: (m) => fieldText(m, f.key) !== doc.original.modes[m.number - 1]?.[f.key],
         })),
+        ...(conv ? /** @type {import("../grid.js").Column<Mode>[]} */ ([
+            {
+                id: "scan", label: "Scan", text: (m) => scans[m.number - 1]?.scan ?? "",
+                editor: (m) => (blocked || isTrunkedMode(cp, m) ? null : { type: "select", options: ["Enabled", "Disabled"] }),
+            },
+            { id: "scan_list", label: "Scan list", cls: "name", text: (m) => modeScanText(scans[m.number - 1]) },
+        ]) : []),
     ];
     const grid = createGrid({
         label: "Modes",
         columns,
         rows: () => cp.modes,
-        onEdit: (m, key, text) => editMode(m.number, key, text),
+        onEdit: (m, key, text) => (key === "scan"
+            ? restructureDoc(`Mode ${m.number} scan`, (d) => setModeScan(d, { mode: m.number, scan: text }))
+            : editMode(m.number, key, text)),
         rowAction: { label: "Edit", title: "Open this mode in the mode editor", run: (m) => void openModeEditor(m.number) },
         rowClass: (m) => (isTrunkedMode(cp, m) ? "trunked" : ""),
     });
+    if (keep) grid.select(Math.min(keep[0], cp.modes.length - 1), keep[1]);
+    const active = () => (cp.modes[grid.active()[0]]?.number ?? cp.modes.length);
     const el = h("div", {},
+        structureBar(doc, [
+            { label: "Add mode…", title: "Insert a mode after the active one", run: () => addModeDialog(active()) },
+            { label: "Duplicate", title: "Copy the active mode right after it", run: () => duplicateMode(active()) },
+            { label: "Delete", title: "Delete the active mode", run: () => deleteModeAsk(active()) },
+            ...(conv ? [{ label: "Scan…", title: "The active mode's scan settings (Zone Operation off)", run: () => modeScanDialog(active()) }] : []),
+            ...(doc.trunk.info ? [{ label: "Remove trunking…", title: "Make mode 1 a conventional mode", run: () => removeTrunkingAsk() }] : []),
+        ]),
         doc.trunked.length > 1 ? trunkedNote(doc) : null,
         note(`${cp.modes.length} modes. Arrow keys move, Enter or typing edits, Escape cancels; `
             + "Edit opens one mode as a form. Changed cells are highlighted."
@@ -78,7 +102,7 @@ export default {
         if (!doc.cp.modes.length) {
             return fill(el, doc.trunked.length ? trunkedNote(doc) : empty("No modes were found in this codeplug."));
         }
-        if (cache?.doc !== doc) cache = build(doc);
+        if (cache?.doc !== doc) cache = build(doc, cache?.grid.active() ?? null);
         else cache.grid.refresh();
         if (cache.el.parentElement !== el) fill(el, cache.el);
     },

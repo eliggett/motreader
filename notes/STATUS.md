@@ -23,9 +23,29 @@ the reverse-engineering tool and the reference:
   scan parts not yet in the web app), and the same edited files imported by the
   CLI and the web app give byte-identical archives.
 - Milestones done: 1 skeleton, 2 read-only, 3 editing + Export Codeplug, 4
-  CSV/YAML + phone/MPL lists. Next: 5 structural ops (modes/zones
-  add/delete/move, scan lists, trunk removal, Zone Operation), 6 control head
-  buttons, 7 export-time checks.
+  CSV/YAML + phone/MPL lists, 5 structural ops. Next: 6 control head buttons,
+  7 export-time checks.
+- M5 (2026-10-25): modeops / zonelist / zoneop / trunking removal / convscan /
+  scanlist ported to web/lib (byte parity with Python on 10,700 generated
+  cases over every sample: tools/py_struct.py, tests/js/struct-parity.test.js;
+  scan decode in the decode parity). The app: add / duplicate / delete modes
+  (Modes tab), add / delete zones and zone scan lists (Zones tab), Zone
+  Operation switch (Radio-Wide), zones-off scan (Modes Scan columns, Conventional
+  tab), Remove trunking (Modes tab), undo of each structural change
+  (lib/document.js restructure keeps the previous document). CSV/YAML export
+  now has the scan columns / conventional_scan / zones[].scan, equal to the
+  CLI's, and import applies them (and the Zone Operation / list type switches)
+  as the CLI does, byte-identical to its archives. Move mode isn't in Python
+  yet (it needs its own RSS mapping). Older format versions: still modes only
+  (no add / delete).
+  Found on the way (fixed in Python too): mode add / delete didn't move ext
+  +0x47 / +0x49 (MPL tables), so on a standard head with MPL enabled RSS read
+  the MPL list 6 bytes off (FORMAT §5j); Zone Operation on cut per-mode scan
+  lists from records that had none (FORMAT §5g). Web-app results checked in
+  RSS (617ASN add / delete / zone / scan list, 617ASQ zones off + Mode Slave
+  lists + add, 566AYA trunk removal + add, 617ASN 3-mode zones on + zone): no
+  GET warning, and RSS re-saves them identically (the last one but for RSS's
+  own conventional-list normalization).
 
 UHF (2026-10-25): decoded, edited and exported (FORMAT §5a-UHF), validated
 in RSS. Codeplugs motreader can't edit safely (older format versions 101/102,

@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * Zone edits: a zone's name and its member modes (the zone tables are
- * template-patched by rebuild.js; adding/removing zones comes later).
+ * template-patched by rebuild.js; adding / deleting zones is structure.js).
  */
 import { InvalidValue } from "./errors.js";
 import { nameRule } from "./modefields.js";

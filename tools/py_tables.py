@@ -3,10 +3,7 @@
 
     PYTHONPATH=. python3 tools/py_tables.py export FILE...
         FILE: an archive or a decrypted body (*.plain.bin). Prints
-        {FILE: {name: text, ...}} with the files cli.export writes, plus
-        "radio.yaml (no scan)": radio.yaml without the parts the web app
-        doesn't do yet (conventional_scan, zones[].scan), and "scan_columns":
-        whether modes.csv has the zones-off scan columns.
+        {FILE: {name: text, ...}} with the files cli.export writes.
     PYTHONPATH=. python3 tools/py_tables.py import TEMPLATE DIR OUT
         cli.do_import (output on stderr).
 """
@@ -18,8 +15,6 @@ import json
 import os
 import sys
 import tempfile
-
-import yaml
 
 from motreader import cli
 from motreader.archive import BANNER_PREFIX, Archive
@@ -41,12 +36,6 @@ def export_one(path: str) -> dict:
         for name in sorted(os.listdir(out)):
             with open(os.path.join(out, name), newline="") as fh:
                 files[name] = fh.read()
-    radio = yaml.safe_load(files["radio.yaml"])
-    radio.pop("conventional_scan", None)
-    for z in radio.get("zones", []):
-        z.pop("scan", None)
-    files["radio.yaml (no scan)"] = yaml.safe_dump(radio, sort_keys=False)
-    files["scan_columns"] = "scan" in files["modes.csv"].split("\r\n", 1)[0].split(",")
     return files
 
 

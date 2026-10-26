@@ -10,6 +10,7 @@ import { SCREENS, FIELD_BY_KEY, EN, SIREN_CHOICES, REARM_CHOICES, HEAD_CHOICES, 
 import { editRadioWide } from "../editing.js";
 import { empty, note, section, NO_DOC, modesOnlyText } from "./common.js";
 import { listSections } from "./lists.js";
+import { zoneOperationAsk, structureBlocked, convScanSection } from "../structure.js";
 
 /** @typedef {import("../state.js").Document} Document */
 
@@ -50,7 +51,15 @@ function fieldRow(/** @type {Document} */ doc, /** @type {string} */ key, /** @t
     const msg = h("span", { class: "field-msg" }, f.editable === false && f.note ? f.note : "");
     const choices = choicesOf(f, v);
     let control;
-    if (f.editable === false || (f.kind === "headtype" && !choices)) {
+    if (key === "zone_operation") {
+        // switching it re-packs the codeplug (zones <-> per-mode scan lists)
+        const on = cur === "Enabled";
+        const blocked = structureBlocked(doc);
+        control = h("span", { class: "ro-value", id }, cur);
+        msg.replaceChildren(h("button", {
+            class: "small", disabled: Boolean(blocked), title: blocked, onclick: () => void zoneOperationAsk(!on),
+        }, on ? "Turn off…" : "Turn on…"), " re-packs the codeplug, as in RSS");
+    } else if (f.editable === false || (f.kind === "headtype" && !choices)) {
         control = h("span", { class: "ro-value", id }, valueLabel(key, cur));
         if (f.kind === "headtype" && !choices) msg.textContent = "RSS can't change the S9000e (A9) head";
     } else if (choices) {
@@ -123,7 +132,8 @@ export function settingsTab(id, title, tab, extra) {
 }
 
 export const radioWideTab = settingsTab("radiowide", "Radio-Wide", "radiowide");
-export const conventionalTab = settingsTab("conventional", "Conventional", "conventional", listSections);
+export const conventionalTab = settingsTab("conventional", "Conventional", "conventional", (doc) => [
+    convScanSection(doc), ...listSections(doc)].filter((x) => x !== null));
 export const headTab = settingsTab("head", "Control Head", "head", () => [
     section("Buttons", h("p", { class: "note" }, "Control head button assignment arrives in a later milestone.")),
 ]);

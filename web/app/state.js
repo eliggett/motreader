@@ -1,8 +1,8 @@
 // @ts-check
 /**
  * The open document. Every change goes through `setDocument` / `update`, which
- * notify subscribers, so tabs re-render from one source of truth (and undo can
- * be added here later).
+ * notify subscribers, so tabs re-render from one source of truth. (Undo of
+ * structural changes keeps the previous document: CodeplugDocument.previous.)
  */
 
 /** @typedef {import("../lib/document.js").CodeplugDocument} Document */

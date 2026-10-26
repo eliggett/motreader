@@ -501,7 +501,7 @@ function encodeHead(/** @type {Uint8Array} */ out, /** @type {Blocks} */ blk, /*
 }
 
 /** Recompute the derived bytes of every touched block: ext sum; CHB summary word, then CHB sum. */
-function finish(/** @type {Uint8Array} */ out, /** @type {Blocks} */ blk, /** @type {Set<string>} */ touched) {
+export function finish(/** @type {Uint8Array} */ out, /** @type {Blocks} */ blk, /** @type {Set<string>} */ touched) {
     const { ext: e, chb: c } = blk;
     if (touched.has("ext") && e !== null) {
         const L = byte(out, e);

@@ -11,6 +11,7 @@ import { trunkingInfo, TrunkingUnsupported } from "./trunking.js";
 import { MODE_FIELDS, fieldText } from "./modefields.js";
 import { decodePhones, decodeMpls } from "./lists.js";
 import { assessSupport, isOldFormat } from "./support.js";
+import { buildBody } from "./export.js";
 
 /**
  * @typedef {{
@@ -28,6 +29,9 @@ import { assessSupport, isOldFormat } from "./support.js";
  *   listProblem: string | null,
  *   support: import("./support.js").Support,
  *   trunked: { number: number, name: string }[],
+ *   ops: string[],
+ *   importedPlain: Uint8Array,
+ *   previous: CodeplugDocument | null,
  *   original: {
  *     modes: Record<string, string>[], zones: { name: string, modes: string }[],
  *     radioWide: import("./radiowide.js").RadioWide, phones: string[], mpls: string[],
@@ -42,12 +46,26 @@ import { assessSupport, isOldFormat } from "./support.js";
  *   was opened, as displayed text, to tell what changed.
  *   An older format version (`support.modesOnly`) decodes only its modes:
  *   `radioWide`, `phones` and `mpls` are empty (and zones aren't parsed).
+ *   Structural changes (adding / deleting modes and zones, Zone Operation, ...)
+ *   re-pack the codeplug: `restructure` writes the edits so far into it and
+ *   opens the result as a new document, so `plain` / `original` describe the
+ *   re-packed codeplug; `ops` lists the structural changes made since the file
+ *   was imported, `importedPlain` is the body as imported, and `previous` is
+ *   the document before the last structural change (for undo).
  */
 
 /** Decode an archive file. Throws if it isn't one. */
 export function openDocument(/** @type {string} */ fileName, /** @type {Uint8Array} */ raw) {
     const a = splitArchive(raw);
-    const plain = decryptBody(a.body);
+    return documentFromBody(fileName, raw, a.banner, decryptBody(a.body));
+}
+
+/**
+ * A document for a decrypted body (as imported, or re-packed).
+ * @param {string} fileName @param {Uint8Array} raw @param {Uint8Array} banner @param {Uint8Array} plain
+ * @returns {CodeplugDocument}
+ */
+function documentFromBody(fileName, raw, banner, plain) {
     const cp = parseCodeplug(plain);
     /** @type {CodeplugDocument["trunk"]} */
     let trunk = { info: null, unsupported: null };
@@ -74,8 +92,9 @@ export function openDocument(/** @type {string} */ fileName, /** @type {Uint8Arr
     const mpls = modesOnly ? [] : tryList(() => decodeMpls(cp));
     /** @type {CodeplugDocument} */
     const doc = {
-        fileName, raw, banner: a.banner, plain, cp, radioWide, trunk, index: null,
+        fileName, raw, banner, plain, cp, radioWide, trunk, index: null,
         radioWideEdits: {}, phones, mpls, listProblem, support: assessSupport(cp), trunked: trunkedModes(cp),
+        ops: [], importedPlain: plain, previous: null,
         original: {
             modes: cp.modes.map(modeTexts),
             zones: cp.zones.map((z) => ({ name: z.name, modes: z.modes.join(" ") })),
@@ -118,6 +137,7 @@ export function setRadioWide(doc, key, value) {
  * @param {CodeplugDocument} doc
  */
 export function changes(doc) {
+    const ops = doc.ops;
     const modes = doc.cp.modes.filter((m, i) => {
         const was = doc.original.modes[i] ?? {};
         return MODE_FIELDS.some((f) => fieldText(m, f.key) !== was[f.key]);
@@ -130,5 +150,27 @@ export function changes(doc) {
     const radioWide = [...keys].filter((k) => String(doc.radioWide[k]) !== String(doc.original.radioWide[k]));
     const phones = doc.phones.filter((p, i) => JSON.stringify(p) !== doc.original.phones[i]).map((p) => p.number);
     const mpls = doc.mpls.filter((m, i) => JSON.stringify(m) !== doc.original.mpls[i]).map((m) => m.number);
-    return { modes, zones, radioWide, phones, mpls, any: modes.length + zones.length + radioWide.length + phones.length + mpls.length > 0 };
+    return {
+        ops, modes, zones, radioWide, phones, mpls,
+        any: ops.length + modes.length + zones.length + radioWide.length + phones.length + mpls.length > 0,
+    };
+}
+
+/**
+ * Apply a structural change: the edits so far are written into the body (as
+ * on export), `fn` re-packs it, and the result opens as the new document
+ * (with `what` added to `ops`). Throws InvalidValue when the edits can't be
+ * written or `fn` refuses. Highlighting of changed values starts again from
+ * the new document.
+ * @param {CodeplugDocument} doc @param {string} what @param {(body: Uint8Array) => Uint8Array} fn
+ * @returns {CodeplugDocument}
+ */
+export function restructure(doc, what, fn) {
+    const body = fn(buildBody(doc, doc.radioWideEdits));
+    const next = documentFromBody(doc.fileName, doc.raw, doc.banner, body);
+    next.index = doc.index;
+    next.ops = [...doc.ops, what];
+    next.importedPlain = doc.importedPlain;
+    next.previous = doc;
+    return next;
 }

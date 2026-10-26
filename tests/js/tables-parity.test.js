@@ -2,8 +2,7 @@
 /**
  * CSV/YAML interchange with the motreader CLI, both ways:
  *  - export: web/lib's modes.csv, phones.csv, mpl.csv and radio.yaml equal
- *    the CLI's on every sample (minus the scan parts the web app doesn't do
- *    yet: modes.csv's zones-off scan columns, conventional_scan, zones[].scan);
+ *    the CLI's on every sample (scan settings included);
  *  - import: the same edited files imported by the CLI and by web/lib give
  *    byte-identical archives (on the real archives on hand).
  */
@@ -15,7 +14,7 @@ import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { isArchive, openArchive } from "../../web/lib/archive.js";
 import { BANNER_LONG } from "../../web/lib/archive.js";
-import { tablesOfBody, importTables, SCAN_COLUMNS } from "../../web/lib/tables.js";
+import { tablesOfBody, importTables } from "../../web/lib/tables.js";
 import { parseCsv, toCsv } from "../../web/lib/csv.js";
 import { openDocument } from "../../web/lib/document.js";
 import { exportArchive } from "../../web/lib/export.js";
@@ -39,13 +38,6 @@ function jsTables(/** @type {string} */ path) {
     return Object.fromEntries(tablesOfBody(banner, plain).files.map((f) => [f.name, f.text]));
 }
 
-/** A CSV without some columns. */
-function dropColumns(/** @type {string} */ text, /** @type {string[]} */ cols) {
-    const rows = parseCsv(text);
-    const keep = (rows[0] ?? []).map((h, i) => (cols.includes(h) ? -1 : i)).filter((i) => i >= 0);
-    return toCsv(rows.map((r) => keep.map((i) => r[i] ?? "")));
-}
-
 test("CLI export reference available", { skip: ref ? false : "Python unavailable" }, () => assert.ok(files.length > 200));
 
 for (const path of files) {
@@ -59,14 +51,13 @@ for (const path of files) {
             return;
         }
         assert.ok(!want.error, `the CLI failed (${want.error}) where JS exported`);
-        const modes = want.scan_columns ? dropColumns(want["modes.csv"], SCAN_COLUMNS) : want["modes.csv"];
-        assert.equal(got["modes.csv"], modes, "modes.csv");
+        assert.equal(got["modes.csv"], want["modes.csv"], "modes.csv");
         assert.equal(got["phones.csv"], want["phones.csv"], "phones.csv");
         assert.equal(got["mpl.csv"], want["mpl.csv"], "mpl.csv");
         // PyYAML (YAML 1.1) leaves a digit string like 0228 unquoted (it can't be octal); js-yaml
         // (YAML 1.2) quotes it. Both read back as the same text in both importers.
         const unquote = (/** @type {string} */ y) => y.replace(/: '(\d+)'$/gm, ": $1");
-        assert.equal(unquote(got["radio.yaml"] ?? ""), unquote(want["radio.yaml (no scan)"]), "radio.yaml");
+        assert.equal(unquote(got["radio.yaml"] ?? ""), unquote(want["radio.yaml"]), "radio.yaml");
     });
 }
 
@@ -113,6 +104,12 @@ for (const path of archives) {
         yaml = yaml.replace(/^(  time_out_timer: )(\w+)$/m, (_, a, v) => a + (v === "Enabled" ? "Disabled" : "Enabled"));
         yaml = yaml.replace(/^(  minimum_volume: )(\d+)$/m, (_, a, v) => a + String((Number(v) + 1) % 16));
         if (doc0.cp.zones.length) yaml = yaml.replace(/^(- number: 1\n  name: ).*$/m, "$1WEB ZONE");
+        // scan: zones off, mode n's scan columns; zones on, zone 1's scan list
+        if (/,scan,/.test(modes.split("\r\n", 1)[0] ?? "")) {
+            modes = setCell(modes, "mode", n, "scan", "Enabled");
+            modes = setCell(modes, "mode", n, "talkback_scan", "Enabled");
+        }
+        yaml = yaml.replace(/^(  scan:\n    scan_type: )[^\n]*\n((?:    .*\n)*?)(    priority_1: )[^\n]*$/m, (_, a, mid, p1) => `${a}Pri Tlkgr\n${mid}${p1}1`);
 
         const dir = mkdtempSync(join(tmpdir(), "motreader-tables-"));
         try {
@@ -128,7 +125,7 @@ for (const path of archives) {
             const rep = importTables(doc, edited);
             assert.deepEqual(rep.refused, [], "nothing refused");
             assert.ok(rep.applied.length >= 8, `applied: ${rep.applied.join("; ")}`);
-            const mine = exportArchive(doc, doc.radioWideEdits);
+            const mine = exportArchive(rep.doc, rep.doc.radioWideEdits);
             assert.deepEqual(mine.problems, []);
             assert.ok(existsSync(out));
             assert.deepEqual([...mine.bytes], [...readFileSync(out)], "the same archive as the CLI's import");
@@ -147,7 +144,48 @@ for (const path of archives) {
         const rep = importTables(doc, tables);
         assert.deepEqual(rep.refused, []);
         assert.deepEqual(rep.applied, [], "nothing to apply");
+        assert.equal(rep.doc, doc, "no re-pack");
         const out = exportArchive(doc, doc.radioWideEdits);
         assert.deepEqual(out.changed, [], "the archive is unchanged");
+    });
+}
+
+/** Import edited files with the CLI and with web/lib; the archives must be the same. */
+function importBoth(/** @type {string} */ path, /** @type {import("../../web/lib/tables.js").TextFile[]} */ edited) {
+    const dir = mkdtempSync(join(tmpdir(), "motreader-tables-"));
+    try {
+        for (const f of edited) writeFileSync(join(dir, f.name), f.text);
+        const out = join(dir, "out.arc");
+        const r = py(["import", path, dir, out]);
+        const doc = openDocument(basename(path), new Uint8Array(readFileSync(path)));
+        const rep = importTables(doc, edited);
+        if (r.status !== 0) {
+            assert.ok(rep.refused.length, `the CLI refused (${r.stderr.trim().split("\n").pop()}) but the web app didn't`);
+            return rep;
+        }
+        assert.deepEqual(rep.refused, [], "nothing refused");
+        const mine = exportArchive(rep.doc, rep.doc.radioWideEdits);
+        assert.deepEqual(mine.problems, []);
+        assert.deepEqual([...mine.bytes], [...readFileSync(out)], "the same archive as the CLI's import");
+        return rep;
+    } finally {
+        rmSync(dir, { recursive: true, force: true });
+    }
+}
+
+for (const path of archives) {
+    test(`switches import like the CLI: ${basename(path)}`, { skip: !ref || !archives.length }, () => {
+        const t = jsTables(path);
+        const doc0 = openDocument(basename(path), new Uint8Array(readFileSync(path)));
+        if (doc0.cp.band === "900?" || !doc0.support.editable) return;
+        const yaml = t["radio.yaml"] ?? "";
+        // Zone Operation flipped
+        const zo = yaml.replace(/^(  zone_operation: )(\w+)$/m, (_, a, v) => a + (v === "Enabled" ? "Disabled" : "Enabled"));
+        if (zo !== yaml) importBoth(path, [{ name: "radio.yaml", text: zo }]);
+        // zones off: the list types flipped, with a mode's scan columns
+        if (/^conventional_scan:/m.test(yaml)) {
+            const cs = yaml.replace(/^(  non_priority_list: )(.*)$/m, (_, a, v) => a + (v === "Op Select" ? "Mode Slave" : "Op Select"));
+            importBoth(path, [{ name: "radio.yaml", text: cs }, { name: "modes.csv", text: setCell(t["modes.csv"] ?? "", "mode", "1", "scan", "Enabled") }]);
+        }
     });
 }

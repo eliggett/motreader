@@ -72,6 +72,7 @@ export function generalInfo(d) {
     /** @type {InfoRow[]} */
     const codeplug = [
         { label: "Decrypted codeplug size", value: `${d.plain.length} bytes`, note: `data ends at byte ${end}; the rest is 0xFF padding` },
+        ...(d.ops.length ? [{ label: "Structural changes", value: d.ops.join("; "), note: `re-packed since import (${d.importedPlain.length} bytes then)` }] : []),
         { label: "Codeplug blocks", value: "—", note: NOT_DECODED },
         { label: "Radio's maximum codeplug size", value: "—", note: NOT_DECODED },
         { label: "Decryption key (nonce)", value: hex(nonce(d.plain), " "), note: "the 13 bytes at the start of the body; RSS picks new ones on every save" },

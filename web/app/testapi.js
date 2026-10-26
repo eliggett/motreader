@@ -25,6 +25,7 @@ import * as editing from "./editing.js";
 import { exportArchive } from "../lib/export.js";
 import { exportTables } from "../lib/tables.js";
 import { changes } from "../lib/document.js";
+import * as structure from "../lib/structure.js";
 import { lastDownload } from "./files.js";
 import { currentDialog } from "./modal.js";
 
@@ -139,6 +140,19 @@ export function installTestApi(/** @type {Promise<void>} */ ready) {
             el.dispatchEvent(new Event("input", { bubbles: true }));
             el.dispatchEvent(new Event("change", { bubbles: true }));
         },
+        /**
+         * Run a structural change from lib/structure.js by name, as the app's
+         * buttons do (without their dialogs), e.g.
+         * mr.struct("addModeTo", { after: 3, zones: [1] }), mr.struct("deleteZoneIn", 2):
+         * {} or { error }.
+         */
+        struct: (/** @type {string} */ name, /** @type {any[]} */ ...args) => {
+            const fn = /** @type {Record<string, unknown>} */ (structure)[name];
+            if (typeof fn !== "function") return { error: `no structural command ${name}` };
+            return editing.restructureDoc(name, (d) => fn(d, ...args));
+        },
+        /** Undo the last structural change: {} or { error }. */
+        undo: () => editing.undoRestructure(),
         /** The toolbar commands (file pickers can't be driven from scripts; use load()). */
         actions,
     };

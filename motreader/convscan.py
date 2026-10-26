@@ -92,7 +92,7 @@ class ConvScan:
 class _Layout:
     def __init__(self, body: bytes):
         from .codeplug import Codeplug
-        self.band = "vhf" if Codeplug.parse(body).band == "vhf" else "900"
+        self.band = "vhf" if Codeplug.parse(body).band in ("vhf", "uhf") else "900"
         pt = mode_pointer_table(body)
         e = RW.find_ext_block(body)
         if pt is None or e is None:
@@ -327,7 +327,7 @@ def offsets(body: bytes) -> dict:
     return out
 
 
-EXT_PTRS = (0x18, 0x1A, 0x1C, 0x20, 0x22, 0x25, 0x27, 0x29, 0x2B, 0x2D, 0x41, 0x50)
+EXT_PTRS = (0x18, 0x1A, 0x1C, 0x20, 0x22, 0x25, 0x27, 0x29, 0x2B, 0x2D, 0x41, 0x47, 0x49, 0x50)
 HDR_PTRS = (0xDD, 0xE5, 0xE7, 0xED)
 
 

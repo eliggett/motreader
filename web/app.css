@@ -207,9 +207,15 @@ table.grid td.members-edit { font-family: var(--mono); min-width: 9rem; }
 .export .form-row { display: flex; gap: 0.75rem; align-items: center; margin: 0.75rem 0 0.25rem; }
 .export progress { width: 100%; margin-top: 0.5rem; accent-color: var(--accent); }
 .mode-editor .form { grid-template-columns: max-content minmax(10rem, max-content) minmax(8rem, 1fr); }
+.struct-bar { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0 0 0.6rem; }
+.struct-form .form { grid-template-columns: max-content minmax(8rem, max-content) minmax(8rem, 1fr); }
+.struct-form > .field-msg { min-height: 1.2em; margin: 0.6rem 0 0; }
+.form-row > .label { color: var(--muted); }
+.checks { display: flex; flex-wrap: wrap; gap: 0.2rem 0.9rem; }
+.check { white-space: nowrap; }
 
 @media (max-width: 40rem) {
-  .form, .mode-editor .form { grid-template-columns: 1fr; }
+  .form, .mode-editor .form, .struct-form .form { grid-template-columns: 1fr; }
   .form-row > label { margin-top: 0.4rem; }
 }
 .import-report ul { margin: 0.25rem 0 0.75rem; padding-left: 1.2rem; font-size: 0.9rem; }

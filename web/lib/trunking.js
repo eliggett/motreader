@@ -1,7 +1,7 @@
 // @ts-check
 /**
- * Trunking detection (TRUNKED DUAL MODE, 900 MHz; FORMAT §5h). Port of
- * `trunking_info` in motreader/trunking.py; removal is ported later.
+ * Trunking detection and removal (TRUNKED DUAL MODE, 900 MHz; FORMAT §5h).
+ * Port of motreader/trunking.py.
  *
  * Layout (566AYA): mode 1 is the trunked mode, a 37-byte record whose word at
  * +2 points at the 27-byte personality section right after the mode records;
@@ -12,12 +12,15 @@
 import { be16 } from "./bytes.js";
 import { modePointerTable } from "./codeplug.js";
 import { findExtBlock } from "./radiowide.js";
+import { InvalidValue } from "./errors.js";
+import { putBe16, sum8, spliceAll, finishBody } from "./repack.js";
 
 const TRUNK_REC_LEN = 37;
 const PERS_LEN = 0x1B;
 const TG_HEAD = 4;
 const MAX_SYSTEMS = 0x1D6;
 const MAX_SUBFLEETS = 0x1D7;
+const TRUNK_BYTE = 0x1DC;
 const EXT_CONV_COUNT = 0x86;
 const SYSTEM_PTR = 0xE9;
 
@@ -71,4 +74,61 @@ export function trunkingInfo(/** @type {Uint8Array} */ body) {
         base, tab, starts, n, L, ext: e, r0, pers, tg, data_end: dataEnd,
         systems: /** @type {number} */ (body[MAX_SYSTEMS]), subfleets: /** @type {number} */ (body[MAX_SUBFLEETS]),
     };
+}
+
+/**
+ * Refuse a structural change on a trunked codeplug, as the Python ops do
+ * (unsupported trunking: its own reason).
+ */
+export function refuseIfTrunked(/** @type {Uint8Array} */ body) {
+    let t;
+    try {
+        t = trunkingInfo(body);
+    } catch (e) {
+        if (e instanceof TrunkingUnsupported) throw new InvalidValue(e.message);
+        throw e;
+    }
+    if (t) throw new InvalidValue("trunked codeplug: remove trunking first (remove-trunking)");
+}
+
+/**
+ * Remove trunking the way RSS stores a radio that went through the
+ * repeater-builder workaround (604AUN: TRUNKED DUAL MODE with no trunking
+ * data): the trunked mode 1 becomes a conventional mode, a copy of mode 2
+ * (edit it afterwards), so no mode, zone, scan list or name renumbers. Type
+ * byte 0, systems / subfleets 0, 0x1DC 0, ext conventional count = n; the
+ * personality section and talkgroup block are removed; pointers, sums, 0xC9
+ * and FF padding follow. Byte-identical to RSS's GET + re-SAVE of the result
+ * on 566AYA. Returns the new body.
+ */
+export function removeTrunking(/** @type {Uint8Array} */ body) {
+    let t;
+    try {
+        t = trunkingInfo(body);
+    } catch (e) {
+        if (e instanceof TrunkingUnsupported) throw new InvalidValue(e.message);
+        throw e;
+    }
+    if (!t) throw new InvalidValue("no trunked mode in this codeplug");
+    const { base, tab, starts, n, L, ext: e, r0, pers, tg } = t;
+    const s2 = be16(body, 0xE7) - base;
+    const s1 = /** @type {number} */ (starts[1]);
+    /** @type {[number, number, Uint8Array][]} */
+    const edits = [[r0, TRUNK_REC_LEN, body.slice(s1, s1 + L)], [pers, PERS_LEN, new Uint8Array(0)], [tg, t.data_end - tg, new Uint8Array(0)]];
+    const moved = (/** @type {number} */ p) => p + edits.reduce((d, [o, ln, nb]) => d + (o + ln <= p && o < p ? nb.length - ln : 0), 0);
+    const out = Uint8Array.from(body);
+    out[s2 + n] = 0;                                   // mode 1 type -> conventional
+    out[tab - 1] = sum8(out, s2, tab - 1);             // mode-list section sum
+    out[MAX_SYSTEMS] = out[MAX_SUBFLEETS] = out[TRUNK_BYTE] = 0;
+    out[e + EXT_CONV_COUNT] = n;                       // conventional modes
+    starts.forEach((p, i) => putBe16(out, tab + 2 * i, moved(p) + base));
+    out[tab + 2 * n] = sum8(out, tab, tab + 2 * n);
+    for (const k of [0x20, 0x22]) {
+        const w = be16(body, e + k) - base;
+        if (r0 < w && w < body.length) putBe16(out, e + k, moved(w) + base);
+    }
+    const Le = /** @type {number} */ (out[e]);
+    out[e + Le - 1] = sum8(out, e, e + Le - 1);
+    const neu = spliceAll(out, [...edits].sort((a, b) => b[0] - a[0]));
+    return finishBody(neu, body.length);
 }

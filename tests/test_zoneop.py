@@ -90,3 +90,21 @@ def test_single_zone_is_decoded_via_rss_pointers():
     cp = Codeplug.parse(_gt("617ASQ1266_zones_on.plain.bin"))
     assert cp.zone_operation is True
     assert [(z.number, z.name, z.modes) for z in cp.zones] == [(1, "ZONE  01", list(range(1, 11)))]
+
+
+def test_zones_on_keeps_records_without_per_mode_lists():
+    """A 900 radio with zones off and both CONVENTIONAL lists Op Select keeps
+    no per-mode scan list: switching zones on must not cut its records."""
+    p = os.path.expanduser("~/.dosbox/c/MRSS/SPECTRA/ARCHIVE-bk/A617ASN1.767")
+    if not os.path.exists(p):
+        pytest.skip("archive not present")
+    from motreader.archive import Archive
+    from motreader.crypto import decrypt_body
+    body = decrypt_body(Archive.load(p).body)
+    before = Codeplug.parse(body)
+    assert not before.zone_operation and before.band == "900"
+    after = Codeplug.parse(Z.zones_on(body))
+    assert after.body[0x10A] == body[0x10A]
+    key = lambda m: (m.name, m.rx_mhz, m.tx_mhz, m.ta_mhz, m.rx_pl, m.tx_pl)
+    assert [key(m) for m in after.modes] == [key(m) for m in before.modes]
+    assert [z.modes for z in after.zones] == [list(range(1, len(before.modes) + 1))]

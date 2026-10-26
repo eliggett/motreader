@@ -98,6 +98,8 @@ motreader).
 | A9 head: RSS's default name is "  MODE   66" (leading spaces kept and shown by RSS). A GUI may prefer offering a plain default. | n/a |
 | Zones-off scan lists are renumbered. RSS gets this wrong: ADD leaves the member numbered after+1 as is (the new mode inherits its list places, the old one drops out); DELETE on 900 Mode Slave lists shifts later members by two. motreader renumbers correctly. | differs (deliberate) |
 | Not handled yet (refused): trunked codeplugs (remove trunking first), width changes above 120 modes. | blocks |
+| Web app: Add mode asks for the position, the mode to copy, the name (checked like a rename) and, with zones on, the zones (defaulting to the copied mode's); Duplicate copies the active mode right after it, same name and zones; Delete asks first. Each re-packs the codeplug, highlighting of earlier edits restarts, and Undo (one step per change) puts the codeplug back, dropping edits made after the change (asked first). | n/a |
+| Older format versions (112 / 114): no add / delete yet. | refused by the web app |
 
 ## Zones (radio.yaml `zones`)
 

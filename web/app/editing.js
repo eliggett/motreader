@@ -95,6 +95,45 @@ export function editMpl(/** @type {number} */ n, /** @type {string} */ key, /** 
     });
 }
 
+/**
+ * Run a structural change (lib/structure.js): `fn` gets the open document and
+ * returns the re-packed one, which replaces it ("restructure"). A refusal
+ * becomes `{ error }`. Refused on read-only codeplugs and on the older format
+ * versions (modes are only edited there).
+ * @param {string} what  for the log, e.g. "Add mode after 3"
+ * @param {(doc: import("./state.js").Document) => import("./state.js").Document} fn
+ * @returns {EditResult}
+ */
+export function restructureDoc(what, fn) {
+    const doc = store.get();
+    if (!doc) return { error: "no codeplug is open" };
+    if (!doc.support.editable) return { error: `this codeplug is read-only: ${doc.support.reasons.join("; ")}` };
+    if (doc.support.modesOnly) return { error: `adding, deleting and re-packing aren't supported in format version ${doc.support.version} yet` };
+    try {
+        const next = fn(doc);
+        store.setDocument(next, "restructure");
+        log.info(`${what}: ${next.ops[next.ops.length - 1] ?? "done"}; the codeplug is now ${next.plain.length} bytes`);
+        return {};
+    } catch (e) {
+        if (e instanceof InvalidValue) {
+            log.warn(`${what}: ${e.message}`);
+            return { error: e.message };
+        }
+        log.error(`${what} failed: ${e instanceof Error ? e.stack ?? e.message : e}`);
+        return { error: `internal error: ${errText(e)}` };
+    }
+}
+
+/** Undo the last structural change (edits made since it are dropped too). */
+export function undoRestructure() {
+    const doc = store.get();
+    if (!doc?.previous) return { error: "there is no structural change to undo" };
+    const what = doc.ops[doc.ops.length - 1];
+    store.setDocument(doc.previous, "restructure");
+    log.info(`Undone: ${what}`);
+    return {};
+}
+
 /** Has the open document been edited? */
 export function isDirty() {
     const doc = store.get();

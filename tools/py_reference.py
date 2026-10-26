@@ -16,7 +16,7 @@ import hashlib
 import json
 import sys
 
-from motreader import lists, radiowide, trunking
+from motreader import convscan, lists, radiowide, scanlist, trunking
 from motreader.archive import BANNER_PREFIX, Archive
 from motreader.codeplug import Codeplug, mode_pointer_table, zone_operation, zone_sections
 from motreader.crypto import decrypt_body
@@ -71,6 +71,8 @@ def codeplug(body: bytes) -> dict:
         "chb_block": radiowide.find_chb_block(body),
         "radio_wide": radiowide.decode(body, cp.band),
         "trunking": trunk,
+        "zone_scan": _plain(scanlist.decode(body)),
+        "conv_scan": _plain(list(convscan.decode(body))),
     }
 
 
