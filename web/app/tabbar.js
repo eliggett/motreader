@@ -28,7 +28,8 @@ export function initTabs(/** @type {HTMLElement} */ bar, /** @type {HTMLElement}
         main.append(panel);
         parts.set(t.id, { button, panel });
     }
-    store.subscribe(() => renderActive());
+    // a newly loaded codeplug opens on General Info
+    store.subscribe((_d, why) => (why === "load" ? showTab("general") : renderActive()));
     window.addEventListener("hashchange", () => showTab(location.hash.slice(1), false));
     showTab(location.hash.slice(1) || active, false);
 }
