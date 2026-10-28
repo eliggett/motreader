@@ -40,6 +40,6 @@ export function infoTable(/** @type {{ label: string, value: string | number, no
 }
 
 /** A titled section: heading and content. */
-export function section(/** @type {string} */ title, /** @type {Node[]} */ ...content) {
+export function section(/** @type {string} */ title, /** @type {(Node | null)[]} */ ...content) {
     return h("section", { class: "block" }, h("h3", {}, title), ...content);
 }

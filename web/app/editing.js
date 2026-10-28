@@ -10,6 +10,7 @@ import { setModeField, MODE_FIELD_BY_KEY, fieldText } from "../lib/modefields.js
 import { setZoneName, setZoneModes, formatModeList } from "../lib/zonefields.js";
 import { setRadioWide, changes } from "../lib/document.js";
 import { setPhone, setMpl } from "../lib/listfields.js";
+import { setButton } from "../lib/buttonfields.js";
 import { InvalidValue } from "../lib/errors.js";
 
 /** @typedef {{ error?: string, note?: string }} EditResult */
@@ -92,6 +93,16 @@ export function editPhone(/** @type {number} */ n, /** @type {"name" | "dial"} *
 export function editMpl(/** @type {number} */ n, /** @type {string} */ key, /** @type {string} */ text) {
     return run(`MPL ${n} ${key === "name" ? "name" : key.toUpperCase()} = ${JSON.stringify(text)}`, () => {
         setMpl(/** @type {import("./state.js").Document} */ (store.get()), n, key, text);
+    });
+}
+
+/**
+ * Put function `func` (RSS's label, "Zone 3" for direct entry) on control-head
+ * button `button`. `hack`: allow what RSS doesn't (experimental).
+ */
+export function editButton(/** @type {string} */ button, /** @type {string} */ func, hack = false) {
+    return run(`Button ${button} = ${JSON.stringify(func)}${hack ? " (experimental)" : ""}`, () => {
+        setButton(/** @type {import("./state.js").Document} */ (store.get()), button, func, hack);
     });
 }
 

@@ -16,6 +16,20 @@
   --mono: ui-monospace, "DejaVu Sans Mono", Menlo, Consolas, monospace;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --log-height: 11rem;
+  /* control-head drawing (the same in any theme: it pictures the hardware) */
+  --head-face: #2b2e33;
+  --head-area: #34383e;
+  --head-display: #0b0d10;
+  --head-misc: #1c1f23;
+  --head-knob: #18191c;
+  --head-key: #ece5d2;
+  --head-key-np: #5d6168;
+  --head-key-text: #1e1e1e;
+  --head-print: #c3c7cd;
+  --head-led: #173d22;
+  --head-led-xmit: #5e1515;
+  --head-led-busy: #6b4c0f;
+  --head-line: #121417;
 }
 
 * { box-sizing: border-box; }
@@ -228,3 +242,55 @@ table.grid td.members-edit { font-family: var(--mono); min-width: 9rem; }
 .import-report ul { margin: 0.25rem 0 0.75rem; padding-left: 1.2rem; font-size: 0.9rem; }
 .notice { padding: 0.5rem 1rem; background: rgb(224 179 65 / 0.14); border-bottom: 1px solid var(--warn); color: var(--warn); }
 .trunked-list { font-family: var(--mono); color: var(--muted); margin-top: 0; }
+
+/* Control head: the drawing */
+.head-wrap { max-width: 72rem; margin: 0.25rem 0 0.5rem; }
+.head-svg { display: block; width: 100%; height: auto; max-height: 64vh; user-select: none; }
+.head-svg .hd-face { fill: var(--head-face); stroke: var(--head-line); stroke-width: 0.8; }
+.head-svg .hd-area { fill: var(--head-area); stroke: var(--head-line); stroke-width: 0.5; }
+.head-svg .hd-display { fill: var(--head-display); stroke: var(--head-line); stroke-width: 0.5; }
+.head-svg .hd-misc { fill: var(--head-misc); stroke: var(--head-line); stroke-width: 0.5; }
+.head-svg .hd-knob { fill: var(--head-knob); stroke: #3b3f45; stroke-width: 1.2; }
+.head-svg .hd-led { fill: var(--head-led); stroke: var(--head-line); stroke-width: 0.4; }
+.head-svg .hd-led.xmit { fill: var(--head-led-xmit); }
+.head-svg .hd-led.busy { fill: var(--head-led-busy); }
+.head-svg .hd-print { fill: var(--head-print); font-family: var(--sans); font-weight: 700; }
+.head-svg .hd-key { fill: var(--head-key); stroke: var(--head-line); stroke-width: 0.4; }
+.head-svg .hd-key.np { fill: var(--head-key-np); }
+.head-svg .hd-label { fill: var(--head-key-text); font-family: var(--sans); font-weight: 700; pointer-events: none; }
+.head-svg .hd-btn.live { cursor: pointer; }
+.head-svg .hd-btn.live:hover .hd-key { fill: #fffaf0; stroke: var(--accent); stroke-width: 0.8; }
+.head-svg .hd-btn:focus { outline: none; }
+.head-svg .hd-btn:focus-visible .hd-key { stroke: var(--accent); stroke-width: 1.2; }
+.head-svg .hd-btn.fixed .hd-key { fill: #b5ae9d; }
+.head-svg .hd-btn.fixed .hd-label { fill: #4a4843; }
+.head-svg .hd-btn.absent .hd-key { fill: var(--head-area); stroke-dasharray: 1.2 0.8; stroke: var(--muted); }
+.head-svg .hd-btn.changed .hd-key { fill: #cfe3fb; stroke: var(--accent); stroke-width: 1; }
+.head-svg .hd-btn.hack .hd-key { fill: #f6e2a6; stroke: var(--warn); stroke-width: 1; stroke-dasharray: 1.5 0.8; }
+
+/* Control head: the list and the function menu */
+table.buttons-list tr.changed th { color: var(--accent); font-weight: 600; }
+table.buttons-list td.muted { font-family: var(--sans); color: var(--muted); padding-left: 1rem; }
+.fn-chip { font-family: var(--mono); padding: 0 0.5rem; min-width: 6rem; text-align: left; }
+.fn-chip.changed { border-color: var(--accent); background: rgb(79 156 240 / 0.22); font-weight: 600; }
+.fn-chip.hack { border-color: var(--warn); border-style: dashed; color: var(--warn); }
+.btn-menu {
+  position: fixed; z-index: 20; min-width: 16rem; max-width: 26rem; max-height: 60vh; overflow-y: auto;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 5px; padding: 0.3rem;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.5);
+}
+.btn-menu-title { padding: 0.2rem 0.4rem 0.35rem; font-weight: 600; border-bottom: 1px solid var(--border); margin-bottom: 0.2rem; }
+.btn-menu-group { padding: 0.35rem 0.4rem 0.1rem; color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.btn-menu-group.other { color: var(--warn); border-top: 1px dashed var(--warn); margin-top: 0.3rem; }
+.btn-menu-note { padding: 0 0.4rem 0.25rem; color: var(--muted); font-size: 0.8rem; }
+.btn-menu-item {
+  display: flex; gap: 0.75rem; width: 100%; text-align: left; border: 0; background: none; border-radius: 3px; padding: 0.15rem 0.4rem;
+}
+.btn-menu-item .fn { font-family: var(--mono); min-width: 5.5rem; }
+.btn-menu-item .full { color: var(--muted); font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn-menu-item:hover, .btn-menu-item:focus { background: var(--raised); outline: none; }
+.btn-menu-item.current .fn { color: var(--accent); font-weight: 600; }
+.btn-menu-item.other .fn { color: var(--warn); }
+.btn-menu-entry { display: flex; gap: 0.5rem; align-items: center; padding: 0.15rem 0.4rem; }
+.btn-menu-entry .fn { font-family: var(--mono); min-width: 5.5rem; }
+.btn-menu-num { width: 4.5rem; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--accent); border-radius: 3px; padding: 0.1rem 0.3rem; }

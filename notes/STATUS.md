@@ -23,7 +23,7 @@ the reverse-engineering tool and the reference:
   scan parts not yet in the web app), and the same edited files imported by the
   CLI and the web app give byte-identical archives.
 - Milestones done: 1 skeleton, 2 read-only, 3 editing + Export Codeplug, 4
-  CSV/YAML + phone/MPL lists, 5 structural ops. Next: 6 control head buttons,
+  CSV/YAML + phone/MPL lists, 5 structural ops, 6 control head buttons. Next:
   7 export-time checks.
 - M5 (2026-10-25): modeops / zonelist / zoneop / trunking removal / convscan /
   scanlist ported to web/lib (byte parity with Python on 10,700 generated
@@ -46,6 +46,19 @@ the reverse-engineering tool and the reference:
   lists + add, 566AYA trunk removal + add, 617ASN 3-mode zones on + zone): no
   GET warning, and RSS re-saves them identically (the last one but for RSS's
   own conventional-list normalization).
+
+- M6 (2026-10-28): control-head buttons. web/lib/buttons.js ports buttons.py
+  and buttons_a9.py (byte parity with Python over every sample, ~25,600 edit
+  cases: tools/py_buttons.py, tests/js/buttons-parity.test.js; the A9 template
+  table is generated into web/lib/a9table.js by tools/build_a9_table_js.py).
+  buttons.csv exports / imports as the CLI does. The Control Head tab draws the
+  head from the owner's drawings (graphics/head-*-inkscape.svg, Inkscape labels;
+  `python3 tools/build_heads.py` writes web/app/heads/*.js, checked fresh by
+  tests/js/heads.test.js): click a key or a list row for RSS's choices.
+  "Experimental" also offers what RSS doesn't (its fixed keys; on the A9,
+  functions RSS doesn't offer on a key), in Python too (`hack=True`); such
+  edits are flagged on the drawing, in the list and in the export dialog.
+  Warnings, not refusals: no Sel / no Home, A9 keypad keys losing DTMF.
 
 UHF (2026-10-25): decoded, edited and exported (FORMAT §5a-UHF), validated
 in RSS. Codeplugs motreader can't edit safely (older format versions 101/102,

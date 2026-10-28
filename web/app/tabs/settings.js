@@ -11,6 +11,7 @@ import { editRadioWide } from "../editing.js";
 import { empty, note, section, NO_DOC, modesOnlyText } from "./common.js";
 import { listSections } from "./lists.js";
 import { zoneOperationAsk, structureBlocked, convScanSection } from "../structure.js";
+import { buttonsSection } from "./buttons.js";
 
 /** @typedef {import("../state.js").Document} Document */
 
@@ -112,9 +113,10 @@ export function screenSections(tab, doc) {
 /**
  * @param {string} id @param {string} title @param {"radiowide" | "conventional" | "head"} tab
  * @param {(doc: Document) => Node[]} [extra]  more sections after the screens
+ * @param {(doc: Document) => Node[]} [before]  sections before them
  * @returns {import("./common.js").Tab}
  */
-export function settingsTab(id, title, tab, extra) {
+export function settingsTab(id, title, tab, extra, before) {
     return {
         id, title,
         render(el, doc) {
@@ -124,7 +126,7 @@ export function settingsTab(id, title, tab, extra) {
             const scroller = el.closest("main");
             const top = scroller?.scrollTop ?? 0;
             const focused = document.activeElement?.id;
-            fill(el, screenSections(tab, doc), extra?.(doc) ?? []);
+            fill(el, before?.(doc) ?? [], screenSections(tab, doc), extra?.(doc) ?? []);
             if (scroller) scroller.scrollTop = top;
             if (focused) document.getElementById(focused)?.focus();
         },
@@ -134,6 +136,4 @@ export function settingsTab(id, title, tab, extra) {
 export const radioWideTab = settingsTab("radiowide", "Radio-Wide", "radiowide");
 export const conventionalTab = settingsTab("conventional", "Conventional", "conventional", (doc) => [
     convScanSection(doc), ...listSections(doc)].filter((x) => x !== null));
-export const headTab = settingsTab("head", "Control Head", "head", () => [
-    section("Buttons", h("p", { class: "note" }, "Control head button assignment arrives in a later milestone.")),
-]);
+export const headTab = settingsTab("head", "Control Head", "head", undefined, (doc) => [buttonsSection(doc)]);

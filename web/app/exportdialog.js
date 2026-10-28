@@ -41,9 +41,11 @@ export async function exportDialog() {
         ch.zones.length ? `zones ${formatModeList(ch.zones)}` : "",
         ch.phones.length ? `phones ${formatModeList(ch.phones)}` : "",
         ch.mpls.length ? `MPL ${formatModeList(ch.mpls)}` : "",
+        ch.buttons.length ? `buttons ${ch.buttons.join(", ")}` : "",
         ch.radioWide.length ? `radio-wide: ${ch.radioWide.join(", ")}` : "",
     ].filter(Boolean).join("; ");
 
+    const hacks = doc.buttons.filter((b) => b.hack).map((b) => `${b.button} = ${b.function}`);
     const nameInput = h("input", { type: "text", value: doc.fileName, spellcheck: "false", size: 16, id: "export-name" });
     const nameMsg = h("span", { class: "field-msg" });
     const checkName = () => {
@@ -75,6 +77,9 @@ export async function exportDialog() {
                 : { label: "Size", value: `${doc.importedPlain.length} → ${result.plain.length} bytes (re-packed)` },
         ]),
         problems,
+        hacks.length ? h("div", { class: "warn-box" },
+            h("p", {}, `Experimental button assignments RSS doesn't allow: ${hacks.join(", ")}. `
+                + "Check the radio's behaviour after programming; RSS may refuse to save this codeplug.")) : null,
         h("div", { class: "form-row" }, h("label", { for: "export-name" }, "File name"), nameInput, nameMsg),
         h("p", { class: "note" }, "RSS finds archives through its index, SPECTRAM.DBF, not by looking in the folder. "
             + "Keep this name to replace the radio's archive in RSS's ARCHIVE folder; a new name is only seen "

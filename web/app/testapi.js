@@ -116,6 +116,10 @@ export function installTestApi(/** @type {Promise<void>} */ ready) {
         /** Edit phone `n` ("name" / "dial") or MPL `n` ("name" / "rx" / "tx" / "ta"). */
         setPhone: (/** @type {number} */ n, /** @type {"name" | "dial"} */ key, /** @type {string} */ text) => editing.editPhone(n, key, text),
         setMpl: (/** @type {number} */ n, /** @type {string} */ key, /** @type {string} */ text) => editing.editMpl(n, key, text),
+        /** Put a function on a control-head button (`hack`: experimental): {} or { error }. */
+        setButton: (/** @type {string} */ button, /** @type {string} */ func, hack = false) => editing.editButton(button, func, hack),
+        /** The control-head buttons: [{ button, function, name, editable, hack }]. */
+        buttons: () => store.get()?.buttons.map(({ code: _c, ...b }) => b) ?? null,
         /** Build the archive as Export would, without the dialog. */
         exported() {
             const d = store.get();
