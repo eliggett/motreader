@@ -5,7 +5,7 @@
  * double-line frame, cyan title block, white path line, yellow text, the grey
  * F1-F10 bar). The text comes from about.html (<h2> titles, <p> paragraphs)
  * and is wrapped and paged here; PgUp / PgDn (or F7 / F8) turn the pages,
- * F10 or Escape returns.
+ * the scroll wheel turns them too; F10 or Escape returns.
  */
 import { VERSION } from "./version.js";
 
@@ -120,7 +120,7 @@ function screen(/** @type {Line[][]} */ pages, /** @type {number} */ p) {
     /** @type {Seg[][]} */
     const rows = [
         [f(`╔${"═".repeat(L)}╦${"═".repeat(R)}╗`)],
-        [f("║"), { text: pad(" MOTOROLA Radio Service Software", L), cls: "dos-head" }, f("║"),
+        [f("║"), { text: pad(" Radio Service Software", L), cls: "dos-head" }, f("║"),
             { text: pad(" Use PgUp / PgDn To View Help.", R), cls: "dos-head" }, f("║")],
         [f("║"), { text: pad(` SPECTRA        motreader ${VERSION}`, L), cls: "dos-head" }, f("║"),
             { text: pad(` Page ${p + 1} of ${pages.length}.`, R), cls: "dos-head" }, f("║")],
@@ -205,6 +205,21 @@ export function showAboutBox(about) {
             else if (key === "F8") turn(1);
             else if (key === "F10") close();
         });
+        // the scroll wheel turns pages: one page per notch (a trackpad's small
+        // deltas add up), with a pause so one flick doesn't skip to the end
+        let wheel = 0;
+        let quietUntil = 0;
+        dialog.addEventListener("wheel", (e) => {
+            e.preventDefault();
+            const now = performance.now();
+            if (now < quietUntil) return;
+            wheel += e.deltaMode === 0 ? e.deltaY : e.deltaY * 40;
+            if (Math.abs(wheel) >= 60) {
+                turn(Math.sign(wheel));
+                wheel = 0;
+                quietUntil = now + 180;
+            }
+        }, { passive: false });
         // a click outside the screen returns too
         dialog.addEventListener("click", (e) => {
             if (e.target === dialog) close();
