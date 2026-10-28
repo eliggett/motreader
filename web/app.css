@@ -30,6 +30,14 @@
   --head-led-xmit: #5e1515;
   --head-led-busy: #6b4c0f;
   --head-line: #121417;
+  /* the About box: RSS's EGA text colours */
+  --dos-blue: #0000aa;
+  --dos-red: #ff5555;
+  --dos-cyan: #55ffff;
+  --dos-yellow: #ffff55;
+  --dos-white: #ffffff;
+  --dos-gray: #aaaaaa;
+  --dos-black: #000000;
 }
 
 * { box-sizing: border-box; }
@@ -294,3 +302,30 @@ table.buttons-list td.muted { font-family: var(--sans); color: var(--muted); pad
 .btn-menu-entry { display: flex; gap: 0.5rem; align-items: center; padding: 0.15rem 0.4rem; }
 .btn-menu-entry .fn { font-family: var(--mono); min-width: 5.5rem; }
 .btn-menu-num { width: 4.5rem; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--accent); border-radius: 3px; padding: 0.1rem 0.3rem; }
+
+/* About box: a Spectra RSS screen */
+dialog.dos {
+  padding: 0; border: 0; background: var(--dos-blue);
+  box-shadow: 0 0 0 0.5rem #000, 0 1rem 3rem rgb(0 0 0 / 0.8);
+  max-width: none; max-height: none;
+}
+dialog.dos::backdrop { background: rgb(0 0 0 / 0.75); }
+.dos-screen {
+  margin: 0; padding: 0.4em 0.5em; background: var(--dos-blue); outline: none;
+  /* 96 columns that fit the window */
+  font: 700 min(15px, calc((100vw - 3rem) / 58))/1 "DejaVu Sans Mono", "Cascadia Mono", Consolas, ui-monospace, monospace;
+  letter-spacing: 0; white-space: pre; user-select: text;
+}
+/* each row a solid block one character tall, so frame lines and the bar join up */
+.dos-row { display: block; height: 1.2em; line-height: 1.2em; }
+.dos-row > * { display: inline-block; height: 100%; vertical-align: top; }
+.dos-frame { color: var(--dos-red); }
+.dos-head { color: var(--dos-cyan); }
+.dos-path { color: var(--dos-white); }
+.dos-text { color: var(--dos-yellow); font-weight: 400; }
+.dos-title { color: var(--dos-white); }
+.dos-banner { color: var(--dos-cyan); transform: scaleY(1.25); transform-origin: 50% 40%; }
+.dos-link { color: var(--dos-white); text-decoration: underline; }
+.dos-link:hover, .dos-link:focus { background: var(--dos-cyan); color: var(--dos-blue); }
+.dos-fkey { background: var(--dos-gray); color: var(--dos-black); cursor: default; }
+.dos-fkey[data-key="F7"], .dos-fkey[data-key="F8"], .dos-fkey[data-key="F10"] { cursor: pointer; }

@@ -4,12 +4,13 @@
  * file-based ones have a bytes-in variant (`loadCodeplug`, `loadIndex`) so
  * tests don't need a file picker.
  */
+import { showAboutBox } from "./aboutbox.js";
 import { h } from "./dom.js";
 import { store } from "./state.js";
 import { log } from "./log.js";
 import { pickFiles, download } from "./files.js";
 import { importTables as importTableFiles, exportTables } from "../lib/tables.js";
-import { alertModal, openModal, confirmModal } from "./modal.js";
+import { alertModal, confirmModal } from "./modal.js";
 import { openDocument } from "../lib/document.js";
 import { isArchive } from "../lib/archive.js";
 import { readDbf, findArchiveRecord } from "../lib/dbf.js";
@@ -207,20 +208,18 @@ export async function exportCodeplug() {
     await exportDialog();
 }
 
-/** The About dialog; its text lives in about.html so it can be edited on its own. */
+/** The About box (an RSS-style screen); its text lives in about.html so it can be edited on its own. */
 export async function about() {
-    let body;
+    const t = document.createElement("template");
     try {
         const r = await fetch("about.html");
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const t = document.createElement("template");
         t.innerHTML = await r.text(); // our own file, not user data
-        body = t.content;
     } catch (e) {
         log.error(`Could not load about.html: ${errText(e)}`);
-        body = "About text unavailable.";
+        t.innerHTML = "<p>About text unavailable.</p>";
     }
-    await openModal({ title: "About motreader", body });
+    await showAboutBox(t.content);
 }
 
 /** "VHF", "900 MHz", ... */

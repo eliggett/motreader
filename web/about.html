@@ -1,11 +1,47 @@
-<!-- The About dialog's text. Plain HTML; edit freely. Loaded by app/actions.js. -->
-<p><strong>motreader</strong> reads and edits Motorola Spectra codeplug archives,
-the files saved by Spectra RSS (R06.00.05).</p>
+<!--
+  The About box's text. Edit freely: each <h2> is a section title and each <p>
+  a paragraph; the app lays them out on its RSS-style screen (app/aboutbox.js),
+  wrapping and paging the text itself. Links in the text become clickable.
+-->
+<h2>About motreader</h2>
+<p>motreader reads and edits Motorola Spectra codeplug archives, and was tested
+against Spectra RSS (R06.00.05).</p>
 
-<p>Everything runs in your browser. Codeplug files are never uploaded anywhere.</p>
+<h2>Directions</h2>
+<p>Import a codeplug and, optionally, your SPECTRAM.DBF. Make your edits and
+export the codeplug. Place the modified codeplug file in your ARCHIVE
+directory and load up RSS. Verify the settings you have modified (optional,
+recommended). Write the modified codeplug to your radio when you're ready.</p>
+<p>You may also export the codeplug from motreader to a spreadsheet for further
+editing: use the "Export CSV" button to do this.</p>
+<p>Please note: RSS requires you to keep the codeplug's file name the same as
+the one it tracks in the SPECTRAM.DBF file. Do not rename your codeplug files;
+use directories (folders) to keep track of different versions.</p>
 
-<p>The archive format was reverse-engineered by observing RSS. Work from an
-archive you have backed up, and check what you write in RSS before
-programming a radio.</p>
+<h2>Advice</h2>
+<p>The codeplug format was only discovered through a massive reverse
+engineering effort, so there may be many corner cases and flat-out errors.
+Make backups of your codeplugs often. Always verify modified codeplugs in RSS
+before loading them onto radios. Please send me your codeplugs: doing so makes
+this software better and more flexible!</p>
+<p>Do not use this software on radios responsible for life support, law
+enforcement, fire, rescue, or related occupations.</p>
 
-<p>Third-party code: js-yaml (MIT). See <code>vendor/VENDOR.md</code>.</p>
+<h2>Warranty</h2>
+<p>No warranty is expressed or implied. This software may brick your radio,
+and by using it, you understand that you take that risk.</p>
+
+<h2>Author and Copyright</h2>
+<p>Elliott H. Liggett, W6EL.</p>
+
+<h2>AI Usage</h2>
+<p>Most of the code was written by Claude Opus 4.8 and Opus 5.5. Claude was
+also instrumental in discovering the OEM codeplug format by driving DOSBox and
+disassembling portions of the OEM executable.</p>
+
+<h2>Software License</h2>
+<p>This is Open Source software, as defined by the GNU GPL version 3. The
+source code is available at https://github.com/eliggett/motreader/ . You may
+make copies and make modifications, provided the original license is included
+and adhered to. Some JavaScript dependencies may have other (similar and
+compatible) licenses.</p>
