@@ -54,6 +54,7 @@ for (const path of files) {
         assert.equal(got["modes.csv"], want["modes.csv"], "modes.csv");
         assert.equal(got["phones.csv"], want["phones.csv"], "phones.csv");
         assert.equal(got["mpl.csv"], want["mpl.csv"], "mpl.csv");
+        assert.equal(got["buttons.csv"], want["buttons.csv"], "buttons.csv");
         // PyYAML (YAML 1.1) leaves a digit string like 0228 unquoted (it can't be octal); js-yaml
         // (YAML 1.2) quotes it. Both read back as the same text in both importers.
         const unquote = (/** @type {string} */ y) => y.replace(/: '(\d+)'$/gm, ": $1");
@@ -100,6 +101,13 @@ for (const path of archives) {
             mpl = setCell(mpl, "mpl", "1", "rx_type", "TPL");
             mpl = setCell(mpl, "mpl", "1", "rx_code", "103.5");
         }
+        // buttons: two editable buttons swap functions
+        let buttons = t["buttons.csv"];
+        const swap = doc0.buttons.filter((b) => b.editable);
+        const [b1, b2] = [swap[0], swap.find((b) => b.function !== swap[0]?.function)];
+        if (buttons && b1 && b2) {
+            buttons = setCell(setCell(buttons, "button", b1.button, "function", b2.function), "button", b2.button, "function", b1.function);
+        }
         let yaml = t["radio.yaml"] ?? "";
         yaml = yaml.replace(/^(  time_out_timer: )(\w+)$/m, (_, a, v) => a + (v === "Enabled" ? "Disabled" : "Enabled"));
         yaml = yaml.replace(/^(  minimum_volume: )(\d+)$/m, (_, a, v) => a + String((Number(v) + 1) % 16));
@@ -116,6 +124,7 @@ for (const path of archives) {
             /** @type {import("../../web/lib/tables.js").TextFile[]} */
             const edited = [{ name: "modes.csv", text: modes }, { name: "phones.csv", text: phones }, { name: "radio.yaml", text: yaml }];
             if (mpl) edited.push({ name: "mpl.csv", text: mpl });
+            if (buttons) edited.push({ name: "buttons.csv", text: buttons });
             for (const f of edited) writeFileSync(join(dir, f.name), f.text);
             const out = join(dir, "out.arc");
             const r = py(["import", path, dir, out]);

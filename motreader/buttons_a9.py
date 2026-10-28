@@ -202,8 +202,12 @@ def _parse(btn, func):
                      f"(known: {sorted(FUNCTIONS)})")
 
 
-def encode_buttons(cp: Codeplug, body: bytearray, rows) -> None:
-    """Apply buttons.csv rows on an A9 head (change-gated per button)."""
+def encode_buttons(cp: Codeplug, body: bytearray, rows, hack: bool = False) -> None:
+    """Apply buttons.csv rows on an A9 head (change-gated per button).
+    `hack`: also change the buttons RSS keeps fixed and allow functions RSS
+    doesn't offer on a key (experimental: RSS never wrote these). A function on
+    a key takes the key's home code as RSS does on the other keys: Ind 1 0x0e,
+    Home 0x12 (as the other labelled keys), * 0x0a, 0 0x00, # 0x0b."""
     lay = _layout(cp)
     if lay is None:
         raise ValueError("A9 key map not recognized; refusing to edit buttons")
@@ -217,10 +221,10 @@ def encode_buttons(cp: Codeplug, body: bytearray, rows) -> None:
                              f"(buttons: {list(orig)})")
         if " ".join(r.function.split()).lower() == " ".join(o.function.split()).lower():
             continue
-        if not o.editable:
+        if not o.editable and not hack:
             raise ValueError(f"button {r.button} is fixed in RSS ({o.function})")
         lab, d = _parse(r.button, r.function)
-        if lab in NOT_OFFERED or lab not in ALLOWED.get(_class(r.button), ()):
+        if lab in NOT_OFFERED or (lab not in ALLOWED.get(_class(r.button), ()) and not hack):
             raise ValueError(f"button {r.button}: RSS does not offer {lab!r} there "
                              f"(offered: {ALLOWED.get(_class(r.button))})")
         if FUNCTIONS[lab][4] and not 1 <= d <= 99:

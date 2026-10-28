@@ -10,6 +10,7 @@ import { decode as decodeRadioWide, encode as encodeRadioWide, FIELD_BY_KEY } fr
 import { trunkingInfo, TrunkingUnsupported } from "./trunking.js";
 import { MODE_FIELDS, fieldText } from "./modefields.js";
 import { decodePhones, decodeMpls } from "./lists.js";
+import { decodeButtons } from "./buttons.js";
 import { assessSupport, isOldFormat } from "./support.js";
 import { buildBody } from "./export.js";
 
@@ -26,6 +27,7 @@ import { buildBody } from "./export.js";
  *   radioWideEdits: Record<string, unknown>,
  *   phones: import("./lists.js").Phone[],
  *   mpls: import("./lists.js").Mpl[],
+ *   buttons: import("./buttonfields.js").DocButton[],
  *   listProblem: string | null,
  *   support: import("./support.js").Support,
  *   trunked: { number: number, name: string }[],
@@ -34,7 +36,7 @@ import { buildBody } from "./export.js";
  *   previous: CodeplugDocument | null,
  *   original: {
  *     modes: Record<string, string>[], zones: { name: string, modes: string }[],
- *     radioWide: import("./radiowide.js").RadioWide, phones: string[], mpls: string[],
+ *     radioWide: import("./radiowide.js").RadioWide, phones: string[], mpls: string[], buttons: string[],
  *   },
  * }} CodeplugDocument
  *   `trunk.unsupported`: why trunking is present but can't be removed by motreader.
@@ -42,10 +44,11 @@ import { buildBody } from "./export.js";
  *   Edits: modes and zones are edited in place in `cp`; radio-wide edits
  *   accumulate in `radioWideEdits` (applied on export), and `radioWide` shows
  *   their effect. `phones` / `mpls` are edited in place too (`listProblem`: why
- *   a list couldn't be read). `original` is how everything read when the file
+ *   a list couldn't be read). `buttons` (the control-head buttons) are set
+ *   through buttonfields.js. `original` is how everything read when the file
  *   was opened, as displayed text, to tell what changed.
  *   An older format version (`support.modesOnly`) decodes only its modes:
- *   `radioWide`, `phones` and `mpls` are empty (and zones aren't parsed).
+ *   `radioWide`, `phones`, `mpls` and `buttons` are empty (and zones aren't parsed).
  *   Structural changes (adding / deleting modes and zones, Zone Operation, ...)
  *   re-pack the codeplug: `restructure` writes the edits so far into it and
  *   opens the result as a new document, so `plain` / `original` describe the
@@ -90,10 +93,11 @@ function documentFromBody(fileName, raw, banner, plain) {
     };
     const phones = modesOnly ? [] : tryList(() => decodePhones(cp));
     const mpls = modesOnly ? [] : tryList(() => decodeMpls(cp));
+    const buttons = modesOnly ? [] : tryList(() => decodeButtons(cp));
     /** @type {CodeplugDocument} */
     const doc = {
         fileName, raw, banner, plain, cp, radioWide, trunk, index: null,
-        radioWideEdits: {}, phones, mpls, listProblem, support: assessSupport(cp), trunked: trunkedModes(cp),
+        radioWideEdits: {}, phones, mpls, buttons, listProblem, support: assessSupport(cp), trunked: trunkedModes(cp),
         ops: [], importedPlain: plain, previous: null,
         original: {
             modes: cp.modes.map(modeTexts),
@@ -101,6 +105,7 @@ function documentFromBody(fileName, raw, banner, plain) {
             radioWide: { ...radioWide },
             phones: phones.map((p) => JSON.stringify(p)),
             mpls: mpls.map((m) => JSON.stringify(m)),
+            buttons: buttons.map((b) => b.function),
         },
     };
     return doc;
@@ -132,8 +137,8 @@ export function setRadioWide(doc, key, value) {
 }
 
 /**
- * What differs from the file as opened: mode numbers, zone numbers and
- * radio-wide keys (side effects included).
+ * What differs from the file as opened: mode numbers, zone numbers,
+ * radio-wide keys (side effects included), list entries and buttons.
  * @param {CodeplugDocument} doc
  */
 export function changes(doc) {
@@ -150,9 +155,10 @@ export function changes(doc) {
     const radioWide = [...keys].filter((k) => String(doc.radioWide[k]) !== String(doc.original.radioWide[k]));
     const phones = doc.phones.filter((p, i) => JSON.stringify(p) !== doc.original.phones[i]).map((p) => p.number);
     const mpls = doc.mpls.filter((m, i) => JSON.stringify(m) !== doc.original.mpls[i]).map((m) => m.number);
+    const buttons = doc.buttons.filter((b, i) => b.function !== doc.original.buttons[i]).map((b) => b.button);
     return {
-        ops, modes, zones, radioWide, phones, mpls,
-        any: ops.length + modes.length + zones.length + radioWide.length + phones.length + mpls.length > 0,
+        ops, modes, zones, radioWide, phones, mpls, buttons,
+        any: ops.length + modes.length + zones.length + radioWide.length + phones.length + mpls.length + buttons.length > 0,
     };
 }
 

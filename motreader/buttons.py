@@ -87,6 +87,7 @@ FUNCTIONS = {
 CODE_BY_LABEL = {lab.lower(): code for code, (lab, _) in FUNCTIONS.items()
                  if lab != "Rcl/Del"}            # the fixed * / # code isn't assignable
 BLANK = "00000000"
+RCL_DEL = "02020000"
 
 
 @dataclass
@@ -121,7 +122,7 @@ def decode_buttons(cp) -> list:
     for btn in layout(cp.body):
         code = _code_at(cp.body, btn)
         lab, name = FUNCTIONS.get(code, ("0x" + code, ""))
-        if btn in FIXED_LABEL:
+        if btn in FIXED_LABEL and code == RCL_DEL:
             lab = FIXED_LABEL[btn]
         out.append(Button(btn, lab, name, code, btn not in FIXED))
     return out
@@ -133,17 +134,20 @@ def _parse_function(btn: str, func: str) -> str:
         int(f[2:], 16)
         return f[2:].lower()
     code = CODE_BY_LABEL.get(f.lower())
+    if code is None and f.lower() in (FIXED_LABEL.get(btn, "").lower(), "rcl/del"):
+        code = RCL_DEL
     if code is None:
         raise ValueError(f"button {btn}: unknown function {func!r} "
                          f"(known: {sorted(lab for lab, _ in FUNCTIONS.values())})")
     return code
 
 
-def encode_buttons(cp, body: bytearray, rows) -> None:
-    """Apply buttons.csv rows (change-gated on the function per button)."""
+def encode_buttons(cp, body: bytearray, rows, hack: bool = False) -> None:
+    """Apply buttons.csv rows (change-gated on the function per button).
+    `hack`: also change the buttons RSS keeps fixed (experimental)."""
     if not has_table(cp):
         from . import buttons_a9
-        return buttons_a9.encode_buttons(cp, body, rows)
+        return buttons_a9.encode_buttons(cp, body, rows, hack)
     orig = {b.button: b for b in decode_buttons(cp)}
     want = {}
     for r in rows:
@@ -154,13 +158,13 @@ def encode_buttons(cp, body: bytearray, rows) -> None:
         if r.function.strip().lower() == o.function.lower():
             want[r.button] = o.code
             continue
-        if not o.editable:
+        if not o.editable and not hack:
             raise ValueError(f"button {r.button} is fixed in RSS ({o.function})")
         want[r.button] = _parse_function(r.button, r.function)
     final = {b: want.get(b, o.code) for b, o in orig.items()}
     seen = {}
     for b, code in final.items():
-        if code == BLANK or b in FIXED:
+        if code in (BLANK, RCL_DEL) or (b in FIXED and code == orig[b].code):
             continue
         if code in seen:
             lab = FUNCTIONS.get(code, ("0x" + code,))[0]

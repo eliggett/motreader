@@ -4,7 +4,7 @@
  * Python import applies edits (motreader/cli.py do_import):
  *
  *   1. modes and zones (rebuild.js) into a copy of the original body
- *   2. the phone and MPL lists (lists.js)
+ *   2. the phone and MPL lists (lists.js), the control-head buttons (buttons.js)
  *   3. radio-wide settings (radiowide.encode)
  *   4. the A9 head checksum over name edits
  *   5. encrypt with the original nonce, behind the original banner
@@ -18,6 +18,8 @@ import { sealArchive, openArchive } from "./archive.js";
 import { parseCodeplug } from "./codeplug.js";
 import { diff } from "./bytes.js";
 import { encodePhones, encodeMpls, decodePhones, decodeMpls } from "./lists.js";
+import { encodeButtons, decodeButtons } from "./buttons.js";
+import { buttonRows } from "./buttonfields.js";
 
 /** @typedef {import("./document.js").CodeplugDocument} CodeplugDocument */
 
@@ -31,14 +33,15 @@ export const MODE_CHECK_FIELDS = /** @type {const} */ ([
 /**
  * The new plaintext body: `doc.cp`'s modes/zones, the lists and
  * `radioWideEdits` applied to the original body. Throws InvalidValue for a
- * value that can't be written. (`phones` / `mpls` may be absent: unchanged.)
- * @param {Pick<CodeplugDocument, "cp"> & Partial<Pick<CodeplugDocument, "phones" | "mpls">>} doc
+ * value that can't be written. (`phones` / `mpls` / `buttons` may be absent: unchanged.)
+ * @param {Pick<CodeplugDocument, "cp"> & Partial<Pick<CodeplugDocument, "phones" | "mpls" | "buttons">>} doc
  * @param {Record<string, unknown>} radioWideEdits  key -> value in RSS wording
  */
 export function buildBody(doc, radioWideEdits = {}) {
     let out = /** @type {Uint8Array} */ (rebuild(doc.cp));
     if (doc.phones?.length) encodePhones(doc.cp, out, doc.phones);
     if (doc.mpls?.length) encodeMpls(doc.cp, out, doc.mpls);
+    if (doc.buttons?.length) encodeButtons(doc.cp, out, buttonRows({ buttons: doc.buttons }));
     if (Object.keys(radioWideEdits).length) out = encodeRadioWide(out, radioWideEdits);
     fixA9HeadChecksum(doc.cp, out);
     return out;
@@ -90,6 +93,12 @@ export function exportArchive(doc, radioWideEdits = {}) {
         const back = decodeList(check);
         want.forEach((x, i) => {
             if (JSON.stringify(x) !== JSON.stringify(back[i])) problems.push(`${what} ${x.number} reads back as ${JSON.stringify(back[i])}`);
+        });
+    }
+    if (doc.buttons?.length) {
+        const back = decodeButtons(check);
+        doc.buttons.forEach((b, i) => {
+            if (back[i]?.button !== b.button || back[i]?.function !== b.function) problems.push(`button ${b.button} reads back as ${back[i]?.function}`);
         });
     }
     return { bytes, plain, changed: diff(doc.importedPlain ?? doc.plain, plain), problems };

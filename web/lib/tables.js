@@ -6,11 +6,11 @@
  *   modes.csv   one row per mode (the editable columns, the zones-off scan
  *               columns when Zone Operation is off, then raw_hex)
  *   phones.csv  the phone list          mpl.csv  the MPL list (when enabled)
+ *   buttons.csv the control-head buttons
  *   radio.yaml  identity, radio_wide settings, conventional_scan (zones off),
  *               zones (name, modes, scan)
  *
- * Not yet in the web app: buttons.csv. Import reports it as not applied
- * rather than guessing. As the CLI import does, a Zone Operation switch or a
+ * As the CLI import does, a Zone Operation switch or a
  * zones-off scan list / scan type change re-packs the codeplug first, and the
  * zones / scan lists of the old layout aren't applied then (re-export to edit
  * them).
@@ -26,6 +26,8 @@ import { MODE_FIELD_BY_KEY, fieldText, squelchText, setModeField } from "./modef
 import { setZoneName, setZoneModes } from "./zonefields.js";
 import { setRadioWide, restructure } from "./document.js";
 import { setPhone, setMpl, mplSquelchText } from "./listfields.js";
+import { decodeButtons } from "./buttons.js";
+import { setButtons } from "./buttonfields.js";
 import { isDplCode } from "./tones.js";
 import { decode as decodeConvScan, encode as encodeConvScan, setListTypes, setScanType } from "./convscan.js";
 import { decode as decodeZoneScan, encode as encodeZoneScan, zoneScan } from "./scanlist.js";
@@ -86,6 +88,14 @@ export function tablesOfBody(banner, body) {
             name: "mpl.csv",
             text: toCsv([["mpl", "name", "rx_type", "rx_code", "tx_type", "tx_code", "ta_type", "ta_code"],
                 ...mpls.map((m) => [String(m.number), m.name, m.rx_type, m.rx_code, m.tx_type, m.tx_code, m.ta_type, m.ta_code])]),
+        });
+    }
+    const btns = decodeButtons(cp);
+    if (btns.length) {
+        files.push({
+            name: "buttons.csv",
+            text: toCsv([["button", "function", "name", "code", "editable"],
+                ...btns.map((b) => [b.button, b.function, b.name, b.code, b.editable ? "yes" : "no"])]),
         });
     }
     /** @type {Record<string, unknown>} */
@@ -256,7 +266,7 @@ export function importTables(doc, files) {
         if (kind === "modes") importModes(doc, f, apply, rep, scanRows);
         else if (kind === "phones") importPhones(doc, f, apply, rep);
         else if (kind === "mpl") importMpls(doc, f, apply, rep);
-        else if (kind === "buttons") rep.notApplied.push(`${f.name}: control head buttons aren't edited by the web app yet`);
+        else if (kind === "buttons") importButtons(doc, f, apply);
     }
     if (Array.isArray(radio.zones) && doc.cp.zones.length && !zoneSwitched) importZones(doc, radio.zones, apply, rep);
     // zones off: per-mode SCAN settings / Mode Slave lists and the radio-wide (Op Select) list, in place
@@ -408,6 +418,15 @@ function importPhones(doc, f, apply, rep) {
         const dial = (row.number ?? "").trim().toUpperCase();
         if (row.number !== undefined && dial !== p.dial) apply(`phone ${n} number = ${JSON.stringify(dial)}`, () => setPhone(doc, n, "dial", dial));
     }
+}
+
+/** buttons.csv -> button edits, all together (RSS's duplicate check sees the final layout). @param {CodeplugDocument} doc @param {TextFile} f @param {Apply} apply */
+function importButtons(doc, f, apply) {
+    const rows = parseCsvObjects(f.text).rows.filter((r) => r.button !== undefined && r.function !== undefined)
+        .map((r) => ({ button: r.button ?? "", function: r.function ?? "" }));
+    const norm = (/** @type {string} */ x) => x.split(/\s+/).filter(Boolean).join(" ").toLowerCase();
+    const changed = rows.filter((r) => norm(r.function) !== norm(doc.buttons.find((b) => b.button === r.button)?.function ?? "\0"));
+    if (changed.length) apply(`buttons ${changed.map((r) => `${r.button} = ${r.function}`).join(", ")}`, () => setButtons(doc, rows));
 }
 
 /** mpl.csv -> MPL edits. @param {CodeplugDocument} doc @param {TextFile} f @param {Apply} apply @param {ImportReport} rep */
