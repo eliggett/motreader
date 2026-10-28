@@ -53,7 +53,8 @@ const ENTRIES = {
 export const KEYPAD_ORDER = /** @type {const} */ (["Ind 1", "Ind 2", "Ind 3", "Ind 4", "Ind 5",
     "1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"]);
 export const SMALL_ORDER = /** @type {const} */ (["Ind 1", "Ind 2", "Ind 3", "Ind 4", "Ind 5", "7", "8", "9"]);
-const FIXED = new Set(["Ind 5", "*", "#"]);
+const FIXED = new Set(["Ind 5", "*", "#"]);   // no RSS tab stop (Rotary too: owner, 2026-10-28)
+const SEL = "01100000";   // RSS offers Sel on no other button: Ind 5 keeps it
 /** @type {Readonly<Record<string, string>>} */
 const FIXED_LABEL = { "*": "Rcl", "#": "Del" };
 const BLANK = "00000000";
@@ -145,7 +146,9 @@ function encodeTable(cp, body, rows, hack) {
             continue;
         }
         if (!o.editable && !hack && !r.hack) throw new InvalidValue(`button ${r.button} is fixed in RSS (${o.function})`);
-        want.set(r.button, parseFunction(r.button, r.function));
+        const code = parseFunction(r.button, r.function);
+        if (code === SEL && !hack && !r.hack) throw new InvalidValue(`button ${r.button}: RSS doesn't offer Sel there (it stays on Ind 5)`);
+        want.set(r.button, code);
     }
     /** @type {Map<string, string>} */
     const seen = new Map();
@@ -462,19 +465,23 @@ export function buttonOffsets(/** @type {Codeplug} */ cp) {
  * The functions for `button`'s menu: `offered` = what RSS offers there,
  * `other` = what RSS doesn't (the experimental choices). A fixed button offers
  * nothing in RSS. A9 byte-identical aliases and SECURENET are left out.
+ * Blank comes first, then by name.
  * @param {Codeplug} cp @param {string} button
  * @returns {{ offered: Choice[], other: Choice[] }}
  */
 export function functionChoices(cp, button) {
     if (hasTable(cp)) {
-        const all = Object.values(FUNCTIONS).filter(([l]) => l !== "Rcl/Del").map(([label, name]) => ({ label, name, data: false }));
+        const all = Object.entries(FUNCTIONS).filter(([c]) => c !== RCL_DEL)
+            .sort(([a, [x]], [b, [y]]) => (a === BLANK ? -1 : b === BLANK ? 1 : x.localeCompare(y)));
+        const choices = (/** @type {[string, [string, string]][]} */ list) => list.map(([, [label, name]]) => ({ label, name, data: false }));
         const fixed = button in FIXED_LABEL ? [{ label: /** @type {string} */ (FIXED_LABEL[button]), name: /** @type {[string, string]} */ (FUNCTIONS[RCL_DEL])[1], data: false }] : [];
-        return FIXED.has(button) ? { offered: [], other: [...fixed, ...all] } : { offered: all, other: [] };
+        if (FIXED.has(button)) return { offered: [], other: [...fixed, ...choices(all)] };
+        return { offered: choices(all.filter(([c]) => c !== SEL)), other: choices(all.filter(([c]) => c === SEL)) };
     }
     const allowed = A9_FIXED.has(button) ? [] : A9_ALLOWED[keyClass(button)] ?? [];
     const choice = (/** @type {string} */ label) => ({ label, name: /** @type {import("./a9table.js").A9Function} */ (A9_FUNCTIONS[label])[0], data: takesData(label) });
     const usable = Object.keys(A9_FUNCTIONS).filter((l) => !ALIASES.has(l) && !NOT_OFFERED.has(l));
-    const byName = (/** @type {string} */ a, /** @type {string} */ b) => a.localeCompare(b);
+    const byName = (/** @type {string} */ a, /** @type {string} */ b) => (a === "Blank" ? -1 : b === "Blank" ? 1 : a.localeCompare(b));
     return {
         offered: usable.filter((l) => allowed.includes(l)).sort(byName).map(choice),
         other: usable.filter((l) => !allowed.includes(l)).sort(byName).map(choice),

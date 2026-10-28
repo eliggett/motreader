@@ -33,6 +33,10 @@ test("standard head: edits, refusals, experimental, export", { skip: !find("a604
     assert.throws(() => setButton(d, "Ind 2", "Airhn"), /both have Airhn/);
     assert.throws(() => setButton(d, "Ind 5", "Scan"), /fixed in RSS/);
     assert.throws(() => setButton(d, "Ind 2", "Nope"), InvalidValue);
+    // Sel stays on Ind 5 in RSS (Rotary too): elsewhere only as an experimental edit
+    assert.throws(() => setButton(d, "Ind 2", "Sel"), /doesn't offer Sel/);
+    assert.equal(functionChoices(d.cp, "Ind 2").offered[0]?.label, "Blank", "Blank first");
+    assert.deepEqual(functionChoices(d.cp, "Ind 2").other.map((c) => c.label), ["Sel"]);
     // experimental: Ind 5 off Sel, * to a function; then an ordinary edit still goes through
     setButton(d, "Ind 5", "Blank", true);
     setButton(d, "*", "VRS", true);
@@ -57,6 +61,7 @@ test("A9 head: offered functions, direct entry, experimental keys", { skip: !fin
     const { offered, other } = functionChoices(d.cp, "1");
     assert.ok(!offered.some((c) => c.label === "Scan") && other.some((c) => c.label === "Scan"), "keypad keys aren't offered Scan");
     assert.throws(() => setButton(d, "1", "Scan"), /does not offer/);
+    assert.equal(offered[0]?.label, "Blank", "Blank first");
     setButton(d, "1", "zone 4");
     assert.equal(fn(d, "1"), "Zone 4");
     assert.throws(() => setButton(d, "*", "Scan"), /fixed in RSS/);

@@ -44,7 +44,8 @@ ENTRIES = {"Ind 1": 0, "Ind 2": 1, "Ind 3": 2, "Ind 4": 3, "Ind 5": 4,
 KEYPAD_ORDER = ("Ind 1", "Ind 2", "Ind 3", "Ind 4", "Ind 5",
                 "1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#")
 SMALL_ORDER = ("Ind 1", "Ind 2", "Ind 3", "Ind 4", "Ind 5", "7", "8", "9")
-FIXED = {"Ind 5", "*", "#"}         # no RSS tab stop
+FIXED = {"Ind 5", "*", "#"}         # no RSS tab stop (Rotary too: owner, 2026-10-28)
+SEL = "01100000"                    # RSS offers Sel on no other button: Ind 5 keeps it
 FIXED_LABEL = {"*": "Rcl", "#": "Del"}   # same code, label by position
 
 # function code (hex) -> (RSS short label, RSS full name); collected from RSS
@@ -167,6 +168,8 @@ def encode_buttons(cp, body: bytearray, rows, hack: bool = False) -> None:
         if not o.editable and not hack:
             raise ValueError(f"button {r.button} is fixed in RSS ({o.function})")
         want[r.button] = _parse_function(r.button, r.function)
+        if want[r.button] == SEL and not hack:
+            raise ValueError(f"button {r.button}: RSS doesn't offer Sel there (it stays on Ind 5)")
     final = {b: want.get(b, o.code) for b, o in orig.items()}
     seen = {}
     for b, code in final.items():
