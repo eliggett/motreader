@@ -44,6 +44,14 @@ test("the trunked 566AYA reports removable trunking", { skip: !existsSync(join(A
     assert.equal(info(d)["Radio band"], "900 MHz");
 });
 
+test("File Blocks match what RSS shows on reading", () => {
+    // counts read off RSS's screen as it loaded each archive
+    for (const [f, n] of /** @type {[string, string][]} */ ([["a566aya0.014", "27"], ["a221azn0.035", "46"], ["a617asn1.767", "14"]])) {
+        if (!existsSync(join(ARCHIVE, f))) continue;
+        assert.equal(info(open(f))["File Blocks"], n, f);
+    }
+});
+
 test("a non-archive is refused", () => {
     assert.throws(() => openDocument("x.bin", new Uint8Array(100)), /not a Spectra archive/);
 });

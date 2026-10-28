@@ -865,7 +865,7 @@ must contain the home mode (0x10F).
 | zone names | 6 B/zone (6-bit); A9 head: 11-char ASCII in its string pool (pointer 0) |
 | zone flag section | 2-byte length, then per zone W+3: scan-options byte, 2 priority bytes, W-byte zone scan list |
 | zone membership | 2-byte length, W bytes per zone, **8-bit sum** (motreader now keeps it valid on zone edits) |
-| body length | FF-padded to k*0x100 + 0xAD |
+| body length | FF-padded to k*0x100 + 0xAD; with the 0x53-byte banner the file is k+1 whole 256-byte blocks, the "File Blocks" RSS flashes on reading (566AYA 27, 221AZN 46, 617ASN 14) |
 
 Each mode record ends with an 8-bit sum (not verified by RSS on GET).
 motreader now locates mode records through the pointer table (900 view = true

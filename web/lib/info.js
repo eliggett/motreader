@@ -73,7 +73,10 @@ export function generalInfo(d) {
     const codeplug = [
         { label: "Decrypted codeplug size", value: `${d.plain.length} bytes`, note: `data ends at byte ${end}; the rest is 0xFF padding` },
         ...(d.ops.length ? [{ label: "Structural changes", value: d.ops.join("; "), note: `re-packed since import (${d.importedPlain.length} bytes then)` }] : []),
-        { label: "Codeplug blocks", value: "—", note: NOT_DECODED },
+        {
+            label: "File Blocks", value: String(Math.ceil(d.plain.length / 256)),
+            note: "256-byte blocks, as RSS counts them on reading (the body is k×256 + 0xAD bytes, a whole number of blocks with the banner)",
+        },
         { label: "Radio's maximum codeplug size", value: "—", note: NOT_DECODED },
         { label: "Decryption key (nonce)", value: hex(nonce(d.plain), " "), note: "the 13 bytes at the start of the body; RSS picks new ones on every save" },
         { label: "Archive file", value: d.fileName, note: `${d.raw.length} bytes, ${d.banner.length === BANNER_LONG.length ? "long" : "short"} banner` },
