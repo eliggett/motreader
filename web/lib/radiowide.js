@@ -153,7 +153,7 @@ export const FIELDS = [
 /** @type {Map<string, Field>} */
 export const FIELD_BY_KEY = new Map(FIELDS.map((f) => [f.key, f]));
 
-const sum8 = (/** @type {Uint8Array} */ b, /** @type {number} */ from, /** @type {number} */ to) => {
+export const sum8 = (/** @type {Uint8Array} */ b, /** @type {number} */ from, /** @type {number} */ to) => {
     let s = 0;
     for (let i = from; i < to; i++) s += /** @type {number} */ (b[i]);
     return s & 0xFF;
@@ -178,8 +178,8 @@ export function findExtBlock(/** @type {Uint8Array} */ body) {
     return null;
 }
 
-const CHB_CK = 0x11E;
-const CHB_SUM_LO = 0x1E;
+export const CHB_CK = 0x11E;
+export const CHB_SUM_LO = 0x1E;
 
 /**
  * Offset of the control-head/accessory block, or null: bytes +0x66..+0x68 =

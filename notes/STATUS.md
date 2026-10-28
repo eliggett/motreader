@@ -59,6 +59,11 @@ the reverse-engineering tool and the reference:
   functions RSS doesn't offer on a key), in Python too (`hack=True`); such
   edits are flagged on the drawing, in the list and in the export dialog.
   Warnings, not refusals: no Sel / no Home, A9 keypad keys losing DTMF.
+  Found in RSS (fixed in Python too): Airhn on a standard-head button sets
+  CHB+0x46 b4 (FORMAT); new function A/B. Web exports re-save identically in
+  RSS (604AUN Airhn + A/B; 221AZN with an experimental `*` = Mute, which RSS
+  shows and keeps). An experimental standard-head `*` / `#` loads in RSS, which
+  shows Rcl / Del and writes them back on save.
 
 UHF (2026-10-25): decoded, edited and exported (FORMAT §5a-UHF), validated
 in RSS. Codeplugs motreader can't edit safely (older format versions 101/102,

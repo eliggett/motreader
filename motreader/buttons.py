@@ -21,7 +21,10 @@ Ind 1-5 and keys 7, 8, 9. The A9 / S9000e head (221AZN) uses a different,
 record-based format: see buttons_a9.py (decode_buttons / encode_buttons /
 button_offsets here dispatch to it).
 
-Editing changes only the entry bytes (no checksum). RSS refuses to save a
+Editing changes the entry bytes, and one flag: RSS keeps CHB+0x46 b4 set while
+some button has Airhn (cleared when none has), with the control-head block's
+checksum (RSS cycle of 604AUN Ind 1 through every function, 2026-10-28: no
+other function changes anything outside the table). RSS refuses to save a
 function on two buttons ("Duplicate Buttons!"), so motreader refuses too.
 """
 
@@ -82,12 +85,15 @@ FUNCTIONS = {
     "11030000": ("Page", "MDC Page,Trunking Call Alert"),
     "11060000": ("Call", "Conv. MDC Call,Trnk Private Call"),
     "12011200": ("VRS", "Vehicle Repeater System"),
-    "14001401": ("ST", ""),
+    "14001401": ("ST", "SingleTone"),
+    "011a0000": ("A/B", "Speaker A/B"),
 }
 CODE_BY_LABEL = {lab.lower(): code for code, (lab, _) in FUNCTIONS.items()
                  if lab != "Rcl/Del"}            # the fixed * / # code isn't assignable
 BLANK = "00000000"
 RCL_DEL = "02020000"
+AIRHN = "08050000"
+AIRHN_FLAG = (0x46, 4)             # CHB+0x46 b4: some button has Airhn
 
 
 @dataclass
@@ -171,14 +177,33 @@ def encode_buttons(cp, body: bytearray, rows, hack: bool = False) -> None:
             raise ValueError(f"buttons {seen[code]} and {b} both have {lab}: RSS refuses "
                              "duplicate buttons (blank one of them)")
         seen[code] = b
+    if all(code == orig[b].code for b, code in want.items()):
+        return
     for b, code in want.items():
         if code != orig[b].code:
             e = TABLE_OFF + ENTRY_LEN * ENTRIES[b]
             body[e:e + ENTRY_LEN] = bytes.fromhex(code)
+    _airhn_flag(body, AIRHN in final.values())
+
+
+def _airhn_flag(body: bytearray, on: bool) -> None:
+    """CHB+0x46 b4 follows "some button has Airhn" (and the CHB checksum)."""
+    from .radiowide import find_chb_block, CHB_CK, CHB_SUM_LO
+    c = find_chb_block(bytes(body))
+    if c is None:
+        return
+    o, bit = AIRHN_FLAG
+    v = body[c + o] | (1 << bit) if on else body[c + o] & ~(1 << bit) & 0xFF
+    if v != body[c + o]:
+        body[c + o] = v
+        body[c + CHB_CK] = sum(body[c + CHB_SUM_LO:c + CHB_CK]) & 0xFF
 
 
 def button_offsets(cp) -> set:
     if not has_table(cp):
         from . import buttons_a9
         return buttons_a9.button_offsets(cp)
-    return set(range(TABLE_OFF, TABLE_OFF + 20 * ENTRY_LEN))
+    from .radiowide import find_chb_block, CHB_CK
+    c = find_chb_block(cp.body)
+    flag = {c + AIRHN_FLAG[0], c + CHB_CK} if c is not None else set()
+    return set(range(TABLE_OFF, TABLE_OFF + 20 * ENTRY_LEN)) | flag

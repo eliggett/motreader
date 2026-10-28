@@ -787,6 +787,13 @@ Blank `00 00 00 00`):
 | 9-17 | keys 1 … 9 |
 | 18, 19 | `*` / `#`, fixed (code `02 02 00 00`, shown as Rcl / Del by position) |
 
+**Airhn flag: CHB+0x46 b4** is set while some button holds Airhn (08 05 00 00)
+and cleared when none does, with the CHB checksum (+0x11E). An RSS cycle of
+604AUN Ind 1 through all 28 functions (2026-10-28,
+`notes/ground-truth/buttons_604AUN_rss/`) changed nothing else outside the
+button table. Also seen in that cycle and 617ASN's: `01 1a 00 00` = A/B
+(Speaker A/B); ST's full name is "SingleTone".
+
 Header **0x10D b1 set = no full keypad** (617ASN, 617ASQ): only Ind 1-5 and keys
 7/8/9 exist. This is also why Phone/DTMF Encode defaults to List there. 32
 function codes with RSS's short and full names (`buttons.FUNCTIONS`) were

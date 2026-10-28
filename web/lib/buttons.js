@@ -7,7 +7,9 @@
  * codes at 0x123 (entry: Ind 1-5 = 0-4, key 0 = 8, keys 1-9 = 9-17, * / # =
  * 18 / 19). Ind 5 (Sel), * and # (Rcl / Del, one code, label by position) are
  * fixed in RSS. Radios without a full keypad (0x10D b1) have Ind 1-5 and keys
- * 7, 8, 9 only. No checksum.
+ * 7, 8, 9 only. RSS keeps CHB+0x46 b4 set while some button has Airhn (with
+ * the control-head block's checksum); no other function touches anything
+ * outside the table.
  *
  * A9 / S9000e head: 88 x 7-byte key records in two copies 0x268 apart (copy 2
  * is the trunking layer), a bitmap of the records whose 2nd byte is 0x90, and
@@ -25,6 +27,7 @@ import { InvalidValue } from "./errors.js";
 import { a9HeadChecksumOff } from "./a9.js";
 import { FUNCTIONS as A9_FUNCTIONS, ALLOWED as A9_ALLOWED } from "./a9table.js";
 import { hex as hexOf, fromHex } from "./bytes.js";
+import { findChbBlock, CHB_CK, CHB_SUM_LO, sum8 } from "./radiowide.js";
 
 /** @typedef {import("./codeplug.js").Codeplug} Codeplug */
 /**
@@ -55,6 +58,8 @@ const FIXED = new Set(["Ind 5", "*", "#"]);
 const FIXED_LABEL = { "*": "Rcl", "#": "Del" };
 const BLANK = "00000000";
 const RCL_DEL = "02020000";
+const AIRHN = "08050000";
+const AIRHN_FLAG = /** @type {const} */ ([0x46, 4]);   // CHB+0x46 b4: some button has Airhn
 /** code (hex) -> [RSS short label, RSS full name] */
 /** @type {Readonly<Record<string, [string, string]>>} */
 export const FUNCTIONS = {
@@ -89,7 +94,8 @@ export const FUNCTIONS = {
     "11030000": ["Page", "MDC Page,Trunking Call Alert"],
     "11060000": ["Call", "Conv. MDC Call,Trnk Private Call"],
     "12011200": ["VRS", "Vehicle Repeater System"],
-    "14001401": ["ST", ""],
+    "14001401": ["ST", "SingleTone"],
+    "011a0000": ["A/B", "Speaker A/B"],
 };
 /** label (lower case) -> code; the fixed * / # code isn't assignable by label */
 const CODE_BY_LABEL = new Map(Object.entries(FUNCTIONS).filter(([, [l]]) => l !== "Rcl/Del").map(([c, [l]]) => [l.toLowerCase(), c]));
@@ -153,7 +159,21 @@ function encodeTable(cp, body, rows, hack) {
         }
         seen.set(code, b);
     }
+    if ([...want].every(([b, code]) => code === orig.get(b)?.code)) return;
     for (const [b, code] of want) if (code !== orig.get(b)?.code) body.set(fromHex(code), entryOff(b));
+    airhnFlag(body, [...orig].some(([b, o]) => (want.get(b) ?? o.code) === AIRHN));
+}
+
+/** CHB+0x46 b4 follows "some button has Airhn" (and the CHB checksum). */
+function airhnFlag(/** @type {Uint8Array} */ body, /** @type {boolean} */ on) {
+    const c = findChbBlock(body);
+    if (c === null) return;
+    const [o, bit] = AIRHN_FLAG;
+    const was = /** @type {number} */ (body[c + o]);
+    const v = on ? was | (1 << bit) : was & ~(1 << bit) & 0xFF;
+    if (v === was) return;
+    body[c + o] = v;
+    body[c + CHB_CK] = sum8(body, c + CHB_SUM_LO, c + CHB_CK);
 }
 
 // ---------------------------------------------------------------------------
@@ -422,7 +442,10 @@ export function encodeButtons(cp, body, rows, hack = false) {
 
 /** Body offsets of the button bytes. */
 export function buttonOffsets(/** @type {Codeplug} */ cp) {
-    if (hasTable(cp)) return new Set(Array.from({ length: 20 * ENTRY_LEN }, (_, i) => TABLE_OFF + i));
+    if (hasTable(cp)) {
+        const c = findChbBlock(cp.body);
+        return new Set([...Array.from({ length: 20 * ENTRY_LEN }, (_, i) => TABLE_OFF + i), ...(c === null ? [] : [c + AIRHN_FLAG[0], c + CHB_CK])]);
+    }
     const lay = a9Layout(cp);
     /** @type {Set<number>} */
     const out = new Set();

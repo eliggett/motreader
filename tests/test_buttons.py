@@ -207,3 +207,23 @@ def test_a9_rules():
     B.encode_buttons(cp, out, rows)
     dec = {b.button: b.function for b in B.decode_buttons(Codeplug.parse(bytes(out)))}
     assert dec["Mode Dn"] == "Vol Up"         # ...decoded under RSS's GET name
+
+
+# RSS cycle of 604AUN Ind 1 through every function (2026-10-28): Airhn on a
+# button sets CHB+0x46 b4 (and the CHB checksum); taking it off clears it.
+AIRHN_GT = os.path.join(GT_DIR, "buttons_604AUN_rss")
+
+
+def _gt(name):
+    with open(os.path.join(AIRHN_GT, f"{name}.plain.bin"), "rb") as f:
+        return f.read()
+
+
+@pytest.mark.parametrize("src,func,want", [
+    ("ind1_xradb", "Airhn", "ind1_airhn"), ("ind1_airhn", "Siren", "ind1_siren")])
+def test_airhn_sets_the_control_head_flag_as_rss_does(src, func, want):
+    cp = Codeplug.parse(_gt(src))
+    out = bytearray(cp.body)
+    B.encode_buttons(cp, out, [B.Button("Ind 1", func)])
+    rss = _gt(want)
+    assert [i for i in range(len(rss)) if out[i] != rss[i] and i not in BOOKKEEPING] == []
