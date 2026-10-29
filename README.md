@@ -4,8 +4,15 @@ Are you tired of tapping away in ancient dos software to program your radio's ch
 
 motreader can read and write codeplug files for the Motorola Spectra series radios. You can also import and export CSV-formatted files for easier editing. 
 
+
 ## Author: 
 Elliott Liggett, W6EL. Major portions of the code written by Claude Opus 4.8 and Opus 5.5. 
+
+## Screenshots:
+
+![A9 Control Head Editor](screenshots/Control_A9.png)
+
+![Mode Editor](screenshots/ModeEditor.png)
 
 ## Getting started:
 
@@ -25,4 +32,10 @@ Once satisfied, at your own risk, write the codeplug to the radio.
 
 ## WARRANTY: 
 No warranty is expressed or implied. This software may brick your radio, and by using it, you understand that you take that risk. Do not use this software on radios responsible for life support, law enforcement, fire, rescue, or related occupations.
+
+## More screenshots, just for fun
+
+![A5 Control Head Editor](screenshots/Control_A9.png)
+
+![About Box](screenshots/AboutScreen.png)
 
