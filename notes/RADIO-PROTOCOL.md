@@ -16,7 +16,11 @@ Status (2026-10-30):
   READs it on Linux** through dosbox-x `directserial ... rib:1`. The two
   archives match except the nonce and 17 bytes RSS rewrites on READ; RSS
   GETs motreader's archive with no warning. RSS sent no writes; the radio
-  re-reads unchanged. Writing is not attempted yet.
+  re-reads unchanged.
+- **Programming the real radio works**: unmodified RSS PROGRAM through
+  dosbox-x `rib:1`, and `motreader write-radio` (same contents, then mode 10
+  renamed via CSV import). Both verified by reading back; RSS reads the
+  edited radio without complaint.
 
 Items marked *(guess)* are unconfirmed.
 
@@ -154,6 +158,16 @@ The result equals the archive except 16 bytes RSS maintains itself:
 0x602D–0x602F, 0x6042–0x6043, 0x610F–0x6112, 0x6132–0x6138 (dates, history,
 check values *(guess)*).
 
+### PROGRAM on the real radio (617ASQ, RSS through dosbox-x)
+
+Simpler than against the blank fake radio (no MCU RAM writes, no
+`00 12 01`): checking reads (model b675.., option block via 0xFFC6, header
+fields, b69f–b6a2), then in **one** codeplug session `WRITE 6000=FF`, every
+byte 0x6000..end in order, `READ 6000`; then MCU read b69f–b6a0, `WRITE
+b6a0=39` (scrambled, codeplug session; it already held 0x39), the 0x51
+probe, and `00 10 01 08`. RSS's writes went out about 25–30 ms apart; the
+radio needs no reply-time between them beyond that.
+
 ### READ sequence
 
 Same probes, then 0x6000–0x6CFF in 0x100-byte blocks, two bytes per message.
@@ -271,8 +285,8 @@ messages.
 3. ~~dosbox-x real ports on Linux~~ — RSS READ works on a real radio.
    Still to try: RSS PROGRAM on the real radio. Offer upstream afterwards.
 4. ~~motreader read (Python)~~ — reads a real radio; archive accepted by RSS.
-5. **Write, then the web app**: only after reads round-trip; always a backup
-   read first; copy RSS's invalidate-first order (0x6000=FF … 0x6000 last).
+5. ~~Write~~ — `write-radio` done and tested on the real radio. **Next: the
+   web app**.
    Web: Web Serial (`setSignals({dataTerminalReady})`,
    `getSignals().ringIndicator`), Chrome/Edge only.
 

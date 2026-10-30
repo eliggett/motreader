@@ -22,7 +22,12 @@
         # read a radio over a RIB (read-only; notes/RADIO-PROTOCOL.md): writes
         # codeplug.bin (EEPROM from 0x6000), mcu.json, radio.log and an
         # archive A<serial>; the archive's 6 radio-sourced prefix bytes are not
-        # known yet, so check it against an RSS read of the same radio
+        # matches what RSS saves from the same radio (except its nonce and
+        # 17 bookkeeping bytes RSS rewrites)
+    python -m motreader.cli write-radio <serial_port> <archive> <outdir> --yes
+        # program a radio with an archive's codeplug, the way RSS does. Reads
+        # the radio first (backup in <outdir>/backup), refuses unless serial,
+        # model and codeplug size match, then verifies by reading back
 
 Export writes one CSV per multi-row category (modes.csv, phones.csv, mpl.csv,
 buttons.csv)
@@ -603,6 +608,51 @@ def read_radio(port: str, outdir: str) -> None:
           f"codeplug.bin, mcu.json, radio.log")
 
 
+def write_radio(port: str, archive: str, outdir: str) -> None:
+    from .crypto import decrypt_body
+    from .radio import Radio, SerialLink
+
+    image = decrypt_body(Archive.load(archive).body)[0xAD:]
+    os.makedirs(outdir, exist_ok=True)
+    logf = open(os.path.join(outdir, "radio.log"), "w")
+    link = SerialLink(port, log=lambda line: logf.write(line + "\n"))
+
+    def progress(done, total):
+        print(f"\r  {done:#06x} / {total:#06x}", end="", flush=True)
+
+    try:
+        radio = Radio(link, progress)
+        print("backup read:")
+        before = radio.read_all(finish=False)
+        print()
+        _save_read(before, os.path.join(outdir, "backup"))
+        changed = sum(a != b for a, b in zip(before.codeplug, image))
+        print(f"programming {len(image):#x} bytes ({changed} differ from the radio):")
+        after = radio.program_verified(image, progress)
+        print()
+        _save_read(after, os.path.join(outdir, "after"))
+    finally:
+        link.close()
+        logf.close()
+    print(f"programmed and verified; backup in {outdir}/backup")
+
+
+def _save_read(res, outdir: str) -> None:
+    import json
+
+    from .crypto import encrypt_body
+
+    os.makedirs(outdir, exist_ok=True)
+    cp = res.codeplug
+    serial = cp[0x1D:0x27].decode("latin-1")
+    with open(os.path.join(outdir, "codeplug.bin"), "wb") as f:
+        f.write(cp)
+    with open(os.path.join(outdir, "mcu.json"), "w") as f:
+        json.dump({f"{a:04x}": v.hex() for a, v in res.mcu.items()}, f, indent=1)
+    Archive(encrypt_body(res.archive_body())).save(
+        os.path.join(outdir, f"A{serial[:7]}.{serial[7:]}"))
+
+
 def main(argv: list[str]) -> int:
     if len(argv) < 2:
         print(__doc__)
@@ -626,6 +676,8 @@ def main(argv: list[str]) -> int:
         remove_trunking(argv[2], argv[3])
     elif cmd == "read-radio" and len(argv) == 4:
         read_radio(argv[2], argv[3])
+    elif cmd == "write-radio" and len(argv) == 6 and argv[5] == "--yes":
+        write_radio(argv[2], argv[3], argv[4])
     else:
         print(__doc__)
         return 1

@@ -11,7 +11,8 @@ Layers:
 * ``Radio`` opens sessions and reads memory: the codeplug EEPROM at 0x6000
   (scrambled) and the MCU bytes RSS checks.
 
-Read-only: nothing here writes to the radio.
+Reads change nothing. ``Radio.program`` writes a codeplug the way RSS does
+(checked against RSS programming a real 617ASQ): see its docstring.
 """
 
 from __future__ import annotations
@@ -41,7 +42,16 @@ OPTIONS_POINTER = 0xFFC6
 OPTIONS_LEN = 16
 
 
+# RSS writes this MCU EEPROM byte after programming (0x39 on every radio
+# seen, real and emulated); its meaning is unknown.
+PROGRAMMED_FLAG = (0xB6A0, 0x39)
+
+
 class BusError(Exception):
+    pass
+
+
+class ProgramRefused(Exception):
     pass
 
 
@@ -239,6 +249,59 @@ class Radio:
         addr = ptr[0] << 8 | ptr[1]
         with self.session(SESSION_MCU):
             return addr, self.read(addr, OPTIONS_LEN, False, per_msg=1)
+
+    def write(self, addr: int, data: bytes, scrambled: bool, progress=None):
+        """Write bytes one per message (opcode 0x07, no reply)."""
+        for i, v in enumerate(data):
+            a = addr + i
+            hi, lo = a >> 8 & 0xFF, a & 0xFF
+            p = sb.scramble(hi, lo, v) if scrambled else (hi, lo, v)
+            self.link.transact(bytes([*p, sb.OP_WRITE]))
+            if progress:
+                progress(i + 1, len(data))
+
+    def program(self, image: bytes, progress=None) -> None:
+        """Write a codeplug image (EEPROM from 0x6000) as RSS does: in one
+        codeplug session, 0x6000 = 0xFF, then every byte from 0x6000 in
+        order; then a reset. RSS also writes MCU byte 0xB6A0 = 0x39 afterwards;
+        we only check that it already holds that.
+
+        Refuses (ProgramRefused) unless the radio's serial, model and
+        codeplug length match the image. Callers should keep a backup read
+        and verify by reading back (``program_verified`` does both)."""
+        with self.session(SESSION_CODEPLUG):
+            head = self.read(CODEPLUG_BASE, 0x60, True)
+        if not head.startswith(b"COPYRIGHT MOTOROLA"):
+            raise ProgramRefused("radio codeplug header not recognised")
+        for what, sl in (("serial", slice(0x1D, 0x27)), ("model", slice(0x44, 0x58))):
+            if head[sl] != image[sl]:
+                raise ProgramRefused(f"{what} differs: radio {head[sl]!r}, "
+                                     f"image {image[sl]!r}")
+        if codeplug_length(head) != len(image) or codeplug_length(image) != len(image):
+            raise ProgramRefused(f"codeplug length differs: radio "
+                                 f"{codeplug_length(head):#x}, image {len(image):#x}")
+        with self.session(SESSION_MCU):
+            flag = self.read(PROGRAMMED_FLAG[0], 1, False, per_msg=1)[0]
+        if flag != PROGRAMMED_FLAG[1]:
+            raise ProgramRefused(f"MCU byte {PROGRAMMED_FLAG[0]:04x} is {flag:02x}, "
+                                 f"not {PROGRAMMED_FLAG[1]:02x}: not seen before")
+        with self.session(SESSION_CODEPLUG):
+            self.write(CODEPLUG_BASE, b"\xff", True)
+            self.write(CODEPLUG_BASE, image, True, progress)
+            if self.read(CODEPLUG_BASE, 2, True) != image[:2]:
+                raise BusError("header byte did not read back after programming")
+        self.mode(*MODE_DONE)
+
+    def program_verified(self, image: bytes, progress=None) -> ReadResult:
+        """program(), then read the whole radio back and compare."""
+        self.program(image, progress)
+        time.sleep(2.0)                      # let the radio restart after the reset
+        back = self.read_all(finish=False)
+        if back.codeplug != image:
+            bad = [i for i in range(len(image)) if back.codeplug[i] != image[i]]
+            raise BusError(f"verify failed at {len(bad)} bytes, first "
+                           f"{CODEPLUG_BASE + bad[0]:#06x}")
+        return back
 
     def read_all(self, finish=True) -> ReadResult:
         mcu = self.read_mcu()

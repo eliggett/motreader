@@ -32,7 +32,7 @@ def synthetic_image(blocks=3, seed=7):
     cp[0x40:0x48] = b"\xff" * 8
     mem = {0x6000 + i: b for i, b in enumerate(cp)}
     mem.update({0xB675: 0x12, 0xB676: 0x34, 0xB677: 0x35, 0xB69F: 0x56,
-                0xB6A0: 0x78, 0xB6A1: 0x9A, 0xB6A2: 0xBC,
+                0xB6A0: 0x39, 0xB6A1: 0x9A, 0xB6A2: 0xBC,
                 0xFFC6: 0xB6, 0xFFC7: 0x81})          # option-block pointer
     mem.update({0xB681 + i: v for i, v in enumerate(OPTIONS)})
     return bytes(cp), mem
@@ -63,7 +63,7 @@ def test_read_all_in_process():
     link = SimLink(mem)
     got = rd.Radio(link).read_all()
     assert got.codeplug == cp
-    assert got.mcu == {0xB675: b"\x12\x34\x35", 0xB69F: b"\x56\x78\x9a\xbc",
+    assert got.mcu == {0xB675: b"\x12\x34\x35", 0xB69F: b"\x56\x39\x9a\xbc",
                        0xB681: OPTIONS}
     assert link.sent[-1][:4] == bytes([0, 0x10, 0x01, 0x08])   # RSS's ending
     assert link.fake.writes == 0                               # read-only
@@ -96,3 +96,28 @@ def test_over_pty():
         p.kill()
         p.wait()
         os.remove(img)
+
+
+def test_program_in_process():
+    cp, mem = synthetic_image()
+    new = bytearray(cp)
+    new[0x100:0x110] = b"edited codeplug!"
+    link = SimLink(mem)
+    back = rd.Radio(link).program_verified(bytes(new))
+    assert back.codeplug == bytes(new)
+    # RSS's order: the header byte is set to 0xFF first, then every byte
+    writes = [m for m in link.sent if m[3] == sb.OP_WRITE]
+    assert sb.unscramble(*writes[0][:3]) == (0x60, 0x00, 0xFF)
+    assert [sb.unscramble(*w[:3])[:2] for w in writes[1:4]] == [(0x60, 0), (0x60, 1), (0x60, 2)]
+    assert len(writes) == 1 + len(cp)
+
+
+@pytest.mark.parametrize("field, off", [("serial", 0x20), ("model", 0x48), ("length", 0x1C)])
+def test_program_refuses_other_radio(field, off):
+    cp, mem = synthetic_image()
+    other = bytearray(cp)
+    other[off] ^= 0x01
+    link = SimLink(mem)
+    with pytest.raises(rd.ProgramRefused, match=field):
+        rd.Radio(link).program(bytes(other))
+    assert link.fake.writes == 0
