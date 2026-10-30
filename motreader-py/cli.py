@@ -24,10 +24,13 @@
         # archive A<serial>; the archive's 6 radio-sourced prefix bytes are not
         # matches what RSS saves from the same radio (except its nonce and
         # 17 bookkeeping bytes RSS rewrites)
-    python -m motreader.cli write-radio <serial_port> <archive> <outdir> --yes
+    python -m motreader.cli write-radio <serial_port> <archive> <outdir> --yes [--clone] [--ignore-features]
         # program a radio with an archive's codeplug, the way RSS does. Reads
-        # the radio first (backup in <outdir>/backup), refuses unless serial,
-        # model and codeplug size match, then verifies by reading back
+        # the radio first (backup in <outdir>/backup), refuses unless the
+        # model and serial match and the codeplug fits the 8 KB EEPROM, then
+        # verifies by reading back. --clone (RSS's CLONE): another radio of
+        # the same model; the radio keeps its serial number, and the
+        # archive's options must match the radio's (--ignore-features)
 
 Export writes one CSV per multi-row category (modes.csv, phones.csv, mpl.csv,
 buttons.csv)
@@ -608,11 +611,13 @@ def read_radio(port: str, outdir: str) -> None:
           f"codeplug.bin, mcu.json, radio.log")
 
 
-def write_radio(port: str, archive: str, outdir: str) -> None:
+def write_radio(port: str, archive: str, outdir: str, clone=False,
+                ignore_features=False) -> None:
     from .crypto import decrypt_body
     from .radio import Radio, SerialLink
 
-    image = decrypt_body(Archive.load(archive).body)[0xAD:]
+    body = decrypt_body(Archive.load(archive).body)
+    image, options = body[0xAD:], body[13:19]
     os.makedirs(outdir, exist_ok=True)
     logf = open(os.path.join(outdir, "radio.log"), "w")
     link = SerialLink(port, log=lambda line: logf.write(line + "\n"))
@@ -628,7 +633,9 @@ def write_radio(port: str, archive: str, outdir: str) -> None:
         _save_read(before, os.path.join(outdir, "backup"))
         changed = sum(a != b for a, b in zip(before.codeplug, image))
         print(f"programming {len(image):#x} bytes ({changed} differ from the radio):")
-        after = radio.program_verified(image, progress)
+        after = radio.program_verified(image, progress, clone=clone,
+                                       options=options,
+                                       ignore_features=ignore_features)
         print()
         _save_read(after, os.path.join(outdir, "after"))
     finally:
@@ -676,8 +683,10 @@ def main(argv: list[str]) -> int:
         remove_trunking(argv[2], argv[3])
     elif cmd == "read-radio" and len(argv) == 4:
         read_radio(argv[2], argv[3])
-    elif cmd == "write-radio" and len(argv) == 6 and argv[5] == "--yes":
-        write_radio(argv[2], argv[3], argv[4])
+    elif (cmd == "write-radio" and len(argv) >= 6 and "--yes" in argv[5:]
+          and set(argv[5:]) <= {"--yes", "--clone", "--ignore-features"}):
+        write_radio(argv[2], argv[3], argv[4], clone="--clone" in argv[5:],
+                    ignore_features="--ignore-features" in argv[5:])
     else:
         print(__doc__)
         return 1

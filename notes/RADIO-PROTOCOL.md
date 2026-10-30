@@ -17,6 +17,9 @@ Status (2026-10-30):
   archives match except the nonce and 17 bytes RSS rewrites on READ; RSS
   GETs motreader's archive with no warning. RSS sent no writes; the radio
   re-reads unchanged.
+- `write-radio` accepts a bigger codeplug (more modes) up to the 8 KB
+  codeplug EEPROM (0x6000–0x7FFF); the radio's length comes from header
+  byte 0x601C. `--clone` programs another radio of the same model.
 - **Programming the real radio works**: unmodified RSS PROGRAM through
   dosbox-x `rib:1`, and `motreader write-radio` (same contents, then mode 10
   renamed via CSV import). Both verified by reading back; RSS reads the
@@ -168,6 +171,32 @@ b6a0=39` (scrambled, codeplug session; it already held 0x39), the 0x51
 probe, and `00 10 01 08`. RSS's writes went out about 25–30 ms apart; the
 radio needs no reply-time between them beyond that.
 
+### CLONE (RSS → fake radio, 617ASN1665 archive onto a 617ASN1767)
+
+RSS's CLONE MENU (GET/SAVE F5 → F8) shows the target's Serial Number, MDC
+Unit Id and DTMF Unit Id (editable), says "Serial Number And Front Panel
+Password Of The Radio Will Be Merged", then programs as above. Result: the
+source codeplug verbatim except the **target's serial** (and the usual
+RSS-rewritten bytes). Its help: same model only; conventional radios clone
+completely except MDC ID and DTMF selective-call number; trunked radios only
+phone/call/scan lists.
+
+- **Features check**: the codeplug holds a copy of the radio's option block
+  (16 bytes; at 0x62F7 on the 617ASN, found through a pointer at 0x652C).
+  When the target's differs from the archive's, RSS warns "Target Radio has
+  different features than current archive … may result in incorrect
+  operation" (F2 continue / F10 abort).
+- Front-panel password: not located. Not 0x605F–0x6060; the remaining
+  candidates are the bytes RSS rewrites (0x610F–0x6112, 0x6131–0x6138).
+- Nothing else in the codeplug range is kept from the target, so per-radio
+  alignment data is not in the codeplug.
+
+motreader: `write-radio … --clone` writes the archive's codeplug with the
+radio's serial, after checking the model and the archive's option bytes
+(prefix 13..18) against the radio's option block (`--ignore-features` to
+override). Emulator check: clone 1665 → fake 1767 verified, then RSS READ of
+the result is clean.
+
 ### READ sequence
 
 Same probes, then 0x6000–0x6CFF in 0x100-byte blocks, two bytes per message.
@@ -199,6 +228,13 @@ Same probes, then 0x6000–0x6CFF in 0x100-byte blocks, two bytes per message.
 - The 0x2000 extra region on the larger radios.
 - What the 16 RSS-maintained bytes encode.
 - Error-code → message mapping.
+- **Alignment data (to investigate):** TX power (high/low PA set), reference
+  oscillator warp, deviation (modulation levels), and PTT behaviour. Likely
+  outside the codeplug range (clone keeps nothing per-radio in it), probably
+  MCU EEPROM 0xB6xx. Method: run RSS's SERVICE/ALIGNMENT screens against
+  the fake radio and log which addresses each adjustment reads and writes;
+  then confirm on a real radio by reading only.
+- Front-panel password location.
 
 ## Linux / real-port problems in dosbox-x
 

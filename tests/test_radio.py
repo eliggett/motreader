@@ -112,12 +112,57 @@ def test_program_in_process():
     assert len(writes) == 1 + len(cp)
 
 
-@pytest.mark.parametrize("field, off", [("serial", 0x20), ("model", 0x48), ("length", 0x1C)])
-def test_program_refuses_other_radio(field, off):
+@pytest.mark.parametrize("field, off, val", [
+    ("serial", 0x20, None), ("model", 0x48, None),
+    ("length", 0x1C, 0xFF),            # header claims more than the image holds
+])
+def test_program_refuses(field, off, val):
     cp, mem = synthetic_image()
     other = bytearray(cp)
-    other[off] ^= 0x01
+    other[off] = other[off] ^ 0x01 if val is None else val
     link = SimLink(mem)
     with pytest.raises(rd.ProgramRefused, match=field):
         rd.Radio(link).program(bytes(other))
     assert link.fake.writes == 0
+
+
+def test_program_bigger_codeplug():
+    # adding modes grows the codeplug: allowed up to the EEPROM size
+    cp, mem = synthetic_image(blocks=3)
+    big, _ = synthetic_image(blocks=5, seed=9)
+    big = bytearray(big)
+    big[0x1D:0x27], big[0x44:0x58] = cp[0x1D:0x27], cp[0x44:0x58]
+    back = rd.Radio(SimLink(mem)).program_verified(bytes(big))
+    assert back.codeplug == bytes(big)
+
+
+def other_radio_image():
+    """The same model with a different serial and contents."""
+    cp, _ = synthetic_image(seed=11)
+    other = bytearray(cp)
+    other[0x1D:0x27] = b"617ASN1767"
+    return cp, bytes(other)
+
+
+def test_clone_keeps_target_serial():
+    cp, mem = synthetic_image(seed=11)
+    _, src = other_radio_image()
+    src = bytearray(src)
+    src[0x100:0x108] = b"cloned!!"
+    back = rd.Radio(SimLink(mem)).program_verified(bytes(src), clone=True,
+                                                   options=OPTIONS[:6])
+    want = bytearray(src)
+    want[0x1D:0x27] = cp[0x1D:0x27]          # the radio keeps its serial
+    assert back.codeplug == bytes(want)
+
+
+def test_clone_checks_features():
+    _, mem = synthetic_image(seed=11)
+    _, src = other_radio_image()
+    other_options = b"\x00\x56\x40\xa3\x1e\xf7"
+    link = SimLink(mem)
+    with pytest.raises(rd.ProgramRefused, match="features"):
+        rd.Radio(link).program(src, clone=True, options=other_options)
+    assert link.fake.writes == 0
+    rd.Radio(SimLink(mem)).program(src, clone=True, options=other_options,
+                                   ignore_features=True)

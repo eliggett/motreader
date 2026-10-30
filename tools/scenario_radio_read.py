@@ -48,6 +48,9 @@ def main():
     ap.add_argument("--image")
     ap.add_argument("--wait", type=float, default=60)
     ap.add_argument("--program", action="store_true")
+    ap.add_argument("--clone", metavar="SERIAL",
+                    help="like --program, but through CLONE MENU -> F8, "
+                         "entering SERIAL as the target radio's serial")
     ap.add_argument("--save")
     ap.add_argument("--set", action="append", default=[])
     ap.add_argument("--link", choices=("rib", "pty", "pty-rib", "real"), default="rib")
@@ -96,6 +99,8 @@ def main():
     try:
         with Harness(a.sandbox_c, a.workdir, extra_conf=conf) as h:
             d = h.connect()
+            if a.clone:
+                a.program = True
             if a.program:
                 boot_and_get(d)                     # leaves us in GET/SAVE
             else:
@@ -106,6 +111,17 @@ def main():
                 if not key_to(d, "f3", "GET / SAVE MENU"):
                     raise RuntimeError("no GET/SAVE menu")
             show(d, "start")
+            if a.clone:
+                d.send_keys("f5")                   # CLONE MENU
+                wait_for(d, "CLONE RADIO")
+                d.send_keys("f8")
+                wait_for(d, "Enter Radio Serial Number")
+                for ch in a.clone.lower():
+                    d.send_keys(ch)
+                    time.sleep(0.15)
+                d.send_keys("enter")
+                time.sleep(1.0)
+                show(d, "clone screen")
             d.send_keys("f8" if a.program else "f2")   # PROGRAM / READ
             t_end = time.time() + a.wait
             last = None
@@ -114,7 +130,8 @@ def main():
                 if s != last:
                     show(d, f"t+{a.wait - (t_end - time.time()):.0f}s")
                     last = s
-                    if a.program and "Press F8 AGAIN" in s:
+                    if a.program and ("Press F8 AGAIN" in s
+                                      or "Program TARGET" in s):
                         d.send_keys("f8")
                 model = s.split("Model:", 1)[1].split("\n", 1)[0].strip() \
                     if "Model:" in s else ""

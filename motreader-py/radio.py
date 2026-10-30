@@ -26,6 +26,11 @@ from . import sb9600 as sb
 
 CODEPLUG_BASE = 0x6000
 BLOCK = 0x100
+# The codeplug EEPROM is 8 KB (0x6000-0x7FFF): a blank radio makes RSS read
+# to 0x7DFF, and the largest archive on hand is 0x1F00 bytes.
+EEPROM_SIZE = 0x2000
+SERIAL = slice(0x1D, 0x27)      # in the codeplug, e.g. "617ASQ1266"
+MODEL = slice(0x44, 0x58)       # " 503D43KMA7JA5BK    "
 
 # MODE (open, close) payloads per session, as RSS sends them.
 SESSION_CODEPLUG = ((0xD1, 0x01), (0x90, 0x01))
@@ -260,26 +265,48 @@ class Radio:
             if progress:
                 progress(i + 1, len(data))
 
-    def program(self, image: bytes, progress=None) -> None:
+    def program(self, image: bytes, progress=None, *, clone=False,
+                options: bytes | None = None, ignore_features=False) -> bytes:
         """Write a codeplug image (EEPROM from 0x6000) as RSS does: in one
         codeplug session, 0x6000 = 0xFF, then every byte from 0x6000 in
         order; then a reset. RSS also writes MCU byte 0xB6A0 = 0x39 afterwards;
-        we only check that it already holds that.
+        we only check that it already holds that. Returns the image written.
 
-        Refuses (ProgramRefused) unless the radio's serial, model and
-        codeplug length match the image. Callers should keep a backup read
-        and verify by reading back (``program_verified`` does both)."""
+        Refuses (ProgramRefused) unless the model matches, the radio's serial
+        matches (or ``clone``), and the image fits the codeplug EEPROM.
+
+        ``clone``, like RSS's CLONE: write another radio's codeplug of the
+        same model, with this radio's serial number put into it. ``options``
+        (archive prefix bytes 13..18) are then checked against this radio's
+        option block, as RSS does ("Target Radio has different features"),
+        unless ``ignore_features``.
+
+        Callers should keep a backup read and verify by reading back
+        (``program_verified`` does both)."""
         with self.session(SESSION_CODEPLUG):
             head = self.read(CODEPLUG_BASE, 0x60, True)
         if not head.startswith(b"COPYRIGHT MOTOROLA"):
             raise ProgramRefused("radio codeplug header not recognised")
-        for what, sl in (("serial", slice(0x1D, 0x27)), ("model", slice(0x44, 0x58))):
-            if head[sl] != image[sl]:
-                raise ProgramRefused(f"{what} differs: radio {head[sl]!r}, "
-                                     f"image {image[sl]!r}")
-        if codeplug_length(head) != len(image) or codeplug_length(image) != len(image):
-            raise ProgramRefused(f"codeplug length differs: radio "
-                                 f"{codeplug_length(head):#x}, image {len(image):#x}")
+        if head[MODEL] != image[MODEL]:
+            raise ProgramRefused(f"model differs: radio {head[MODEL]!r}, "
+                                 f"image {image[MODEL]!r}")
+        if head[SERIAL] != image[SERIAL]:
+            if not clone:
+                raise ProgramRefused(f"serial differs: radio {head[SERIAL]!r}, image "
+                                     f"{image[SERIAL]!r} (clone to program it anyway)")
+            image = image[:SERIAL.start] + head[SERIAL] + image[SERIAL.stop:]
+        if len(image) > EEPROM_SIZE or len(image) % BLOCK:
+            raise ProgramRefused(f"codeplug length {len(image):#x} does not fit the "
+                                 f"{EEPROM_SIZE:#x}-byte codeplug EEPROM")
+        if abs(codeplug_length(image) - len(image)) > BLOCK:   # 604AUN: one off
+            raise ProgramRefused(f"image length {len(image):#x} disagrees with its "
+                                 f"header ({codeplug_length(image):#x})")
+        if clone and not ignore_features:
+            _, radio_options = self.read_options()
+            if options is None or radio_options[:6] != options[:6]:
+                raise ProgramRefused(
+                    f"radio has different features: radio options "
+                    f"{radio_options[:6].hex()}, archive {options and options[:6].hex()}")
         with self.session(SESSION_MCU):
             flag = self.read(PROGRAMMED_FLAG[0], 1, False, per_msg=1)[0]
         if flag != PROGRAMMED_FLAG[1]:
@@ -291,10 +318,11 @@ class Radio:
             if self.read(CODEPLUG_BASE, 2, True) != image[:2]:
                 raise BusError("header byte did not read back after programming")
         self.mode(*MODE_DONE)
+        return image
 
-    def program_verified(self, image: bytes, progress=None) -> ReadResult:
+    def program_verified(self, image: bytes, progress=None, **kw) -> ReadResult:
         """program(), then read the whole radio back and compare."""
-        self.program(image, progress)
+        image = self.program(image, progress, **kw)
         time.sleep(2.0)                      # let the radio restart after the reset
         back = self.read_all(finish=False)
         if back.codeplug != image:
