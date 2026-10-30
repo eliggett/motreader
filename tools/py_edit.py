@@ -7,7 +7,8 @@
 cases.json is a list of {"id", "file", "modes": [{"number", field: value...}],
 "zones": [{"number", "name"?, "modes"?}], "radio_wide": {key: value}}; each
 mode/zone field is set as is on the parsed Codeplug, then rebuild(),
-radiowide.encode() and the A9 head checksum run, as cli.do_import does.
+radiowide.encode(), the A9 head checksum and the header checksum run, as
+cli.do_import does.
 Prints {id: {"sha256", "changed": [offsets]} or {"error"}}.
 """
 
@@ -19,7 +20,7 @@ import sys
 
 from motreader import lists, radiowide
 from motreader.archive import BANNER_PREFIX, Archive
-from motreader.codeplug import Codeplug
+from motreader.codeplug import Codeplug, fix_header_checksum
 from motreader.crypto import decrypt_body
 
 _bodies: dict = {}
@@ -51,7 +52,7 @@ def apply(case: dict) -> bytes:
         out = radiowide.encode(bytes(out), case["radio_wide"])
     out = bytearray(out)
     lists.fix_a9_head_checksum(cp, out)
-    return bytes(out)
+    return fix_header_checksum(bytes(out))
 
 
 def main() -> None:

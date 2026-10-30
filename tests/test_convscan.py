@@ -12,7 +12,7 @@ import pytest
 
 from motreader import convscan as C
 from motreader import modeops as M
-from motreader.codeplug import Codeplug, mode_pointer_table
+from motreader.codeplug import Codeplug, fix_header_checksum, mode_pointer_table
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 GT = os.path.join(os.path.dirname(HERE), "notes", "ground-truth", "convscan_rss")
@@ -279,4 +279,5 @@ def test_cli_export_import_round_trip(tmp_path):
     yaml.safe_dump(y, open(out / "radio.yaml", "w"), sort_keys=False)
     cli.do_import(str(tmp_path / "a.266"), str(out), str(tmp_path / "b.266"))
     b = decrypt_body(Archive.load(str(tmp_path / "b.266")).body)
-    assert b == C.set_list_types(a, "Mode Slave", "Mode Slave")
+    # the CLI also keeps the header checksum current (the list types are in its range)
+    assert b == fix_header_checksum(C.set_list_types(a, "Mode Slave", "Mode Slave"))

@@ -261,6 +261,32 @@ the MCU session not 14 of them.
 
 The dumps contain Motorola firmware: keep them local, never commit them.
 
+## Codeplug checksum the radio checks (FL 01/82)
+
+Programming a codeplug whose MDC Unit ID motreader had changed made the radio
+show **FL 01/82** at power-on (the owner's test, twice). Cause: radio
+**0x6131 = 8-bit sum of 0x6044..0x6130**, which motreader didn't update.
+
+- Found by brute force over all 100 distinct archives on hand (8- and 16-bit
+  sums and XOR over every range, against every RSS-maintained byte): this is
+  the only checksum among them; the others are save stamps. No sum or XOR
+  covers a mode record either (rebuild already keeps the known record sums).
+- Firmware (617ASQ dump, capstone M680X): routine **0x1DF0** sums B bytes
+  from X and compares with the byte after them. 0xB566 calls it with X=0x6044,
+  B=0xED and writes the result to 0x6131 through the EEPROM writer 0xB262,
+  right after storing the current mode at 0x6062 (body 0x10F, Home Mode).
+  0xC673 does the same for **MCU EEPROM 0xB62D..0xB633 → 0xB661** (alignment
+  area; worth knowing for the alignment work). The boot-time check itself
+  wasn't found in the 64 KB view (banked code?).
+- Confirmed on the radio by RAM comparison after power-up: with only 0x6107
+  changed (stale sum), 131 RAM bytes differ from good boots, most of the
+  working state isn't loaded, and **RAM 0x0053 = 0x82** (the "82"); with the
+  sum corrected, all 4024 stable bytes match the good boots and 0x0053 = 0.
+  The web app then programmed MDC 1118 with the fix: no error; 1110 restored.
+- The firmware's error reporter (0x81C8) turns an index 0-4 into
+  0x81/0x82/0x84/0x88/0x90, so other checks may exist; motreader also keeps
+  the ext-block, mode-table, record, control-head and A9 sums.
+
 ## Open questions
 
 - ~~MCU values / archive prefix~~ — answered by the real radio (above). The

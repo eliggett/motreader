@@ -19,7 +19,7 @@ import { decode as decodeRadioWide, FIELD_BY_KEY, SIREN_CHOICES, REARM_CHOICES, 
 import { buildBody } from "../../web/lib/export.js";
 import { diff, equal } from "../../web/lib/bytes.js";
 import { sampleFiles } from "./reference.js";
-import { ROOT } from "./util.js";
+import { ROOT, fixed } from "./util.js";
 
 /** @param {string} path */
 function bodyOf(path) {
@@ -172,7 +172,8 @@ for (const file of files) {
             const g = /** @type {{ sha256: string, changed: number[], out: Uint8Array, body: Uint8Array }} */ (got);
             assert.deepEqual(g.changed, want.changed, `${what}: changed offsets`);
             assert.equal(g.sha256, want.sha256, what);
-            if (what === "noop") assert.ok(equal(g.out, g.body), "an unedited rebuild is byte-identical");
+            // byte-identical, except a stale header checksum (files from older motreaders) is corrected
+            if (what === "noop") assert.ok(equal(g.out, fixed(g.body)), "an unedited rebuild is byte-identical");
         }
     });
 }

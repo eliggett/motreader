@@ -60,7 +60,7 @@ import yaml
 
 from . import buttons, convscan, lists, modeops, radiowide, scanlist, trunking, zonelist, zoneop
 from .archive import Archive
-from .codeplug import Codeplug, mode_pointer_table
+from .codeplug import Codeplug, fix_header_checksum, header_checksum, mode_pointer_table
 from .crypto import decrypt_body, encrypt_body
 
 
@@ -377,7 +377,8 @@ def do_import(template_path: str, outdir: str, new_path: str) -> None:
     # (mode/zone/phone/MPL name edits), else RSS warns on GET.
     new_body = bytearray(new_body)
     lists.fix_a9_head_checksum(cp, new_body)
-    new_body = bytes(new_body)
+    # the radio checks the header checksum (FL 01/82 when it is stale)
+    new_body = fix_header_checksum(bytes(new_body))
     new_cipher = encrypt_body(new_body)
     Archive(body=new_cipher, banner=arc.banner).save(new_path)
 
@@ -506,7 +507,7 @@ def remove_trunking(src: str, dst: str) -> None:
         new = trunking.remove_trunking(body)
     except ValueError as e:
         raise SystemExit(f"remove-trunking: {e}")
-    Archive(body=encrypt_body(new), banner=arc.banner).save(dst)
+    Archive(body=encrypt_body(fix_header_checksum(new)), banner=arc.banner).save(dst)
     a = Codeplug.parse(body)
     c = Codeplug.parse(decrypt_body(Archive.load(dst).body))
     key = lambda m: (m.rx_mhz, m.tx_mhz, m.ta_mhz, m.name, m.rx_pl, m.tx_pl)
@@ -538,7 +539,7 @@ def mode_op(src: str, dst: str, op: str, args: list[str]) -> None:
             new = modeops.delete_mode(body, after)
     except (ValueError, KeyError) as e:
         raise SystemExit(f"{op}-mode: {e}")
-    Archive(body=encrypt_body(new), banner=arc.banner).save(dst)
+    Archive(body=encrypt_body(fix_header_checksum(new)), banner=arc.banner).save(dst)
     c = Codeplug.parse(decrypt_body(Archive.load(dst).body))
     key = lambda m: (m.rx_mhz, m.tx_mhz, m.ta_mhz, m.name, m.rx_pl, m.tx_pl, m.ta_pl)
     old = [key(m) for m in a.modes]
@@ -572,7 +573,7 @@ def zone_op(src: str, dst: str, op: str, args: list[str]) -> None:
             new = zonelist.delete_zone(body, num)
     except (ValueError, KeyError) as e:
         raise SystemExit(f"{op}-zone: {e}")
-    Archive(body=encrypt_body(new), banner=arc.banner).save(dst)
+    Archive(body=encrypt_body(fix_header_checksum(new)), banner=arc.banner).save(dst)
     c = Codeplug.parse(decrypt_body(Archive.load(dst).body))
     old = [(z.name, z.modes) for z in a.zones]
     got = [(z.name, z.modes) for z in c.zones]
@@ -703,6 +704,11 @@ def write_radio(port: str, archive: str, outdir: str, clone=False,
     from .radio import Radio, SerialLink
 
     body = decrypt_body(Archive.load(archive).body)
+    if len(body) > 0x1DE and body[0x1DE] != header_checksum(body):
+        # made by a motreader before the header checksum was known: the radio
+        # would show FL 01/82
+        print(f"header checksum corrected ({body[0x1DE]:02x} -> {header_checksum(body):02x})")
+        body = fix_header_checksum(body)
     image, options = body[0xAD:], body[13:19]
     os.makedirs(outdir, exist_ok=True)
     logf = open(os.path.join(outdir, "radio.log"), "w")

@@ -15,7 +15,7 @@ import { rebuild } from "./rebuild.js";
 import { encode as encodeRadioWide, decode as decodeRadioWide } from "./radiowide.js";
 import { fixA9HeadChecksum } from "./a9.js";
 import { sealArchive, openArchive } from "./archive.js";
-import { parseCodeplug } from "./codeplug.js";
+import { parseCodeplug, fixHeaderChecksum } from "./codeplug.js";
 import { diff } from "./bytes.js";
 import { encodePhones, encodeMpls, decodePhones, decodeMpls } from "./lists.js";
 import { encodeButtons, decodeButtons } from "./buttons.js";
@@ -44,6 +44,7 @@ export function buildBody(doc, radioWideEdits = {}) {
     if (doc.buttons?.length) encodeButtons(doc.cp, out, buttonRows({ buttons: doc.buttons }));
     if (Object.keys(radioWideEdits).length) out = encodeRadioWide(out, radioWideEdits);
     fixA9HeadChecksum(doc.cp, out);
+    fixHeaderChecksum(out);         // the radio checks it (FL 01/82)
     return out;
 }
 

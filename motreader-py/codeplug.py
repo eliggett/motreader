@@ -1991,3 +1991,28 @@ class Codeplug:
         if b25:
             return PL_CODE_BY_BYTE.get(b25)
         return None
+
+
+# Header checksum (found 2026-10-30, the radio shows FL 01/82 when it is
+# wrong): body byte 0x1DE (radio 0x6131) is the 8-bit sum of body
+# 0xF1..0x1DD (radio 0x6044..0x6130: model, home mode, MDC IDs and the other
+# fixed-header radio-wide fields). RSS keeps it current, and so does the
+# radio (firmware 0xB566 recomputes it after storing the home mode). It holds
+# in every archive on hand. RSS itself doesn't check it on GET.
+HEADER_SUM = (0xF1, 0x1DE)
+
+
+def header_checksum(body: bytes) -> int:
+    lo, hi = HEADER_SUM
+    return sum(body[lo:hi]) & 0xFF
+
+
+def fix_header_checksum(body: bytes) -> bytes:
+    """``body`` with its header checksum recomputed (unchanged if too short)."""
+    lo, hi = HEADER_SUM
+    if len(body) <= hi:
+        return body
+    out = bytearray(body)
+    out[hi] = header_checksum(body)
+    return bytes(out)
+

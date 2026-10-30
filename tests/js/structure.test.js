@@ -10,6 +10,8 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { openDocument, changes } from "../../web/lib/document.js";
+import { headerChecksum } from "../../web/lib/codeplug.js";
+import { openArchive } from "../../web/lib/archive.js";
 import { exportArchive } from "../../web/lib/export.js";
 import { setModeField } from "../../web/lib/modefields.js";
 import { setRadioWide } from "../../web/lib/document.js";
@@ -18,7 +20,7 @@ import { addMode, deleteMode } from "../../web/lib/modeops.js";
 import { removeTrunking } from "../../web/lib/trunking.js";
 import * as S from "../../web/lib/structure.js";
 import { InvalidValue } from "../../web/lib/errors.js";
-import { SPECTRA } from "./util.js";
+import { SPECTRA, fixed } from "./util.js";
 
 const ARCHIVE = join(SPECTRA, "ARCHIVE");
 /** The archive's path in ARCHIVE, matched case-insensitively (DOS names), or null. */
@@ -108,13 +110,13 @@ test("trunk removal as the plain operation does it", { skip: !has("a566aya0.014"
     const d = open("a566aya0.014");
     assert.ok(d.trunk.info);
     const e = S.removeTrunkingIn(d);
-    assert.ok(equal(e.plain, removeTrunking(d.plain)));
+    assert.ok(equal(e.plain, fixed(removeTrunking(d.plain))));
     assert.equal(e.trunk.info, null);
     assert.ok(!e.cp.trunked_mode1);
     assert.equal(e.cp.modes[0]?.rx_mhz, e.cp.modes[1]?.rx_mhz, "mode 1 is now a copy of mode 2");
     assert.deepEqual(exportArchive(e, {}).problems, []);
     assert.throws(() => S.deleteModeIn(d, 3), /trunked codeplug/);
-    assert.ok(equal(S.deleteModeIn(e, 3).plain, deleteMode(e.plain, 3)));
+    assert.ok(equal(S.deleteModeIn(e, 3).plain, fixed(deleteMode(e.plain, 3))));
 });
 
 test("radio-wide edits made before a change are kept", { skip: !has("a617asq1.266") }, () => {
@@ -123,4 +125,23 @@ test("radio-wide edits made before a change are kept", { skip: !has("a617asq1.26
     d = S.addModeTo(d, { after: d.cp.modes.length, zones: S.zonesOnIn(d) ? [1] : [] });
     assert.equal(d.radioWide.minimum_volume, 3);
     assert.deepEqual(d.radioWideEdits, {});
+});
+
+test("every archive RSS saved has the header checksum the radio checks", { skip: !existsSync(ARCHIVE) }, () => {
+    let n = 0;
+    for (const f of readdirSync(ARCHIVE)) {
+        if (!/^[ab].*\.\d{3}$/i.test(f)) continue;
+        const body = openArchive(new Uint8Array(readFileSync(join(ARCHIVE, f)))).plain;
+        assert.equal(body[0x1DE], headerChecksum(body), f);
+        n++;
+    }
+    assert.ok(n > 0);
+});
+
+test("an MDC Unit ID edit updates the header checksum (FL 01/82 otherwise)", { skip: !has("a617asq1.266") }, () => {
+    const d = open("a617asq1.266");
+    setRadioWide(d, "mdc_unit_id", d.radioWide.mdc_unit_id === "1118" ? "1110" : "1118");
+    const plain = exportArchive(d, d.radioWideEdits).plain;
+    assert.notEqual(plain[0x1DE], d.plain[0x1DE]);
+    assert.equal(plain[0x1DE], headerChecksum(plain));
 });

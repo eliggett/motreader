@@ -5,7 +5,7 @@
  */
 import { splitArchive } from "./archive.js";
 import { decryptBody } from "./crypto.js";
-import { parseCodeplug, trunkedModes } from "./codeplug.js";
+import { parseCodeplug, trunkedModes, fixHeaderChecksum } from "./codeplug.js";
 import { decode as decodeRadioWide, encode as encodeRadioWide, FIELD_BY_KEY } from "./radiowide.js";
 import { trunkingInfo, TrunkingUnsupported } from "./trunking.js";
 import { MODE_FIELDS, fieldText } from "./modefields.js";
@@ -173,6 +173,7 @@ export function changes(doc) {
  */
 export function restructure(doc, what, fn) {
     const body = fn(buildBody(doc, doc.radioWideEdits));
+    fixHeaderChecksum(body);            // the re-pack may change fields in its range
     const next = documentFromBody(doc.fileName, doc.raw, doc.banner, body);
     next.index = doc.index;
     next.ops = [...doc.ops, what];

@@ -448,7 +448,18 @@ Data Mode Control read "Not Avail" on this VHF radio (not mappable here).
 changed — a per-record checksum/parity. Together with the save-side block below,
 this is what the write path must reproduce (see checksum note).
 
-> **Write-path checksums — RESOLVED: no action needed for the archive workflow.**
+> **Header checksum — the radio DOES check it (found 2026-10-30).** Body
+> **0x1DE** (radio 0x6131) = **8-bit sum of body 0xF1..0x1DD** (radio
+> 0x6044..0x6130: model, home mode, MDC IDs and the rest of the fixed header).
+> RSS doesn't check it on GET, but a radio programmed with a stale one shows
+> **FL 01/82** ("codeplug checksum") at power-on and doesn't start. It holds in
+> every archive on hand; motreader recomputes it on every write path
+> (`fix_header_checksum` / `fixHeaderChecksum`). The radio also maintains it
+> itself (firmware 0xB566, after storing the home mode at 0x6062). Details in
+> RADIO-PROTOCOL.md. The rest of the note below stands: the other per-save
+> bytes are stamps, not checksums.
+>
+> **Write-path checksums (earlier conclusion, now amended above).**
 > RSS writes two save-side artifacts the on-disk field edits don't touch:
 > - a **per-save metadata block** `{0xdc, 0xf0, 0x1bc–0x1bf, 0x1de–0x1e5}` — NOT
 >   data-derived (it differs between two identical-data saves when they cross a
@@ -791,9 +802,9 @@ reproduce byte for byte (tests keep the RSS saves in
 `notes/ground-truth/siren_617ASN_rss/` and `accessory_566AYA_rss/`), and edits on
 617ASN, 566 and 604AUN (incl. Siren/PA off with Rearm on) GET in RSS with no
 warning. **Not exposed:** Vehicle Repeater (owner's choice, like SECURENET and trunking;
-preserved verbatim). Header 0x1DE b7
-flipped with the siren on 617ASN only; it sits in the save-stamp bytes, and RSS
-accepts files without it. PA only shows only the PUBLIC ADDRESS half of the
+preserved verbatim). Header 0x1DE
+changed with the siren on 617ASN: it is the header checksum (0x17C is in its range;
+see the checksum note), which motreader now recomputes. PA only shows only the PUBLIC ADDRESS half of the
 SIREN/PA screen. The SIREN settings appear with Siren/PA. Rearm, VRS, Internal PA,
 Speaker A/B and head type stay read-only (base-W problem plus other side effects).
 

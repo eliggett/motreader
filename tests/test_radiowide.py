@@ -452,3 +452,14 @@ def test_zone_operation_and_no_phantom_zones(fn):
     assert bool(cp.zones) is ZONE_OP[fn]
     if not ZONE_OP[fn]:
         assert body[0x1DD] == 0                  # home zone
+
+
+@pytest.mark.parametrize("serial", sorted(RADIOS))
+def test_header_checksum_holds_and_follows_edits(serial):
+    # body 0x1DE = 8-bit sum of 0xF1..0x1DD; the radio checks it (FL 01/82)
+    from motreader.codeplug import fix_header_checksum, header_checksum
+    body = _body(RADIOS[serial])
+    assert body[0x1DE] == header_checksum(body)
+    edited = fix_header_checksum(bytes(RW.encode(body, {"mdc_unit_id": "1118"})))
+    assert edited[0x1DE] == header_checksum(edited)
+    assert fix_header_checksum(body) == body

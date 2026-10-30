@@ -1244,3 +1244,25 @@ function parseZones(cp) {
         });
     }
 }
+
+/**
+ * Header checksum (the radio shows FL 01/82 when it is wrong): body byte
+ * 0x1DE (radio 0x6131) is the 8-bit sum of body 0xF1..0x1DD (radio
+ * 0x6044..0x6130: model, home mode, MDC IDs and the other fixed-header
+ * radio-wide fields). RSS and the radio keep it current; it holds in every
+ * archive on hand. See motreader-py/codeplug.py HEADER_SUM.
+ */
+export const HEADER_SUM = /** @type {const} */ ([0xF1, 0x1DE]);
+
+/** The header checksum `body` should have. */
+export function headerChecksum(/** @type {Uint8Array} */ body) {
+    let s = 0;
+    for (let i = HEADER_SUM[0]; i < HEADER_SUM[1]; i++) s += /** @type {number} */ (body[i]);
+    return s & 0xFF;
+}
+
+/** Recompute the header checksum in place (no-op on a body too short to have one). */
+export function fixHeaderChecksum(/** @type {Uint8Array} */ body) {
+    if (body.length > HEADER_SUM[1]) body[HEADER_SUM[1]] = headerChecksum(body);
+}
+
