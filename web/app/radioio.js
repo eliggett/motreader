@@ -85,9 +85,11 @@ async function withRadio(ui, work) {
     } catch (e) {
         throw new Error(`the serial port could not be opened (in use by another program?): ${errText(e)}`);
     }
+    const radio = new Radio(link);
     try {
-        return await work(new Radio(link));
+        return await work(radio);
     } finally {
+        await radio.finish();        // never leave the radio's panel frozen
         await link.close();
     }
 }
@@ -275,6 +277,7 @@ export async function writeRadio() {
                         progress: (d, t) => {
                             written = true;
                             (write ??= stageProgress(ui, "Writing"))(d, t);
+                            if (d === t) ui.stage.textContent = "Written. Waiting for the radio to restart before reading it back…";
                         },
                         verifyProgress: (d, t) => (verify ??= stageProgress(ui, "Verifying"))(d, t),
                     });

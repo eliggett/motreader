@@ -109,13 +109,28 @@ def test_program_in_process():
     new = bytearray(cp)
     new[0x100:0x110] = b"edited codeplug!"
     link = SimLink(mem)
-    back = rd.Radio(link).program_verified(bytes(new))
+    back = rd.Radio(link).program_verified(bytes(new), restart_wait=0)
     assert back.codeplug == bytes(new)
     # RSS's order: the header byte is set to 0xFF first, then every byte
     writes = [m for m in link.sent if m[3] == sb.OP_WRITE]
     assert sb.unscramble(*writes[0][:3]) == (0x60, 0x00, 0xFF)
     assert [sb.unscramble(*w[:3])[:2] for w in writes[1:4]] == [(0x60, 0), (0x60, 1), (0x60, 2)]
     assert len(writes) == 1 + len(cp)
+
+
+def test_radio_left_restarted():
+    # verifying reads the radio again: MODE_DONE must still be the last message
+    cp, mem = synthetic_image()
+    link = SimLink(mem)
+    radio = rd.Radio(link)
+    radio.program_verified(cp, restart_wait=0)
+    assert link.sent[-1][:4] == bytes([0, 0x10, 0x01, 0x08])
+    assert not radio.needs_reset
+    with radio.session(rd.SESSION_CODEPLUG):
+        pass
+    radio.finish()
+    radio.finish()                       # only once
+    assert [m[:4].hex() for m in link.sent[-2:]] == ["00900108", "00100108"]
 
 
 @pytest.mark.parametrize("field, off, val", [
@@ -138,7 +153,7 @@ def test_program_bigger_codeplug():
     big, _ = synthetic_image(blocks=5, seed=9)
     big = bytearray(big)
     big[0x1D:0x27], big[0x44:0x58] = cp[0x1D:0x27], cp[0x44:0x58]
-    back = rd.Radio(SimLink(mem)).program_verified(bytes(big))
+    back = rd.Radio(SimLink(mem)).program_verified(bytes(big), restart_wait=0)
     assert back.codeplug == bytes(big)
 
 
@@ -155,7 +170,7 @@ def test_clone_keeps_target_serial():
     _, src = other_radio_image()
     src = bytearray(src)
     src[0x100:0x108] = b"cloned!!"
-    back = rd.Radio(SimLink(mem)).program_verified(bytes(src), clone=True,
+    back = rd.Radio(SimLink(mem)).program_verified(bytes(src), restart_wait=0, clone=True,
                                                    options=OPTIONS[:6])
     want = bytearray(src)
     want[0x1D:0x27] = cp[0x1D:0x27]          # the radio keeps its serial
@@ -193,7 +208,7 @@ def test_s9000e_read_and_program():
     assert radio.read_all().codeplug == cp          # second region included
     new = bytearray(cp)
     new[-16:] = b"S9000e region ok"
-    back = radio.program_verified(bytes(new))
+    back = radio.program_verified(bytes(new), restart_wait=0)
     assert back.codeplug == bytes(new)
     # the 0x8000 region was written unscrambled in its own session
     assert any(m[:4] == bytes([0x00, 0xB1, 0x05, 0x08]) for m in link.sent)

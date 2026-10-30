@@ -351,6 +351,15 @@ WEBWRITE. Findings:
 - **Break after PROGRAM.** The radio's reset after `00 10 01` puts a break on
   the line; Chrome ends the readable stream with `BreakError`. That is
   non-fatal (`port.readable` is replaced), so the link takes the next stream.
+- **Leave the radio restarted.** Any session leaves the control head
+  frozen until `00 10 01` (MODE_DONE), which restarts the radio. The first
+  version verified after PROGRAM's reset without sending it again, and the
+  owner found the panel frozen. Now the verify read ends with MODE_DONE, and
+  both the app and the CLI send it on the way out after an error too
+  (`Radio.finish()`).
+- After the reset the 617ASQ puts breaks on the line for 7-8 s and before
+  then answers only after retries, so the verify waits 10 s (`RESTART_MS` /
+  `RESTART_WAIT`).
 - The echo arrives at about 1 ms per byte even without FTDI low latency.
 - The port chooser lists every ttyS* as well; there is no filter, since a
   real RS-232 port is a valid choice.

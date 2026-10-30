@@ -130,6 +130,25 @@ for (const [field, off, val] of /** @type {[string, number, number | null][]} */
     });
 }
 
+test("the radio is left restarted: MODE_DONE is the last message, also after a failure", async () => {
+    const { cp, mem } = syntheticImage();
+    const fake = new FakeRadio(mem);
+    const radio = new rd.Radio(fake);
+    await radio.programVerified(cp, quick);
+    assert.equal(hex(/** @type {Uint8Array} */ (fake.sent.at(-1)).subarray(0, 4)), "00100108");
+    assert.equal(radio.needsReset, false);
+    // a read that fails half-way: finish() sends the reset once
+    const failing = new FakeRadio(syntheticImage().mem);
+    const r2 = new rd.Radio({ transact: (p) => (p[3] === sb.OP_READ && failing.reads > 5 ? Promise.reject(new rd.BusError("gone")) : failing.transact(p)) });
+    await assert.rejects(r2.readAll(), rd.BusError);
+    assert.equal(r2.needsReset, true);
+    await r2.finish();
+    await r2.finish();
+    const sent = failing.sent.map((m) => hex(m.subarray(0, 4)));
+    assert.equal(sent.at(-1), "00100108");
+    assert.equal(sent.filter((m) => m === "00100108").length, 1);
+});
+
 test("a bigger codeplug (modes added) fits up to the EEPROM", async () => {
     const { cp, mem } = syntheticImage(3);
     const big = syntheticImage(5, 9).cp;

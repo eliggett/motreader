@@ -602,9 +602,13 @@ def read_radio(port: str, outdir: str) -> None:
     def progress(done, total):
         print(f"\r  codeplug {done:#06x} / {total:#06x}", end="", flush=True)
 
+    radio = None
     try:
-        res = Radio(link, progress).read_all()
+        radio = Radio(link, progress)
+        res = radio.read_all()
     finally:
+        if radio is not None:
+            radio.finish()          # never leave the radio's panel frozen
         link.close()
         logf.close()
     print()
@@ -640,6 +644,7 @@ def dump_radio(port: str, outdir: str, which: str = "both",
         print(f"\r  {done:#07x} / {total:#07x}  {time.monotonic() - t0:5.0f} s",
               end="", flush=True)
 
+    radio = None
     try:
         radio = Radio(link)
         for name in names:
@@ -654,6 +659,8 @@ def dump_radio(port: str, outdir: str, which: str = "both",
             print(f"  {len(ok)} blocks read, {len(bad)} unanswered")
         radio.mode(0x10, 0x01)
     finally:
+        if radio is not None:
+            radio.finish()          # never leave the radio's panel frozen
         link.close()
         logf.close()
     with open(os.path.join(outdir, "dump_map.json"), "w") as f:
@@ -704,6 +711,7 @@ def write_radio(port: str, archive: str, outdir: str, clone=False,
     def progress(done, total):
         print(f"\r  {done:#06x} / {total:#06x}", end="", flush=True)
 
+    radio = None
     try:
         radio = Radio(link, progress)
         print("backup read:")
@@ -718,6 +726,8 @@ def write_radio(port: str, archive: str, outdir: str, clone=False,
         print()
         _save_read(after, os.path.join(outdir, "after"))
     finally:
+        if radio is not None:
+            radio.finish()          # never leave the radio's panel frozen
         link.close()
         logf.close()
     print(f"programmed and verified; backup in {outdir}/backup")

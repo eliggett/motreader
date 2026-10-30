@@ -46,6 +46,8 @@ export const OPTIONS_POINTER = 0xFFC6;
 export const OPTIONS_LEN = 16;
 /** RSS writes this MCU EEPROM byte after programming (0x39 on every radio seen); we only check it. */
 export const PROGRAMMED_FLAG = [0xB6A0, 0x39];
+/** How long programVerified waits for the radio to restart before reading it back. */
+export const RESTART_MS = 10000;
 /** Offset of the codeplug in the decrypted archive body; prefix bytes 13..18 are the options. */
 export const BODY_CODEPLUG = 0xAD;
 
@@ -117,11 +119,26 @@ export class Radio {
     /** @param {Link} link */
     constructor(link) {
         this.link = link;
+        // a session was opened since the last MODE_DONE: the radio's panel
+        // stays frozen until it gets MODE_DONE (which restarts it)
+        this.needsReset = false;
     }
 
     /** Send a MODE message. */
     async mode(/** @type {number} */ b1, /** @type {number} */ b2) {
         await this.link.transact(Uint8Array.of(0x00, b1, b2, sb.OP_MODE));
+        this.needsReset = b1 !== MODE_DONE[0] || b2 !== MODE_DONE[1];
+    }
+
+    /**
+     * Send MODE_DONE (the radio restarts) if a session was opened since the
+     * last one. Safe to call after an error: never throws.
+     */
+    async finish() {
+        if (!this.needsReset) return;
+        try {
+            await this.mode(MODE_DONE[0], MODE_DONE[1]);
+        } catch { /* the bus is gone: nothing more to do */ }
     }
 
     /**
@@ -334,8 +351,10 @@ export class Radio {
      */
     async programVerified(image, opt = {}) {
         image = await this.program(image, opt);
-        await sleep(opt.restartMs ?? 2000);          // let the radio restart after the reset
-        const back = await this.readAll(opt.verifyProgress, false);
+        // let the radio restart after the reset: a 617ASQ still puts breaks on
+        // the line 7-8 s after it, and answers only after retries before that
+        await sleep(opt.restartMs ?? RESTART_MS);
+        const back = await this.readAll(opt.verifyProgress);     // ends with MODE_DONE: the radio restarts again
         if (!equal(back.codeplug, image)) {
             const bad = [];
             for (let i = 0; i < image.length; i++) if (back.codeplug[i] !== image[i]) bad.push(i);

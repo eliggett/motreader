@@ -61,6 +61,10 @@ OPTIONS_LEN = 16
 # seen, real and emulated); its meaning is unknown.
 PROGRAMMED_FLAG = (0xB6A0, 0x39)
 
+# After PROGRAM's reset a 617ASQ still puts breaks on the line 7-8 s later,
+# and before that answers only after retries: wait this long (s) to verify.
+RESTART_WAIT = 10.0
+
 
 def split_dump(space: bytes) -> list[tuple[str, int, bytes, str]]:
     """Named pieces of a 64 KB address-space dump (68HC11 map as seen on a
@@ -247,9 +251,22 @@ class Radio:
     def __init__(self, link, progress=None):
         self.link = link
         self.progress = progress or (lambda done, total: None)
+        # a session was opened since the last MODE_DONE: the radio's panel
+        # stays frozen until it gets MODE_DONE (which restarts it)
+        self.needs_reset = False
 
     def mode(self, b1, b2):
         self.link.transact(bytes([0x00, b1, b2, sb.OP_MODE]))
+        self.needs_reset = (b1, b2) != MODE_DONE
+
+    def finish(self):
+        """Send MODE_DONE (the radio restarts) if a session was opened since
+        the last one. Safe to call after an error; never raises BusError."""
+        if self.needs_reset:
+            try:
+                self.mode(*MODE_DONE)
+            except BusError:
+                pass
 
     @contextmanager
     def session(self, which):
@@ -411,11 +428,12 @@ class Radio:
             raise ProgramRefused("the 0x8000 region is not writable (no S9000e "
                                  "codeplug EEPROM?)")
 
-    def program_verified(self, image: bytes, progress=None, **kw) -> ReadResult:
+    def program_verified(self, image: bytes, progress=None, *,
+                         restart_wait=RESTART_WAIT, **kw) -> ReadResult:
         """program(), then read the whole radio back and compare."""
         image = self.program(image, progress, **kw)
-        time.sleep(2.0)                      # let the radio restart after the reset
-        back = self.read_all(finish=False)
+        time.sleep(restart_wait)             # let the radio restart after the reset
+        back = self.read_all()               # ends with MODE_DONE: the radio restarts again
         if back.codeplug != image:
             bad = [i for i in range(len(image)) if back.codeplug[i] != image[i]]
             raise BusError(f"verify failed at {len(bad)} bytes, first "
