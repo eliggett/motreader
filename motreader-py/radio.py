@@ -1,0 +1,232 @@
+"""Read a Spectra over a RIB, the way RSS does (notes/RADIO-PROTOCOL.md).
+
+Wiring (RSS's RIB cable): DTR drives the SB9600 BUSY line, BUSY comes back on
+CTS (tied to RI), and every transmitted byte is echoed by the bus.
+
+Layers:
+
+* ``SerialLink`` sends one SB9600 message and returns the reply (pyserial).
+  Any object with the same ``transact(payload) -> bytes | None`` works, which
+  is how the tests drive a simulated radio.
+* ``Radio`` opens sessions and reads memory: the codeplug EEPROM at 0x6000
+  (scrambled) and the MCU bytes RSS checks.
+
+Read-only: nothing here writes to the radio.
+"""
+
+from __future__ import annotations
+
+import random
+import time
+from contextlib import contextmanager
+from dataclasses import dataclass, field
+
+from . import sb9600 as sb
+
+CODEPLUG_BASE = 0x6000
+BLOCK = 0x100
+
+# MODE (open, close) payloads per session, as RSS sends them.
+SESSION_CODEPLUG = ((0xD1, 0x01), (0x90, 0x01))
+SESSION_MCU = ((0x93, 0x01), (0x92, 0x01))
+MODE_DONE = (0x10, 0x01)        # RSS ends every READ with this
+
+# MCU bytes RSS reads during READ (meaning not yet known).
+MCU_PROBES = ((0xB675, 2), (0xB69F, 4))
+
+
+class BusError(Exception):
+    pass
+
+
+def codeplug_length(header: bytes) -> int:
+    """Codeplug size from its header byte 0x1C: (k - 4) * 32, rounded up to
+    whole blocks. Matches 51 of 57 archives on hand; of the rest, 604AUN's
+    archive is one block shorter (reading extra is harmless) and the larger
+    radios add a 0x2000 region not mapped yet."""
+    n = (header[0x1C] - 4) * 32
+    return -(-n // BLOCK) * BLOCK
+
+
+class SerialLink:
+    """One SB9600 message at a time over a RIB on a serial port.
+
+    Unlike RSS we are not bound to a one-millisecond BUSY check: timeouts are
+    generous so USB adapters' latency doesn't matter.
+    """
+
+    def __init__(self, port: str, *, echo_timeout=0.25, reply_timeout=0.6,
+                 busy_timeout=2.0, tries=10, invert_busy=False, log=None):
+        import serial  # pyserial; only needed for real ports
+
+        self.ser = serial.Serial(port, 9600, bytesize=8, parity="N",
+                                 stopbits=1, timeout=echo_timeout,
+                                 rtscts=False, dsrdtr=False)
+        self.sense_busy = True
+        self.drive_busy = True
+        # some RIB cables invert BUSY (RadioConsole2 has the same option)
+        self.invert_busy = invert_busy
+        self._set_dtr(False)
+        try:
+            self.ser.rts = False
+        except OSError:
+            pass
+        self.echo_timeout = echo_timeout
+        self.reply_timeout = reply_timeout
+        self.busy_timeout = busy_timeout
+        self.tries = tries
+        self.log = log
+
+    def close(self):
+        self._set_dtr(False)
+        self.ser.close()
+
+    def _set_dtr(self, on: bool):
+        if not self.drive_busy:
+            return
+        try:
+            self.ser.dtr = on != self.invert_busy
+        except OSError:              # no modem lines (e.g. a pty)
+            self.drive_busy = False
+
+    def busy(self) -> bool:
+        if not self.sense_busy:
+            return False
+        try:
+            if self.invert_busy:
+                return not (self.ser.ri and self.ser.cts)
+            return bool(self.ser.ri or self.ser.cts)
+        except OSError:              # no modem lines (e.g. a pty)
+            self.sense_busy = False
+            return False
+
+    def _wait_idle(self):
+        end = time.monotonic() + self.busy_timeout
+        while self.busy():
+            if time.monotonic() > end:
+                raise BusError("BUSY line stuck (radio off, or cable/RIB fault?)")
+            time.sleep(0.001)
+
+    def _read(self, n, timeout):
+        self.ser.timeout = timeout
+        return self.ser.read(n)
+
+    def transact(self, payload: bytes) -> bytes | None:
+        msg = sb.frame(payload)
+        wants_reply = bool(payload[3] & 0x80)
+        for attempt in range(self.tries):
+            if attempt:
+                time.sleep(random.uniform(0.005, 0.03))
+            self._wait_idle()
+            self.ser.reset_input_buffer()
+            self._set_dtr(True)
+            try:
+                ok = True
+                for b in msg:
+                    self.ser.write(bytes([b]))
+                    if self._read(1, self.echo_timeout) != bytes([b]):
+                        ok = False          # collision or no echo: retry
+                        break
+                if not ok:
+                    continue
+                if not wants_reply:
+                    time.sleep(0.02)
+                    return None
+                first = self._read(1, self.reply_timeout)
+                self._set_dtr(False)        # RSS drops BUSY on the first reply byte
+                if not first:
+                    continue
+                reply = first + self._read(4, self.reply_timeout)
+                if len(reply) == 5:
+                    if self.log:
+                        self.log(f"{msg.hex()} -> {reply.hex()}")
+                    return reply
+            finally:
+                self._set_dtr(False)
+        raise BusError(f"no answer to {msg.hex()} after {self.tries} tries")
+
+
+@dataclass
+class ReadResult:
+    codeplug: bytes                 # EEPROM from 0x6000
+    mcu: dict = field(default_factory=dict)   # address -> bytes
+
+    def archive_body(self, nonce: bytes | None = None) -> bytes:
+        """The decrypted archive body: 13-byte nonce, 6 bytes RSS takes from
+        the radio (source not pinned down yet: zeros here), zeros to 0xAD,
+        then the codeplug."""
+        nonce = nonce or bytes(random.randrange(256) for _ in range(13))
+        prefix = bytearray(0xAD)
+        prefix[:13] = nonce
+        return bytes(prefix) + self.codeplug
+
+
+class Radio:
+    def __init__(self, link, progress=None):
+        self.link = link
+        self.progress = progress or (lambda done, total: None)
+
+    def mode(self, b1, b2):
+        self.link.transact(bytes([0x00, b1, b2, sb.OP_MODE]))
+
+    @contextmanager
+    def session(self, which):
+        (o1, o2), (c1, c2) = which
+        self.mode(o1, o2)
+        try:
+            yield
+        finally:
+            self.mode(c1, c2)
+
+    def read(self, addr: int, n: int, scrambled: bool, per_msg: int = 2) -> bytes:
+        """Read n bytes from addr in the current session, per_msg (1 or 2)
+        bytes per message, chaining the scramble like RSS (10bd:02fb)."""
+        out = bytearray()
+        chain = 0
+        while len(out) < n:
+            hi, lo = addr >> 8 & 0xFF, addr & 0xFF
+            if scrambled:
+                p0, p1, p2 = sb.scramble(hi, lo, chain)
+                chain = p2
+            else:
+                p0, p1, p2 = hi, lo, 0
+            r = self.link.transact(bytes([p0, p1, p2, sb.OP_READ]))
+            if r is None or r[3] != sb.OP_READ_REPLY:
+                raise BusError(f"bad reply to read {addr:04x}: {r and r.hex()}")
+            r1, r2 = (sb.unscramble_reply(*r[:3]) if scrambled else (r[1], r[2]))
+            out.append(r2)
+            if per_msg == 2:
+                out.append(r1)
+            addr += per_msg
+        return bytes(out[:n])
+
+    def read_codeplug(self) -> bytes:
+        with self.session(SESSION_CODEPLUG):
+            probe = self.read(CODEPLUG_BASE + 0x38, 3, True, per_msg=1)
+        per = 1 if probe[1] == 0x28 else 2       # RSS's probe (1e34:0264)
+        with self.session(SESSION_CODEPLUG):
+            data = bytearray(self.read(CODEPLUG_BASE, BLOCK, True, per))
+        if not data.startswith(b"COPYRIGHT MOTOROLA"):
+            raise BusError("codeplug header not found at 0x6000: "
+                           + bytes(data[:32]).hex())
+        total = codeplug_length(data)
+        self.progress(BLOCK, total)
+        for a in range(CODEPLUG_BASE + BLOCK, CODEPLUG_BASE + total, BLOCK):
+            with self.session(SESSION_CODEPLUG):
+                data += self.read(a, BLOCK, True, per)
+            self.progress(len(data), total)
+        return bytes(data)
+
+    def read_mcu(self) -> dict:
+        out = {}
+        for addr, n in MCU_PROBES:
+            with self.session(SESSION_MCU):
+                out[addr] = self.read(addr, n, False, per_msg=1)
+        return out
+
+    def read_all(self, finish=True) -> ReadResult:
+        mcu = self.read_mcu()
+        cp = self.read_codeplug()
+        if finish:
+            self.mode(*MODE_DONE)
+        return ReadResult(cp, mcu)

@@ -8,8 +8,14 @@ land in the workdir.
 With --save DST (READ only): once the read finishes, SAVE it to the
 archive and copy the archive file to DST.
 
+With --link pty|pty-rib, COM1 is instead dosbox-x's directserial on a
+pseudo-terminal served by tools/pty_rib.py (the real-port code path);
+pty-rib adds the rib:1 option. --echo-delay simulates USB latency.
+
 Usage: scenario_radio_read.py <sandbox_c> <workdir> [--image FILE] [--wait S]
-                              [--program] [--save DST]
+                              [--program] [--save DST] [--set ADDR=HEX]
+                              [--link rib|pty|pty-rib] [--echo-delay MS]
+                              [--serial-opts "rxdelay:30 ..."]
 """
 import argparse
 import os
@@ -42,11 +48,31 @@ def main():
     ap.add_argument("--program", action="store_true")
     ap.add_argument("--save")
     ap.add_argument("--set", action="append", default=[])
+    ap.add_argument("--link", choices=("rib", "pty", "pty-rib"), default="rib")
+    ap.add_argument("--echo-delay", type=float, default=0.0)
+    ap.add_argument("--serial-opts", default="",
+                    help="extra directserial options, e.g. rxdelay:30")
     a = ap.parse_args()
     os.makedirs(a.workdir, exist_ok=True)
 
     radios = []
+    if a.link != "rib":
+        cmd = [sys.executable, os.path.join(HERE, "pty_rib.py"),
+               "--log", os.path.join(a.workdir, "radio_pty.log"),
+               "--echo-delay", str(a.echo_delay)]
+        if a.image:
+            cmd += ["--image", a.image]
+        for spec in a.set:
+            cmd += ["--set", spec]
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, text=True)
+        radios.append(p)
+        dev = p.stdout.readline().strip()            # /dev/pts/N
+        opt = (" rib:1" if a.link == "pty-rib" else "") + \
+            (" " + a.serial_opts if a.serial_opts else "")
+        conf = f"[serial]\nserial1=directserial realport:{dev[5:]}{opt}\n"
     for com, port in PORTS.items():
+        if a.link != "rib":
+            break
         cmd = [sys.executable, os.path.join(HERE, "fake_radio.py"),
                "--port", str(port),
                "--log", os.path.join(a.workdir, f"radio_com{com}.log"),
@@ -57,8 +83,9 @@ def main():
             cmd += ["--set", spec]
         radios.append(subprocess.Popen(cmd))
     time.sleep(1)
-    conf = "[serial]\n" + "".join(
-        f"serial{com}=rib port:{port}\n" for com, port in PORTS.items())
+    if a.link == "rib":
+        conf = "[serial]\n" + "".join(
+            f"serial{com}=rib port:{port}\n" for com, port in PORTS.items())
     try:
         with Harness(a.sandbox_c, a.workdir, extra_conf=conf) as h:
             d = h.connect()

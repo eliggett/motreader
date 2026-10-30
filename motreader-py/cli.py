@@ -18,6 +18,11 @@
         # mode (a copy of mode 2: re-export and edit it) and drop the trunking
         # personality/system data; RSS then shows MAX SYSTEMS/SUBFLEETS 00 and
         # "No Trunking data loaded" (motreader/trunking.py)
+    python -m motreader.cli read-radio <serial_port> <outdir>
+        # read a radio over a RIB (read-only; notes/RADIO-PROTOCOL.md): writes
+        # codeplug.bin (EEPROM from 0x6000), mcu.json, radio.log and an
+        # archive A<serial>; the archive's 6 radio-sourced prefix bytes are not
+        # known yet, so check it against an RSS read of the same radio
 
 Export writes one CSV per multi-row category (modes.csv, phones.csv, mpl.csv,
 buttons.csv)
@@ -567,6 +572,37 @@ def zone_op(src: str, dst: str, op: str, args: list[str]) -> None:
     print("  zones:", "; ".join(f"{z.number} {z.name}: {len(z.modes)} modes" for z in c.zones))
 
 
+def read_radio(port: str, outdir: str) -> None:
+    import json
+
+    from .crypto import encrypt_body
+    from .radio import Radio, SerialLink
+
+    os.makedirs(outdir, exist_ok=True)
+    logf = open(os.path.join(outdir, "radio.log"), "w")
+    link = SerialLink(port, log=lambda line: logf.write(line + "\n"))
+
+    def progress(done, total):
+        print(f"\r  codeplug {done:#06x} / {total:#06x}", end="", flush=True)
+
+    try:
+        res = Radio(link, progress).read_all()
+    finally:
+        link.close()
+        logf.close()
+    print()
+    cp = res.codeplug
+    serial = cp[0x1D:0x27].decode("latin-1")
+    with open(os.path.join(outdir, "codeplug.bin"), "wb") as f:
+        f.write(cp)
+    with open(os.path.join(outdir, "mcu.json"), "w") as f:
+        json.dump({f"{a:04x}": v.hex() for a, v in res.mcu.items()}, f, indent=1)
+    name = f"A{serial[:7]}.{serial[7:]}"
+    Archive(encrypt_body(res.archive_body())).save(os.path.join(outdir, name))
+    print(f"read {len(cp):#x} bytes from radio {serial}; wrote {outdir}/{name}, "
+          f"codeplug.bin, mcu.json, radio.log")
+
+
 def main(argv: list[str]) -> int:
     if len(argv) < 2:
         print(__doc__)
@@ -588,6 +624,8 @@ def main(argv: list[str]) -> int:
         zone_op(argv[2], argv[3], "delete", argv[4:])
     elif cmd == "remove-trunking" and len(argv) == 4:
         remove_trunking(argv[2], argv[3])
+    elif cmd == "read-radio" and len(argv) == 4:
+        read_radio(argv[2], argv[3])
     else:
         print(__doc__)
         return 1

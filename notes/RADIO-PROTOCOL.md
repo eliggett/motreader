@@ -11,7 +11,9 @@ Status (2026-10-30):
   wrote the archive into the fake radio, and every write is decoded. **READ**
   reads the whole codeplug, but the archive RSS then saves differs, because
   the fake can't supply the radio's real MCU memory (see Open questions).
-- **Not done:** nothing has been tested on a real radio.
+- **Since:** dosbox-x `directserial ... rib:1` fixes RSS on Linux real ports
+  (tested on a pty with simulated USB latency), and `motreader read-radio`
+  reads a radio. **Not done:** nothing has been tested on a real radio.
 
 Items marked *(guess)* are unconfirmed.
 
@@ -167,28 +169,75 @@ Same probes, then 0x6000–0x6CFF in 0x100-byte blocks, two bytes per message.
 
 ## Linux / real-port problems in dosbox-x
 
-1. **RI timing** (error 9): RSS drops DTR and expects RI clear one delay unit
-   later. Through USB, a DTR change is a control transfer and RI comes back
-   in the next status packet (FTDI: up to the 16 ms latency timer; some
-   clones don't report RI at all). directserial also polls modem lines only
-   every 1 ms.
-2. **0xFF bytes are eaten.** `libserial.cpp` (POSIX `SERIAL_getextchar`)
-   treats every received 0xFF as a PARMRK escape and reads the next byte in
-   its place, although PARMRK is switched off. Any message containing 0xFF
-   (common: data, CRC, scrambled bytes) is corrupted on Linux only.
+Reproduced without hardware: dosbox-x's `directserial` on a pseudo-terminal
+served by `tools/pty_rib.py` (a RIB + fake radio, optional simulated
+latency). RSS PROGRAM on plain `directserial` failed with **"Serial Bus
+Failure: Power Fault"**, the owner's Linux symptom. Causes found:
+
+1. **Echo latency** (RSS gives up at once: error 8). RSS allows about 0x50
+   delay units (~12–20 ms) for each byte's echo and ~0x78 units for a reply's
+   first byte. Through USB the echo is a full round trip, and a host stall
+   uses up the window too (dosbox-x ties emulated time to the wall clock).
+2. **Receive overruns.** directserial's default `rxdelay:0` discards a byte
+   the program hasn't read by the next 1 ms poll; RSS polls between delay
+   loops, so an echo + reply burst overruns ("Overrun RX" in the log).
+3. **RI timing** (error 9): after dropping DTR, RSS wants RI clear one delay
+   unit later; USB adapters report modem lines only every few ms (FTDI: 16 ms
+   default latency timer; some clones not at all).
+4. **0xFF bytes eaten** — only in older dosbox-x (e.g. the 2024.03.01 distro
+   package): POSIX `SERIAL_getextchar` treated every 0xFF as a PARMRK escape.
+   Current upstream sets PARMRK and parses it properly.
+
+Simulated latency per direction vs RSS READ (with the fix below): 0 and 4 ms
+read the whole codeplug; 8 ms fails near the end; 16 ms fails at once. So a
+low-latency port is required whatever the emulator does.
+
+### The fix: `directserial ... rib:1` (dosbox-x branch `serial-rib`)
+
+```
+[serial]
+serial1=directserial realport:ttyUSB0 rib:1
+```
+
+With `rib:1`:
+
+- **Local echo** (`ribecho:1`, default): each transmitted byte is echoed to
+  the program at once, and the hardware's copy is dropped when it arrives. A
+  hardware byte that differs is passed on, so collisions still show.
+- **BUSY** reported on RI and CTS = our DTR, OR the hardware BUSY (CTS or RI)
+  except for `ribholdoff:` ms (default 30) after each DTR change.
+- **`rxdelay:50`** unless given: received bytes wait for the program.
+- **Low latency**: `ASYNC_LOW_LATENCY` on the port (FTDI drops to 1 ms).
+  If that fails (logged), set it by hand:
+  `echo 1 | sudo tee /sys/bus/usb-serial/devices/ttyUSB0/latency_timer`.
+- `MOT_RIBDEBUG=1` in the environment logs every byte (tx, local echo,
+  dropped hardware echo, received) to the dosbox-x log.
 
 ## Tools
 
-- `dosbox-x` branch `serial-rib` (in `dosbox-x/`): new serial type
-  `serialN=rib port:7600 [host:127.0.0.1]`. Models the RIB inside the
-  emulator (immediate echo, RI = DTR OR radio BUSY) and speaks a 2-byte
-  record protocol to the radio process: `D b` data, `B 0|1` BUSY, `R n` baud/100.
+- `dosbox-x` branch `serial-rib` (in `dosbox-x/`): `directserial ... rib:1`
+  (above), and a serial type `serialN=rib port:7600 [host:127.0.0.1]` for the
+  fake radio: the RIB modelled inside the emulator, the radio process on TCP
+  with 2-byte records (`D b` data, `B 0|1` BUSY, `R n` baud/100).
 - `tools/fake_radio.py`: the radio end. Tracks sessions, unscrambles, serves
   reads from `--image` (+ `--set ADDR=HEX` pokes), applies writes, logs every
   message, `--dump`s memory on disconnect.
-- `tools/scenario_radio_read.py`: boots RSS on the harness with COM1/COM2 on
-  `rib` and runs READ (optionally `--save` the result) or `--program`.
-- `motreader/sb9600.py`: CRC, scramble, reply layout.
+- `tools/pty_rib.py`: the same radio behind a RIB on a pseudo-terminal
+  (bus echo, `--echo-delay`/`--reply-delay` to simulate USB latency).
+- `tools/scenario_radio_read.py`: boots RSS on the harness and runs READ
+  (optionally `--save`) or `--program`; `--link rib|pty|pty-rib`.
+- `tools/rib_check.py <port> [--read]`: radio-room check: modem lines, how
+  fast BUSY follows DTR, one header read.
+- `motreader/sb9600.py`: CRC, scramble, reply layout. The CRC equals the
+  256-entry table in RadioConsole2 (`daemon/SB9600.cs`) for every input.
+- `motreader/radio.py` + `python -m motreader.cli read-radio <port> <outdir>`:
+  read-only reader (codeplug.bin, mcu.json, radio.log, an archive).
+
+RadioConsole2 (`~/Documents/projects/RadioConsole2`, open-source SB9600 radio
+control) agrees: messages are `address, data, data, opcode, crc`; BUSY is
+DTR out / CTS in (with an invert option for some cables); broadcast
+`00 00 01 08` resets the radio, the same opcode family as RSS's session
+messages.
 
 ## Plan
 
@@ -196,14 +245,12 @@ Same probes, then 0x6000–0x6CFF in 0x100-byte blocks, two bytes per message.
    questions.
 2. ~~Fake radio in the emulator~~ — PROGRAM complete; READ complete except
    the MCU values.
-3. **dosbox-x real ports on Linux**: fix the 0xFF bug; make RI follow DTR
-   locally (an option for RIB cables, reusing the `rib` model) with the real
-   RI merged in once it settles; FTDI `latency_timer=1` advice. Test on the
-   radio-room machine. Offer upstream.
-4. **motreader read (Python)**: `motreader.radio` over pyserial: sessions,
-   read 0x6000..length, plus a raw dump of the MCU bytes RSS reads, so the
-   archive prefix can be pinned down against an RSS archive of the same
-   radio. Generous timeouts (not bound by RSS's one-unit RI check).
+3. ~~dosbox-x real ports on Linux~~ — `rib:1` done and tested on a pty with
+   simulated latency. **Next: test on the radio-room machine** (rib_check,
+   then RSS READ). Offer upstream afterwards.
+4. ~~motreader read (Python)~~ — `read-radio` done, tested in-process and
+   over a pty. **Next: read the real radio**, alongside an RSS read of the
+   same radio, to pin down the 6 prefix bytes and the MCU values.
 5. **Write, then the web app**: only after reads round-trip; always a backup
    read first; copy RSS's invalidate-first order (0x6000=FF … 0x6000 last).
    Web: Web Serial (`setSignals({dataTerminalReady})`,
