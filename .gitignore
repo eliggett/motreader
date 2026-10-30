@@ -12,3 +12,6 @@ __pycache__/
 # Dev TLS keys for server/server.py (regenerate with server/gen_keys.sh)
 /server/*.pem
 node_modules/
+
+# Radio memory dumps (dump-radio, the Tech tab): Motorola firmware, never commit
+/notes/Firmware/
