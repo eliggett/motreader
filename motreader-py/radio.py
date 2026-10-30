@@ -35,7 +35,17 @@ MODEL = slice(0x44, 0x58)       # " 503D43KMA7JA5BK    "
 # MODE (open, close) payloads per session, as RSS sends them.
 SESSION_CODEPLUG = ((0xD1, 0x01), (0x90, 0x01))
 SESSION_MCU = ((0x93, 0x01), (0x92, 0x01))
+# S9000e (A9 head) radios: a second 8 KB codeplug region at 0x8000, in its
+# own unscrambled session, three bytes per read message (traced from RSS
+# against the fake radio; not yet seen on a real S9000e radio).
+SESSION_EXT = ((0xB1, 0x05), (0x90, 0x05))
+EXT_BASE = 0x8000
+EXT_SIZE = 0x2000
 MODE_DONE = (0x10, 0x01)        # RSS ends every READ with this
+
+# 68HC11 register block: some reads have side effects (serial port flags),
+# so memory dumps skip it unless asked.
+HC11_REGISTERS = (0x1000, 0x1040)
 
 # MCU bytes RSS reads during READ: b675.. starts the model number ("D43"),
 # b69f.. unknown.
@@ -58,6 +68,13 @@ class BusError(Exception):
 
 class ProgramRefused(Exception):
     pass
+
+
+def has_ext_region(cp: bytes) -> bool:
+    """S9000e / A9 head (header 0x60 b5 clear; FORMAT "Control Head Type"):
+    the codeplug continues in the 0x8000 region. Every A9-head archive on
+    hand is exactly EXT_SIZE longer than its header length; no other is."""
+    return not cp[0x60] & 0x20
 
 
 def codeplug_length(header: bytes) -> int:
@@ -203,8 +220,9 @@ class Radio:
             self.mode(c1, c2)
 
     def read(self, addr: int, n: int, scrambled: bool, per_msg: int = 2) -> bytes:
-        """Read n bytes from addr in the current session, per_msg (1 or 2)
-        bytes per message, chaining the scramble like RSS (10bd:02fb)."""
+        """Read n bytes from addr in the current session, per_msg bytes per
+        message (1 or 2; 3 only unscrambled, where reply byte 0 is the third
+        byte), chaining the scramble like RSS (10bd:02fb)."""
         out = bytearray()
         chain = 0
         while len(out) < n:
@@ -219,8 +237,10 @@ class Radio:
                 raise BusError(f"bad reply to read {addr:04x}: {r and r.hex()}")
             r1, r2 = (sb.unscramble_reply(*r[:3]) if scrambled else (r[1], r[2]))
             out.append(r2)
-            if per_msg == 2:
+            if per_msg >= 2:
                 out.append(r1)
+            if per_msg == 3:
+                out.append(r[0])
             addr += per_msg
         return bytes(out[:n])
 
@@ -235,10 +255,17 @@ class Radio:
                            + bytes(data[:32]).hex())
         total = codeplug_length(data)
         self.progress(BLOCK, total)
+        ext = has_ext_region(data)
+        grand = total + (EXT_SIZE if ext else 0)
         for a in range(CODEPLUG_BASE + BLOCK, CODEPLUG_BASE + total, BLOCK):
             with self.session(SESSION_CODEPLUG):
                 data += self.read(a, BLOCK, True, per)
-            self.progress(len(data), total)
+            self.progress(len(data), grand)
+        if ext:
+            with self.session(SESSION_EXT):
+                for a in range(EXT_BASE, EXT_BASE + EXT_SIZE, BLOCK):
+                    data += self.read(a, BLOCK, False, per_msg=3)
+                    self.progress(len(data), grand)
         return bytes(data)
 
     def read_mcu(self) -> dict:
@@ -284,7 +311,7 @@ class Radio:
         Callers should keep a backup read and verify by reading back
         (``program_verified`` does both)."""
         with self.session(SESSION_CODEPLUG):
-            head = self.read(CODEPLUG_BASE, 0x60, True)
+            head = self.read(CODEPLUG_BASE, 0x62, True)
         if not head.startswith(b"COPYRIGHT MOTOROLA"):
             raise ProgramRefused("radio codeplug header not recognised")
         if head[MODEL] != image[MODEL]:
@@ -295,12 +322,18 @@ class Radio:
                 raise ProgramRefused(f"serial differs: radio {head[SERIAL]!r}, image "
                                      f"{image[SERIAL]!r} (clone to program it anyway)")
             image = image[:SERIAL.start] + head[SERIAL] + image[SERIAL.stop:]
-        if len(image) > EEPROM_SIZE or len(image) % BLOCK:
-            raise ProgramRefused(f"codeplug length {len(image):#x} does not fit the "
+        ext = has_ext_region(image)
+        if ext != has_ext_region(head):
+            raise ProgramRefused("control head differs: one is S9000e (A9), "
+                                 "the other is not")
+        main, extra = (image[:-EXT_SIZE], image[-EXT_SIZE:]) if ext else (image, b"")
+        if len(main) > EEPROM_SIZE or len(main) % BLOCK:
+            raise ProgramRefused(f"codeplug length {len(main):#x} does not fit the "
                                  f"{EEPROM_SIZE:#x}-byte codeplug EEPROM")
-        if abs(codeplug_length(image) - len(image)) > BLOCK:   # 604AUN: one off
+        if abs(codeplug_length(main) - len(main)) > BLOCK:   # 604AUN: one off
             raise ProgramRefused(f"image length {len(image):#x} disagrees with its "
-                                 f"header ({codeplug_length(image):#x})")
+                                 f"header ({codeplug_length(main):#x}"
+                                 f"{' + 0x2000' if ext else ''})")
         if clone and not ignore_features:
             _, radio_options = self.read_options()
             if options is None or radio_options[:6] != options[:6]:
@@ -312,13 +345,30 @@ class Radio:
         if flag != PROGRAMMED_FLAG[1]:
             raise ProgramRefused(f"MCU byte {PROGRAMMED_FLAG[0]:04x} is {flag:02x}, "
                                  f"not {PROGRAMMED_FLAG[1]:02x}: not seen before")
+        if ext:
+            self._probe_ext_writable()
         with self.session(SESSION_CODEPLUG):
             self.write(CODEPLUG_BASE, b"\xff", True)
-            self.write(CODEPLUG_BASE, image, True, progress)
-            if self.read(CODEPLUG_BASE, 2, True) != image[:2]:
+            self.write(CODEPLUG_BASE, main, True, progress)
+            if self.read(CODEPLUG_BASE, 2, True) != main[:2]:
                 raise BusError("header byte did not read back after programming")
+        if ext:
+            with self.session(SESSION_EXT):
+                self.write(EXT_BASE, extra, False, progress)
         self.mode(*MODE_DONE)
         return image
+
+    def _probe_ext_writable(self):
+        """RSS's check that the 0x8000 region is writable EEPROM: write the
+        complement of its first byte, read it back, restore it."""
+        with self.session(SESSION_EXT):
+            v = self.read(EXT_BASE, 1, False, per_msg=1)[0]
+            self.write(EXT_BASE, bytes([v ^ 0xFF]), False)
+            ok = self.read(EXT_BASE, 1, False, per_msg=1)[0] == v ^ 0xFF
+            self.write(EXT_BASE, bytes([v]), False)
+        if not ok:
+            raise ProgramRefused("the 0x8000 region is not writable (no S9000e "
+                                 "codeplug EEPROM?)")
 
     def program_verified(self, image: bytes, progress=None, **kw) -> ReadResult:
         """program(), then read the whole radio back and compare."""
@@ -330,6 +380,40 @@ class Radio:
             raise BusError(f"verify failed at {len(bad)} bytes, first "
                            f"{CODEPLUG_BASE + bad[0]:#06x}")
         return back
+
+    def dump(self, which, start=0x0000, end=0x10000, skip=(), progress=None):
+        """Read [start, end) of one session's address space, 0x100 bytes per
+        session, two bytes per message. Blocks the radio doesn't answer are
+        skipped after a short try. Returns (bytearray, readable, failed): the
+        memory (0xFF where not read) and the block start addresses."""
+        scrambled = which is SESSION_CODEPLUG
+        mem = bytearray(b"\xff" * 0x10000)
+        readable, failed = [], []
+        link = self.link
+        quick = hasattr(link, "tries")        # SerialLink: give up fast
+        if quick:
+            saved = (link.tries, link.reply_timeout)
+            link.tries, link.reply_timeout = 2, 0.15
+        try:
+            for a in range(start, end, BLOCK):
+                if any(lo <= a < hi or lo < a + BLOCK <= hi for lo, hi in skip):
+                    continue
+                try:
+                    with self.session(which):
+                        mem[a:a + BLOCK] = self.read(a, BLOCK, scrambled)
+                    readable.append(a)
+                except BusError:
+                    failed.append(a)
+                    try:
+                        self.mode(*which[1])      # close the session anyway
+                    except BusError:
+                        pass
+                if progress:
+                    progress(a + BLOCK - start, end - start)
+        finally:
+            if quick:
+                link.tries, link.reply_timeout = saved
+        return mem, readable, failed
 
     def read_all(self, finish=True) -> ReadResult:
         mcu = self.read_mcu()

@@ -197,6 +197,30 @@ radio's serial, after checking the model and the archive's option bytes
 override). Emulator check: clone 1665 → fake 1767 verified, then RSS READ of
 the result is clean.
 
+### S9000e / A9-head radios: a second codeplug region at 0x8000
+
+Every A9 / S9000e-head archive (221AZN, 221ASJ, 617AWJ; header 0x60 b5
+clear) is exactly 0x2000 bytes longer than its header length; no other
+archive is (604ATY/604AUN are unrelated oddities). Traced with RSS against
+the fake radio (221AZN):
+
+- The archive codeplug is `main` (header length, at 0x6000 as usual) +
+  0x2000 bytes at **0x8000–0x9FFF**.
+- That region has its own session, **`00 b1 05` … `00 90 05`, unscrambled**.
+  RSS reads it **three bytes per message** (reply byte 0 is the third data
+  byte, at addr+2); writes are one byte per message.
+- Before programming, RSS reads 0xE004–0xE009 in that session and checks the
+  region is writable: read 0x8000, write its complement, read back, restore.
+- PROGRAM order: codeplug session (0x6000=FF, main), then the 0x8000 region,
+  then b6a0, 0x51 probe, reset.
+- RSS READ of the fake reproduced the archive exactly once the fake held the
+  radio's full 16-byte option block (the codeplug carries a copy of it).
+
+Not yet confirmed on a real S9000e radio (the third reply byte especially).
+On a standard-head radio 0x8000 is firmware ROM, so S9000e radios must map a
+second EEPROM there. motreader reads/programs it when the head bit says so,
+refuses to mix head types, and does RSS's writability probe first.
+
 ### READ sequence
 
 Same probes, then 0x6000–0x6CFF in 0x100-byte blocks, two bytes per message.
@@ -220,6 +244,23 @@ Same probes, then 0x6000–0x6CFF in 0x100-byte blocks, two bytes per message.
 - RIB timing (FT232R): BUSY appears ~1.5–2 ms after DTR on, clears ~4 ms
   after DTR off.
 
+## The radio's memory space (real 617ASQ, `dump-radio`)
+
+Both the codeplug session (scrambled) and the MCU session (plain) see the
+68HC11's 64 KB address space; the codeplug session answered every block,
+the MCU session not 14 of them.
+
+| Range | Contents |
+|---|---|
+| 0x0000–0x0FFF | RAM (live state); 0x4000–0x4FFF partly mirrors it |
+| 0x1000–0x103F | 68HC11 registers (skipped: reads can clear serial-port flags) |
+| 0x1100–0x5FFF | code and tables |
+| 0x6000–0x7FFF | codeplug EEPROM (8 KB; here 0x600 used, rest 0xFF) |
+| 0x8000–0xFFFF | firmware ROM (version text at 0xFFD2) |
+| 0xB600–0xB6FF | MCU EEPROM: "COPYRIGHT MOTOROLA INC.,1987" + serial at 0xB600; values 0xB628–0xB66F (alignment candidates); model at 0xB675; option block at 0xB681; 0xB69F–0xB6BA all 0x39 |
+
+The dumps contain Motorola firmware: keep them local, never commit them.
+
 ## Open questions
 
 - ~~MCU values / archive prefix~~ — answered by the real radio (above). The
@@ -230,8 +271,9 @@ Same probes, then 0x6000–0x6CFF in 0x100-byte blocks, two bytes per message.
 - Error-code → message mapping.
 - **Alignment data (to investigate):** TX power (high/low PA set), reference
   oscillator warp, deviation (modulation levels), and PTT behaviour. Likely
-  outside the codeplug range (clone keeps nothing per-radio in it), probably
-  MCU EEPROM 0xB6xx. Method: run RSS's SERVICE/ALIGNMENT screens against
+  outside the codeplug range (clone keeps nothing per-radio in it). Best
+  candidates from the real dump: MCU EEPROM 0xB628–0xB66F (e.g.
+  `a0 b1 b0 b2 78 41 3b 49`, `df f3 f3 e7 f3 df 07 60`). Method: run RSS's SERVICE/ALIGNMENT screens against
   the fake radio and log which addresses each adjustment reads and writes;
   then confirm on a real radio by reading only.
 - Front-panel password location.
@@ -299,6 +341,8 @@ With `rib:1`:
   (bus echo, `--echo-delay`/`--reply-delay` to simulate USB latency).
 - `tools/scenario_radio_read.py`: boots RSS on the harness and runs READ
   (optionally `--save`) or `--program`; `--link rib|pty|pty-rib`.
+- `python -m motreader.cli dump-radio <port> <outdir> [codeplug|mcu|both]`:
+  read every address each session answers (read-only; ~11 min per session).
 - `tools/rib_check.py <port> [--read]`: radio-room check: modem lines, how
   fast BUSY follows DTR, one header read.
 - `motreader/sb9600.py`: CRC, scramble, reply layout. The CRC equals the

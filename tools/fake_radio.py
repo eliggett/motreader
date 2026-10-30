@@ -64,7 +64,15 @@ class Radio:
             hi, lo, _ = sb.unscramble(*p[:3]) if scr else (p[0], p[1], p[2])
             a = hi << 8 | lo
             data = bytes([self.mem.get(a, 0xFF), self.mem.get(a + 1, 0xFF)])
-            reply = sb.read_reply(data, scr)
+            if scr:
+                reply = sb.read_reply(data, True)
+            elif self.session == 0xB1:
+                # S9000e region: byte 0 carries a third data byte (RSS reads
+                # 3 per message here)
+                reply = sb.read_reply(data, False, r0=self.mem.get(a + 2, 0xFF))
+            else:
+                # the real radio echoes the address's high byte in byte 0
+                reply = sb.read_reply(data, False, r0=hi)
             desc = f"READ {a:04x}{' scr' if scr else ''} -> {data.hex()}"
             self.reads += 1
         elif op == sb.OP_WRITE:

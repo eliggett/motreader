@@ -20,9 +20,10 @@ from fake_radio import Radio as FakeRadio  # noqa: E402
 OPTIONS = bytes.fromhex("005640a318f7b1f74484001f11000000")   # a 617ASQ's
 
 
-def synthetic_image(blocks=3, seed=7):
+def synthetic_image(blocks=3, seed=7, s9000e=False):
     """A codeplug-shaped image: the real header text, a length byte for
-    `blocks` blocks, random bytes elsewhere (0xFF and the probe byte included)."""
+    `blocks` blocks, random bytes elsewhere (0xFF and the probe byte included).
+    s9000e: A9-head bit, plus the 0x2000-byte region at 0x8000."""
     rng = random.Random(seed)
     cp = bytearray(rng.randrange(256) for _ in range(blocks * 0x100))
     head = b"COPYRIGHT MOTOROLA INC.,1987"
@@ -30,7 +31,12 @@ def synthetic_image(blocks=3, seed=7):
     cp[0x1C] = blocks * 8 + 4            # (k - 4) * 32 = blocks * 0x100
     cp[0x39] = 0x07                      # RSS's 2-bytes-per-message probe
     cp[0x40:0x48] = b"\xff" * 8
+    cp[0x60] = cp[0x60] & ~0x20 if s9000e else cp[0x60] | 0x20     # head type
     mem = {0x6000 + i: b for i, b in enumerate(cp)}
+    if s9000e:
+        ext = bytes(rng.randrange(256) for _ in range(0x2000))
+        mem.update({0x8000 + i: b for i, b in enumerate(ext)})
+        cp += ext
     mem.update({0xB675: 0x12, 0xB676: 0x34, 0xB677: 0x35, 0xB69F: 0x56,
                 0xB6A0: 0x39, 0xB6A1: 0x9A, 0xB6A2: 0xBC,
                 0xFFC6: 0xB6, 0xFFC7: 0x81})          # option-block pointer
@@ -166,3 +172,37 @@ def test_clone_checks_features():
     assert link.fake.writes == 0
     rd.Radio(SimLink(mem)).program(src, clone=True, options=other_options,
                                    ignore_features=True)
+
+
+def test_dump_skips_registers_and_reads_both_sessions():
+    cp, mem = synthetic_image()
+    radio = rd.Radio(SimLink(mem))
+    cmem, ok, bad = radio.dump(rd.SESSION_CODEPLUG, 0x6000, 0x6300)
+    assert bytes(cmem[0x6000:0x6300]) == cp and not bad
+    mmem, ok, bad = radio.dump(rd.SESSION_MCU, 0x0F00, 0x1200,
+                               skip=(rd.HC11_REGISTERS,))
+    assert [a for a in ok] == [0x0F00, 0x1100]          # 0x1000 block skipped
+    assert bytes(mmem[0x1000:0x1100]) == b"\xff" * 0x100
+
+
+def test_s9000e_read_and_program():
+    cp, mem = synthetic_image(s9000e=True)
+    assert len(cp) == 3 * 0x100 + 0x2000
+    link = SimLink(mem)
+    radio = rd.Radio(link)
+    assert radio.read_all().codeplug == cp          # second region included
+    new = bytearray(cp)
+    new[-16:] = b"S9000e region ok"
+    back = radio.program_verified(bytes(new))
+    assert back.codeplug == bytes(new)
+    # the 0x8000 region was written unscrambled in its own session
+    assert any(m[:4] == bytes([0x00, 0xB1, 0x05, 0x08]) for m in link.sent)
+
+
+def test_s9000e_image_refused_on_standard_head_radio():
+    _, mem = synthetic_image()
+    cp9, _ = synthetic_image(s9000e=True)
+    link = SimLink(mem)
+    with pytest.raises(rd.ProgramRefused, match="control head"):
+        rd.Radio(link).program(cp9)
+    assert link.fake.writes == 0

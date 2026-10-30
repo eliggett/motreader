@@ -24,6 +24,12 @@
         # archive A<serial>; the archive's 6 radio-sourced prefix bytes are not
         # matches what RSS saves from the same radio (except its nonce and
         # 17 bookkeeping bytes RSS rewrites)
+    python -m motreader.cli dump-radio <serial_port> <outdir> [codeplug|mcu|both] [--registers]
+        # read every address each session answers (read-only): codeplug
+        # session (scrambled; EEPROM at 0x6000, ROM) and/or MCU session (RAM,
+        # internal EEPROM 0xB6xx). Skips the 68HC11 register block
+        # 0x1000-0x103F unless --registers. Writes <session>_space.bin (0xFF
+        # where unread) and dump_map.json. A full session takes minutes.
     python -m motreader.cli write-radio <serial_port> <archive> <outdir> --yes [--clone] [--ignore-features]
         # program a radio with an archive's codeplug, the way RSS does. Reads
         # the radio first (backup in <outdir>/backup), refuses unless the
@@ -611,6 +617,46 @@ def read_radio(port: str, outdir: str) -> None:
           f"codeplug.bin, mcu.json, radio.log")
 
 
+def dump_radio(port: str, outdir: str, which: str = "both",
+               registers: bool = False) -> None:
+    import json
+    import time
+
+    from .radio import HC11_REGISTERS, SESSION_CODEPLUG, SESSION_MCU, Radio, SerialLink
+
+    os.makedirs(outdir, exist_ok=True)
+    logf = open(os.path.join(outdir, "radio.log"), "w")
+    link = SerialLink(port, log=lambda line: logf.write(line + "\n"))
+    sessions = {"codeplug": SESSION_CODEPLUG, "mcu": SESSION_MCU}
+    names = list(sessions) if which == "both" else [which]
+    skip = () if registers else (HC11_REGISTERS,)
+    result = {}
+    t0 = time.monotonic()
+
+    def progress(done, total):
+        print(f"\r  {done:#07x} / {total:#07x}  {time.monotonic() - t0:5.0f} s",
+              end="", flush=True)
+
+    try:
+        radio = Radio(link)
+        for name in names:
+            print(f"{name} session:")
+            mem, ok, bad = radio.dump(sessions[name], skip=skip, progress=progress)
+            print()
+            with open(os.path.join(outdir, f"{name}_space.bin"), "wb") as f:
+                f.write(mem)
+            result[name] = {"readable": [f"{a:04x}" for a in ok],
+                            "no_answer": [f"{a:04x}" for a in bad],
+                            "skipped": [f"{lo:04x}-{hi - 1:04x}" for lo, hi in skip]}
+            print(f"  {len(ok)} blocks read, {len(bad)} unanswered")
+        radio.mode(0x10, 0x01)
+    finally:
+        link.close()
+        logf.close()
+    with open(os.path.join(outdir, "dump_map.json"), "w") as f:
+        json.dump(result, f, indent=1)
+
+
 def write_radio(port: str, archive: str, outdir: str, clone=False,
                 ignore_features=False) -> None:
     from .crypto import decrypt_body
@@ -683,6 +729,10 @@ def main(argv: list[str]) -> int:
         remove_trunking(argv[2], argv[3])
     elif cmd == "read-radio" and len(argv) == 4:
         read_radio(argv[2], argv[3])
+    elif (cmd == "dump-radio" and len(argv) >= 4
+          and set(argv[4:]) <= {"codeplug", "mcu", "both", "--registers"}):
+        which = next((x for x in argv[4:] if x != "--registers"), "both")
+        dump_radio(argv[2], argv[3], which, "--registers" in argv[4:])
     elif (cmd == "write-radio" and len(argv) >= 6 and "--yes" in argv[5:]
           and set(argv[5:]) <= {"--yes", "--clone", "--ignore-features"}):
         write_radio(argv[2], argv[3], argv[4], clone="--clone" in argv[5:],
