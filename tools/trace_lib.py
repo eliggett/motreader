@@ -56,7 +56,7 @@ core=simple
 cycles={cycles}
 [parallel]
 parallel1=file append:printout.prn timeout:2000
-[autoexec]
+{extra_conf}[autoexec]
 mount c "{sandbox_c}"
 c:
 cd \\MRSS\\SPECTRA
@@ -65,8 +65,11 @@ SPECTRA.EXE
 
 
 class Harness:
-    def __init__(self, sandbox_c, workdir, disp=None, cycles=20000):
+    def __init__(self, sandbox_c, workdir, disp=None, cycles=20000,
+                 extra_conf=""):
+        """extra_conf: config sections to add, e.g. "[serial]\nserial1=...\n"."""
         self.sandbox_c = sandbox_c
+        self.extra_conf = extra_conf
         self.workdir = workdir
         self.disp = disp or os.environ.get("MOT_DISP", ":99")
         self.cycles = cycles
@@ -85,7 +88,8 @@ class Harness:
         # the print-capture file lands in the launch CWD; run from workdir
         with open(self.conf, "w") as f:
             f.write(CONF_TEMPLATE.format(
-                sandbox_c=self.sandbox_c, cycles=self.cycles))
+                sandbox_c=self.sandbox_c, cycles=self.cycles,
+                extra_conf=self.extra_conf))
         _kill_display(self.disp)
         time.sleep(1)
         # private X server
