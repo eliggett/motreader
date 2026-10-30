@@ -8,10 +8,13 @@ import { initLogView } from "./logview.js";
 import { installTestApi } from "./testapi.js";
 import { VERSION } from "./version.js";
 import * as actions from "./actions.js";
+import { readRadio, writeRadio } from "./radioio.js";
 import { isDirty } from "./editing.js";
 
 /** Toolbar buttons (by data-action) and the commands they run. */
 const COMMANDS = {
+    "read-radio": readRadio,
+    "write-radio": writeRadio,
     "import-codeplug": actions.importCodeplug,
     "import-tables": actions.importTables,
     "export-codeplug": actions.exportCodeplug,
@@ -21,7 +24,7 @@ const COMMANDS = {
 };
 
 /** Buttons that need an open document. */
-const NEEDS_DOC = ["import-tables", "export-codeplug", "export-yaml", "export-csv"];
+const NEEDS_DOC = ["write-radio", "import-tables", "export-codeplug", "export-yaml", "export-csv"];
 
 function start() {
     initLogView($("#log"));

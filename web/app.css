@@ -235,6 +235,14 @@ table.grid td.members-edit { font-family: var(--mono); min-width: 9rem; }
 .warn-box { border: 1px solid var(--warn); border-radius: 4px; padding: 0.5rem 0.75rem; margin: 0.5rem 0; color: var(--warn); }
 .export .form-row { display: flex; gap: 0.75rem; align-items: center; margin: 0.75rem 0 0.25rem; }
 .export progress { width: 100%; margin-top: 0.5rem; accent-color: var(--accent); }
+.radio-io progress { width: 100%; margin-top: 0.75rem; accent-color: var(--accent); }
+.radio-io .check-row { display: flex; gap: 0.5rem; align-items: flex-start; margin: 0.5rem 0; }
+.radio-io .check-row input { margin-top: 0.2rem; }
+.radio-io .check-row input:disabled + label { color: var(--muted); }
+.serial-help { margin: 0.75rem 0; }
+.serial-help summary { cursor: pointer; color: var(--accent); }
+.serial-help li { margin: 0.25rem 0; }
+.serial-help code { font-family: var(--mono); }
 .mode-editor .form { grid-template-columns: max-content minmax(10rem, max-content) minmax(8rem, 1fr); }
 .struct-bar { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0 0 0.6rem; }
 .struct-form .form { grid-template-columns: max-content minmax(8rem, max-content) minmax(8rem, 1fr); }

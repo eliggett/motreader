@@ -328,6 +328,36 @@ With `rib:1`:
 - `MOT_RIBDEBUG=1` in the environment logs every byte (tx, local echo,
   dropped hardware echo, received) to the dosbox-x log.
 
+## Web Serial (the web app's Read Radio / Write Radio)
+
+`web/lib/sb9600.js` and `web/lib/radio.js` port the Python protocol and
+`Radio` (async; same checks and order); `web/app/serial.js` is the Web Serial
+link (`setSignals({dataTerminalReady})` for BUSY out, `getSignals()`
+`clearToSend || ringIndicator` for BUSY in, one `writer.write()` per message).
+`tests/js/radio.test.js` runs them against `tests/js/fakeradio.js`, a port of
+`tools/fake_radio.py`.
+
+Real 617ASQ, Chrome 152 on Linux, FTDI FT232R (2026-10-30): read 18 s, write
+plus verify 82 s (backup read 15 s, 1536 writes about 47 s), no retries; the
+web read is byte-identical to `read-radio`'s. Mode 10 was left named
+WEBWRITE. Findings:
+
+- **VMIN.** Chrome keeps the tty's termios VMIN/VTIME. pyserial (and DOSBox)
+  leave VMIN = 0, so `read()` returns 0 when no data is waiting, which
+  Chrome reports as `NetworkError: The device has been lost` straight after
+  `open()`. Fix: `stty -F /dev/ttyUSB0 min 1`, or replug the adapter.
+  `SerialLink.close()` now puts VMIN back to 1; the app's error message and
+  help explain it.
+- **Break after PROGRAM.** The radio's reset after `00 10 01` puts a break on
+  the line; Chrome ends the readable stream with `BreakError`. That is
+  non-fatal (`port.readable` is replaced), so the link takes the next stream.
+- The echo arrives at about 1 ms per byte even without FTDI low latency.
+- The port chooser lists every ttyS* as well; there is no filter, since a
+  real RS-232 port is a valid choice.
+- Testing: headed Chrome on Xvfb (`--ozone-platform=x11`, no WAYLAND_DISPLAY),
+  port picked in the chooser with xdotool. Headless Chrome shows no chooser,
+  and CDP's DeviceAccess domain doesn't cover serial.
+
 ## Tools
 
 - `dosbox-x` branch `serial-rib` (in `dosbox-x/`): `directserial ... rib:1`
@@ -365,9 +395,8 @@ messages.
 3. ~~dosbox-x real ports on Linux~~ — RSS READ works on a real radio.
    Still to try: RSS PROGRAM on the real radio. Offer upstream afterwards.
 4. ~~motreader read (Python)~~ — reads a real radio; archive accepted by RSS.
-5. ~~Write~~ — `write-radio` done and tested on the real radio. **Next: the
-   web app**.
-   Web: Web Serial (`setSignals({dataTerminalReady})`,
-   `getSignals().ringIndicator`), Chrome/Edge only.
+5. ~~Write~~ — `write-radio` done and tested on the real radio.
+6. ~~Web app~~ — Read Radio / Write Radio over Web Serial (Chrome/Edge),
+   tested on the real radio (above).
 
 Out of scope: firmware flashing (the 1200-baud bootstrap path).

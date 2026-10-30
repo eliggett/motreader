@@ -147,7 +147,22 @@ class SerialLink:
 
     def close(self):
         self._set_dtr(False)
+        self._restore_vmin()
         self.ser.close()
+
+    def _restore_vmin(self):
+        """pyserial leaves the tty's VMIN at 0; Chrome's Web Serial on Linux
+        keeps it and then takes the port for a lost device. Put back 1."""
+        try:
+            import termios
+        except ImportError:              # not POSIX
+            return
+        try:
+            attrs = termios.tcgetattr(self.ser.fd)
+            attrs[6][termios.VMIN], attrs[6][termios.VTIME] = 1, 0
+            termios.tcsetattr(self.ser.fd, termios.TCSANOW, attrs)
+        except (termios.error, AttributeError, OSError):
+            pass
 
     def _set_dtr(self, on: bool):
         if not self.drive_busy:
