@@ -8,13 +8,15 @@ land in the workdir.
 With --save DST (READ only): once the read finishes, SAVE it to the
 archive and copy the archive file to DST.
 
+With --link real, COM1 is the host's real port (--realport, default
+ttyUSB0) through directserial rib:1: a real radio on a RIB.
 With --link pty|pty-rib, COM1 is instead dosbox-x's directserial on a
 pseudo-terminal served by tools/pty_rib.py (the real-port code path);
 pty-rib adds the rib:1 option. --echo-delay simulates USB latency.
 
 Usage: scenario_radio_read.py <sandbox_c> <workdir> [--image FILE] [--wait S]
                               [--program] [--save DST] [--set ADDR=HEX]
-                              [--link rib|pty|pty-rib] [--echo-delay MS]
+                              [--link rib|pty|pty-rib|real] [--echo-delay MS]
                               [--serial-opts "rxdelay:30 ..."]
 """
 import argparse
@@ -48,7 +50,9 @@ def main():
     ap.add_argument("--program", action="store_true")
     ap.add_argument("--save")
     ap.add_argument("--set", action="append", default=[])
-    ap.add_argument("--link", choices=("rib", "pty", "pty-rib"), default="rib")
+    ap.add_argument("--link", choices=("rib", "pty", "pty-rib", "real"), default="rib")
+    ap.add_argument("--realport", default="ttyUSB0",
+                    help="with --link real: the host port (directserial rib:1)")
     ap.add_argument("--echo-delay", type=float, default=0.0)
     ap.add_argument("--serial-opts", default="",
                     help="extra directserial options, e.g. rxdelay:30")
@@ -56,7 +60,10 @@ def main():
     os.makedirs(a.workdir, exist_ok=True)
 
     radios = []
-    if a.link != "rib":
+    if a.link == "real":
+        conf = (f"[serial]\nserial1=directserial realport:{a.realport} rib:1"
+                + (" " + a.serial_opts if a.serial_opts else "") + "\n")
+    elif a.link != "rib":
         cmd = [sys.executable, os.path.join(HERE, "pty_rib.py"),
                "--log", os.path.join(a.workdir, "radio_pty.log"),
                "--echo-delay", str(a.echo_delay)]

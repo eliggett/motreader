@@ -31,8 +31,14 @@ SESSION_CODEPLUG = ((0xD1, 0x01), (0x90, 0x01))
 SESSION_MCU = ((0x93, 0x01), (0x92, 0x01))
 MODE_DONE = (0x10, 0x01)        # RSS ends every READ with this
 
-# MCU bytes RSS reads during READ (meaning not yet known).
-MCU_PROBES = ((0xB675, 2), (0xB69F, 4))
+# MCU bytes RSS reads during READ: b675.. starts the model number ("D43"),
+# b69f.. unknown.
+MCU_PROBES = ((0xB675, 3), (0xB69F, 4))
+# RSS reads a pointer at ROM 0xFFC6 (codeplug session) to the radio's option
+# block in MCU EEPROM (0xB681 on a 617ASQ); its first 6 bytes become archive
+# prefix bytes 13..18 (a superset of the header's option bytes 0x6032..0x6037).
+OPTIONS_POINTER = 0xFFC6
+OPTIONS_LEN = 16
 
 
 class BusError(Exception):
@@ -62,6 +68,10 @@ class SerialLink:
         self.ser = serial.Serial(port, 9600, bytesize=8, parity="N",
                                  stopbits=1, timeout=echo_timeout,
                                  rtscts=False, dsrdtr=False)
+        try:
+            self.ser.set_low_latency_mode(True)     # FTDI: 16 ms -> 1 ms
+        except (AttributeError, NotImplementedError, OSError, ValueError):
+            pass
         self.sense_busy = True
         self.drive_busy = True
         # some RIB cables invert BUSY (RadioConsole2 has the same option)
@@ -121,13 +131,11 @@ class SerialLink:
             self.ser.reset_input_buffer()
             self._set_dtr(True)
             try:
-                ok = True
-                for b in msg:
-                    self.ser.write(bytes([b]))
-                    if self._read(1, self.echo_timeout) != bytes([b]):
-                        ok = False          # collision or no echo: retry
-                        break
-                if not ok:
+                # The whole message at once: the radio drops a message whose
+                # bytes are spread out, and a USB round trip per byte is too
+                # slow. The bus echoes it; a difference is a collision.
+                self.ser.write(msg)
+                if self._read(5, self.echo_timeout) != msg:
                     continue
                 if not wants_reply:
                     time.sleep(0.02)
@@ -150,14 +158,15 @@ class SerialLink:
 class ReadResult:
     codeplug: bytes                 # EEPROM from 0x6000
     mcu: dict = field(default_factory=dict)   # address -> bytes
+    options: bytes = b""            # the option block (see OPTIONS_POINTER)
 
     def archive_body(self, nonce: bytes | None = None) -> bytes:
-        """The decrypted archive body: 13-byte nonce, 6 bytes RSS takes from
-        the radio (source not pinned down yet: zeros here), zeros to 0xAD,
-        then the codeplug."""
+        """The decrypted archive body as RSS saves it: 13-byte nonce, the
+        option block's first 6 bytes, zeros to 0xAD, then the codeplug."""
         nonce = nonce or bytes(random.randrange(256) for _ in range(13))
         prefix = bytearray(0xAD)
         prefix[:13] = nonce
+        prefix[13:19] = self.options[:6].ljust(6, b"\0")
         return bytes(prefix) + self.codeplug
 
 
@@ -224,9 +233,18 @@ class Radio:
                 out[addr] = self.read(addr, n, False, per_msg=1)
         return out
 
+    def read_options(self) -> tuple[int, bytes]:
+        with self.session(SESSION_CODEPLUG):
+            ptr = self.read(OPTIONS_POINTER, 2, True, per_msg=1)
+        addr = ptr[0] << 8 | ptr[1]
+        with self.session(SESSION_MCU):
+            return addr, self.read(addr, OPTIONS_LEN, False, per_msg=1)
+
     def read_all(self, finish=True) -> ReadResult:
         mcu = self.read_mcu()
+        addr, options = self.read_options()
+        mcu[addr] = options
         cp = self.read_codeplug()
         if finish:
             self.mode(*MODE_DONE)
-        return ReadResult(cp, mcu)
+        return ReadResult(cp, mcu, options)

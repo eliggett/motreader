@@ -17,6 +17,9 @@ sys.path.insert(0, os.path.join(ROOT, "tools"))
 from fake_radio import Radio as FakeRadio  # noqa: E402
 
 
+OPTIONS = bytes.fromhex("005640a318f7b1f74484001f11000000")   # a 617ASQ's
+
+
 def synthetic_image(blocks=3, seed=7):
     """A codeplug-shaped image: the real header text, a length byte for
     `blocks` blocks, random bytes elsewhere (0xFF and the probe byte included)."""
@@ -28,8 +31,10 @@ def synthetic_image(blocks=3, seed=7):
     cp[0x39] = 0x07                      # RSS's 2-bytes-per-message probe
     cp[0x40:0x48] = b"\xff" * 8
     mem = {0x6000 + i: b for i, b in enumerate(cp)}
-    mem.update({0xB675: 0x12, 0xB676: 0x34, 0xB69F: 0x56, 0xB6A0: 0x78,
-                0xB6A1: 0x9A, 0xB6A2: 0xBC})
+    mem.update({0xB675: 0x12, 0xB676: 0x34, 0xB677: 0x35, 0xB69F: 0x56,
+                0xB6A0: 0x78, 0xB6A1: 0x9A, 0xB6A2: 0xBC,
+                0xFFC6: 0xB6, 0xFFC7: 0x81})          # option-block pointer
+    mem.update({0xB681 + i: v for i, v in enumerate(OPTIONS)})
     return bytes(cp), mem
 
 
@@ -58,7 +63,8 @@ def test_read_all_in_process():
     link = SimLink(mem)
     got = rd.Radio(link).read_all()
     assert got.codeplug == cp
-    assert got.mcu == {0xB675: b"\x12\x34", 0xB69F: b"\x56\x78\x9a\xbc"}
+    assert got.mcu == {0xB675: b"\x12\x34\x35", 0xB69F: b"\x56\x78\x9a\xbc",
+                       0xB681: OPTIONS}
     assert link.sent[-1][:4] == bytes([0, 0x10, 0x01, 0x08])   # RSS's ending
     assert link.fake.writes == 0                               # read-only
 
@@ -67,6 +73,7 @@ def test_archive_body_layout():
     cp, mem = synthetic_image()
     body = rd.Radio(SimLink(mem)).read_all().archive_body(nonce=bytes(13))
     assert body[0xAD:] == cp and len(body) == 0xAD + len(cp)
+    assert body[13:19] == OPTIONS[:6] and not any(body[19:0xAD])
 
 
 def test_over_pty():

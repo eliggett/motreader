@@ -47,3 +47,9 @@ def test_reply_scramble_roundtrip():
 def test_read_reply_layout():
     # plain: byte 2 is the byte at the address, byte 1 the next one
     assert sb.read_reply(b"\x43\x4f", scrambled=False)[:4] == bytes([0, 0x4F, 0x43, 0x07])
+
+
+def test_real_radio_reply():
+    # a 617ASQ's answer to RSS's first codeplug read (0x6000): "CO"
+    assert sb.unscramble_reply(0x60, 0xA8, 0x06) == (ord("O"), ord("C"))
+    assert sb.frame(bytes.fromhex("60a80607")) == bytes.fromhex("60a8060716")

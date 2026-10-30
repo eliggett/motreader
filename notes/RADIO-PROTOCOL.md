@@ -11,9 +11,12 @@ Status (2026-10-30):
   wrote the archive into the fake radio, and every write is decoded. **READ**
   reads the whole codeplug, but the archive RSS then saves differs, because
   the fake can't supply the radio's real MCU memory (see Open questions).
-- **Since:** dosbox-x `directserial ... rib:1` fixes RSS on Linux real ports
-  (tested on a pty with simulated USB latency), and `motreader read-radio`
-  reads a radio. **Not done:** nothing has been tested on a real radio.
+- **Real radio (2026-10-30, VHF 617ASQ1266, FTDI FT232R + RIB):**
+  `motreader read-radio` reads it (0x600 bytes, ~6 s), and **unmodified RSS
+  READs it on Linux** through dosbox-x `directserial ... rib:1`. The two
+  archives match except the nonce and 17 bytes RSS rewrites on READ; RSS
+  GETs motreader's archive with no warning. RSS sent no writes; the radio
+  re-reads unchanged. Writing is not attempted yet.
 
 Items marked *(guess)* are unconfirmed.
 
@@ -155,14 +158,30 @@ check values *(guess)*).
 
 Same probes, then 0x6000–0x6CFF in 0x100-byte blocks, two bytes per message.
 
+## Real radio findings
+
+- **Message spacing:** the radio ignores a message whose bytes are more than
+  ~2 ms apart (tested: write gaps up to 2 ms answered, 3 ms+ never). So a
+  message must go out as one burst; sending byte-by-byte and waiting for each
+  echo through USB (as RSS does on a UART) gets no answer.
+- **Option block:** RSS reads a pointer at ROM 0xFFC6 (codeplug session,
+  1 byte per message: `b6 81`), then 16 bytes of MCU EEPROM at 0xB681
+  (session 0x93). Its first 6 bytes are archive prefix bytes 13..18 (here
+  `00 56 40 a3 18 f7`); they are a superset of the header's 0x6032..0x6037.
+- Other reads: b675..b677 = start of the model number ("D43" for
+  D43KMA7JA5BK); b68a..b68e, b69f..b6a2 (meaning unknown); ROM ffd2..ffd5
+  (a version string, " 606*" here). Session 0x51 (rear head?) does answer.
+- **Bookkeeping bytes** RSS rewrites in the archive on READ (radio address):
+  0x602D–0x602F, 0x6042–0x6043, 0x610F–0x6112, 0x6131–0x6138. Encoded, not
+  yet understood; motreader keeps the radio's values, which RSS accepts.
+- RIB timing (FT232R): BUSY appears ~1.5–2 ms after DTR on, clears ~4 ms
+  after DTR off.
+
 ## Open questions
 
-- **MCU values.** RSS reads b675–b676, b69f–b6a2 and chases pointers through
-  them. With all-FF it accepts the radio but "converts" the codeplug on save
-  (size 0xD00 → 0x1000, many fields). With the 6 radio-sourced archive prefix
-  bytes guessed in, it refuses ("Your Radio Is Not Supported By This Service
-  Software release"). Only the real radio can tell us these: read them with
-  motreader and compare with an RSS archive of the same radio.
+- ~~MCU values / archive prefix~~ — answered by the real radio (above). The
+  fake radio still needs the ROM pointer at 0xFFC6 and the option block to
+  satisfy RSS's checks.
 - The 0x2000 extra region on the larger radios.
 - What the 16 RSS-maintained bytes encode.
 - Error-code → message mapping.
@@ -204,6 +223,10 @@ With `rib:1`:
 - **Local echo** (`ribecho:1`, default): each transmitted byte is echoed to
   the program at once, and the hardware's copy is dropped when it arrives. A
   hardware byte that differs is passed on, so collisions still show.
+- **Burst send**: transmitted bytes are held and written to the port 5 at a
+  time (one SB9600 message), or once the program pauses for two byte times.
+  The radio drops a message spread over more than ~2 ms, and an emulator
+  slower than real time spreads RSS's bytes ~4 ms apart.
 - **BUSY** reported on RI and CTS = our DTR, OR the hardware BUSY (CTS or RI)
   except for `ribholdoff:` ms (default 30) after each DTR change.
 - **`rxdelay:50`** unless given: received bytes wait for the program.
@@ -245,12 +268,9 @@ messages.
    questions.
 2. ~~Fake radio in the emulator~~ — PROGRAM complete; READ complete except
    the MCU values.
-3. ~~dosbox-x real ports on Linux~~ — `rib:1` done and tested on a pty with
-   simulated latency. **Next: test on the radio-room machine** (rib_check,
-   then RSS READ). Offer upstream afterwards.
-4. ~~motreader read (Python)~~ — `read-radio` done, tested in-process and
-   over a pty. **Next: read the real radio**, alongside an RSS read of the
-   same radio, to pin down the 6 prefix bytes and the MCU values.
+3. ~~dosbox-x real ports on Linux~~ — RSS READ works on a real radio.
+   Still to try: RSS PROGRAM on the real radio. Offer upstream afterwards.
+4. ~~motreader read (Python)~~ — reads a real radio; archive accepted by RSS.
 5. **Write, then the web app**: only after reads round-trip; always a backup
    read first; copy RSS's invalidate-first order (0x6000=FF … 0x6000 last).
    Web: Web Serial (`setSignals({dataTerminalReady})`,
