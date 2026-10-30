@@ -7,7 +7,8 @@ import general from "./general.js";
 import modes from "./modes.js";
 import zones from "./zones.js";
 import hex from "./hex.js";
+import tech from "./tech.js";
 import { radioWideTab, conventionalTab, headTab } from "./settings.js";
 
 /** @type {import("./common.js").Tab[]} */
-export const TABS = [general, radioWideTab, conventionalTab, modes, zones, headTab, hex];
+export const TABS = [general, radioWideTab, conventionalTab, modes, zones, headTab, hex, tech];

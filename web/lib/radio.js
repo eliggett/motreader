@@ -59,6 +59,41 @@ export class ProgramRefused extends Error {
     name = "ProgramRefused";
 }
 
+/** Radio.cancel() was called: the operation stopped between two messages. */
+export class Cancelled extends Error {
+    name = "Cancelled";
+}
+
+/**
+ * Known regions of the radio's 64 KB address space (68HC11 map, from a real
+ * 617ASQ dump; notes/RADIO-PROTOCOL.md). All are read in the codeplug
+ * session except the S9000e region. `writable`: EEPROM (RSS writes the MCU
+ * EEPROM through the codeplug session too) and RAM; the firmware is ROM.
+ * @typedef {{ id: string, name: string, start: number, end: number, session: "codeplug" | "ext", writable: boolean, note: string }} Region
+ * @type {Region[]}
+ */
+export const REGIONS = [
+    { id: "ram", name: "RAM", start: 0x0000, end: 0x1000, session: "codeplug", writable: true,
+        note: "live state; anything written is lost when the radio restarts" },
+    { id: "firmware_low", name: "Code below the codeplug", start: 0x1100, end: 0x6000, session: "codeplug", writable: false,
+        note: "code and tables" },
+    { id: "codeplug_eeprom", name: "Codeplug EEPROM", start: 0x6000, end: 0x8000, session: "codeplug", writable: true,
+        note: "all 8 KB: the codeplug and the unused rest" },
+    { id: "firmware", name: "Firmware ROM", start: 0x8000, end: 0x10000, session: "codeplug", writable: false,
+        note: "includes the MCU EEPROM window at 0xB600" },
+    { id: "mcu_eeprom", name: "MCU EEPROM", start: 0xB600, end: 0xB800, session: "codeplug", writable: true,
+        note: "serial, model, option block, alignment candidates" },
+    { id: "codeplug_ext", name: "S9000e codeplug region", start: EXT_BASE, end: EXT_BASE + EXT_SIZE, session: "ext", writable: true,
+        note: "S9000e (A9 head) radios only; untested on a real radio" },
+];
+
+/** 68HC11 registers: some reads have side effects (serial port flags), so they are never read. */
+export const HC11_REGISTERS = [0x1000, 0x1040];
+
+/** The writable region (codeplug session) holding all of [start, end), or undefined. */
+export const writableRegion = (/** @type {number} */ start, /** @type {number} */ end) =>
+    REGIONS.find((r) => r.session === "codeplug" && r.writable && start >= r.start && end <= r.end);
+
 // setTimeout is in every host this runs in (page, Node) but not in plain ECMAScript
 const sleep = (/** @type {number} */ ms) => new Promise((r) => /** @type {any} */ (globalThis).setTimeout(r, ms));
 const sub = (/** @type {Uint8Array} */ b, /** @type {number[]} */ [s, e]) => b.subarray(s, e);
@@ -78,7 +113,11 @@ export function codeplugLength(/** @type {Uint8Array} */ header) {
 
 /** The radio's serial number and model as text, from a codeplug header. */
 export const serialOf = (/** @type {Uint8Array} */ cp) => latin1(sub(cp, SERIAL));
-export const modelOf = (/** @type {Uint8Array} */ cp) => latin1(sub(cp, MODEL)).trim();
+/** The model as the app shows it ("D43KMA7JA5BK" from " 503D43KMA7JA5BK    "). */
+export function modelOf(/** @type {Uint8Array} */ cp) {
+    const text = latin1(sub(cp, MODEL));
+    return /[DT]\d{2}[A-Z0-9]{9}/.exec(text)?.[0] ?? text.trim();
+}
 
 /**
  * @typedef {{
@@ -122,6 +161,27 @@ export class Radio {
         // a session was opened since the last MODE_DONE: the radio's panel
         // stays frozen until it gets MODE_DONE (which restarts it)
         this.needsReset = false;
+        this.stopping = false;
+    }
+
+    /** Stop the running read or verify at the next message (it throws Cancelled). */
+    cancel() {
+        this.stopping = true;
+    }
+
+    /** Throw Cancelled if cancel() was called; a new operation starts uncancelled. */
+    checkCancel() {
+        if (!this.stopping) return;
+        this.stopping = false;
+        throw new Cancelled("cancelled");
+    }
+
+    /** Wait for the radio to restart after MODE_DONE (cancellable). */
+    async waitRestart(ms = RESTART_MS) {
+        for (const end = Date.now() + ms; Date.now() < end;) {
+            this.checkCancel();
+            await sleep(Math.min(100, end - Date.now()));
+        }
     }
 
     /** Send a MODE message. */
@@ -135,6 +195,7 @@ export class Radio {
      * last one. Safe to call after an error: never throws.
      */
     async finish() {
+        this.stopping = false;
         if (!this.needsReset) return;
         try {
             await this.mode(MODE_DONE[0], MODE_DONE[1]);
@@ -164,6 +225,7 @@ export class Radio {
         const out = [];
         let chain = 0;
         while (out.length < n) {
+            this.checkCancel();
             const hi = (addr >> 8) & 0xFF, lo = addr & 0xFF;
             let p;
             if (scrambled) {
@@ -344,17 +406,16 @@ export class Radio {
     }
 
     /**
-     * program(), then read the whole radio back and compare.
-     * @param {Uint8Array} image
-     * @param {{ clone?: boolean, options?: Uint8Array, ignoreFeatures?: boolean, progress?: Progress, verifyProgress?: Progress, restartMs?: number }} [opt]
+     * After program(): wait for the restart, read the whole radio back and
+     * compare (ends with MODE_DONE, so the radio restarts again).
+     * Cancellable with cancel().
+     * @param {Uint8Array} image  as program() returned it
+     * @param {{ progress?: Progress, restartMs?: number }} [opt]
      * @returns {Promise<ReadResult>}
      */
-    async programVerified(image, opt = {}) {
-        image = await this.program(image, opt);
-        // let the radio restart after the reset: a 617ASQ still puts breaks on
-        // the line 7-8 s after it, and answers only after retries before that
-        await sleep(opt.restartMs ?? RESTART_MS);
-        const back = await this.readAll(opt.verifyProgress);     // ends with MODE_DONE: the radio restarts again
+    async verify(image, opt = {}) {
+        await this.waitRestart(opt.restartMs);
+        const back = await this.readAll(opt.progress);
         if (!equal(back.codeplug, image)) {
             const bad = [];
             for (let i = 0; i < image.length; i++) if (back.codeplug[i] !== image[i]) bad.push(i);
@@ -362,5 +423,55 @@ export class Radio {
             throw new BusError(`verify failed at ${bad.length} bytes, ${first}`);
         }
         return back;
+    }
+
+    /**
+     * program(), then verify().
+     * @param {Uint8Array} image
+     * @param {{ clone?: boolean, options?: Uint8Array, ignoreFeatures?: boolean, progress?: Progress, verifyProgress?: Progress, restartMs?: number }} [opt]
+     * @returns {Promise<ReadResult>}
+     */
+    async programVerified(image, opt = {}) {
+        image = await this.program(image, opt);
+        return this.verify(image, { progress: opt.verifyProgress, restartMs: opt.restartMs });
+    }
+
+    /**
+     * Read [start, end) of the address space, a session per 0x100-byte block
+     * (as RSS reads), two bytes per message; in the S9000e region with
+     * `session` "ext", three. Never reads the 68HC11 registers.
+     * @param {number} start @param {number} end
+     * @param {{ session?: "codeplug" | "ext", progress?: Progress }} [opt]
+     */
+    async readRange(start, end, { session = "codeplug", progress } = {}) {
+        if (start < HC11_REGISTERS[1] && end > HC11_REGISTERS[0]) {
+            throw new RangeError("0x1000-0x103F are the 68HC11's registers: reading them can upset the radio");
+        }
+        const out = new Uint8Array(end - start);
+        for (let a = start; a < end;) {
+            const n = Math.min(BLOCK - (a % BLOCK), end - a);
+            const part = session === "ext"
+                ? await this.session(SESSION_EXT, () => this.read(a, n, false, 3))
+                : await this.session(SESSION_CODEPLUG, () => this.read(a, n, true));
+            out.set(part, a - start);
+            a += n;
+            progress?.(a - start, end - start);
+        }
+        return out;
+    }
+
+    /**
+     * Write bytes at addr in one session: scrambled in the codeplug session
+     * (as RSS writes both the codeplug and the MCU EEPROM), or plain in the
+     * S9000e region. Not cancellable: a write stopped half-way is worse.
+     * @param {number} addr @param {Uint8Array} data
+     * @param {{ session?: "codeplug" | "ext", progress?: Progress }} [opt]
+     */
+    async writeRange(addr, data, { session = "codeplug", progress } = {}) {
+        const each = (/** @type {number} */ i) => {
+            if (i % 16 === 0 || i === data.length) progress?.(i, data.length);
+        };
+        if (session === "ext") await this.session(SESSION_EXT, () => this.write(addr, data, false, each));
+        else await this.session(SESSION_CODEPLUG, () => this.write(addr, data, true, each));
     }
 }

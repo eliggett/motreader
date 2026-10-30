@@ -337,3 +337,29 @@ dialog.dos::backdrop { background: rgb(0 0 0 / 0.75); }
 .dos-link:hover, .dos-link:focus { background: var(--dos-cyan); color: var(--dos-blue); }
 .dos-fkey { background: var(--dos-gray); color: var(--dos-black); cursor: default; }
 .dos-fkey[data-key="F7"], .dos-fkey[data-key="F8"], .dos-fkey[data-key="F10"] { cursor: pointer; }
+
+/* Tech tab */
+.tech { max-width: 72rem; }
+.tech .mono, .tech-regions .mono { font-family: var(--mono); }
+.tech-buttons { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.tech-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+.tech-row > label { color: var(--muted); }
+.tech-status { margin: 0 0 0.5rem; }
+.tech-progress { position: sticky; top: 0; z-index: 1; background: var(--bg); padding: 0.25rem 0 0.5rem; }
+.tech-progress progress { width: 100%; accent-color: var(--accent); }
+.tech-stage-row { display: flex; align-items: center; gap: 0.75rem; }
+.tech-stage { margin: 0.25rem 0 0; flex: 1; }
+.tech-stage:empty { display: none; }
+.tech-out { max-height: 24rem; overflow: auto; }
+.tech-regions { border-collapse: collapse; margin-bottom: 0.5rem; }
+.tech-regions th { text-align: left; color: var(--muted); font-weight: normal; padding: 0.25rem 1rem 0.25rem 0; }
+.tech-regions td { vertical-align: top; padding: 0.35rem 1rem 0.35rem 0; border-top: 1px solid var(--border); }
+.tech-regions .note { margin: 0; font-size: 0.85em; }
+.tech-align { border: 1px dashed var(--border); border-radius: 4px; padding: 0.75rem; margin: 0; }
+.tech-align:disabled { opacity: 0.6; }
+.tech-slider { display: grid; grid-template-columns: 14rem 1fr auto auto auto; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+.tech-slider > label { color: var(--muted); }
+@media (max-width: 40rem) {
+  .tech-slider { grid-template-columns: 1fr auto auto auto; }
+  .tech-slider > label { grid-column: 1 / -1; }
+}

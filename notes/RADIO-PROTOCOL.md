@@ -361,6 +361,19 @@ WEBWRITE. Findings:
   then answers only after retries, so the verify waits 10 s (`RESTART_MS` /
   `RESTART_WAIT`).
 - The echo arrives at about 1 ms per byte even without FTDI low latency.
+- Write Radio's verify is optional and can be cancelled (`Radio.cancel()`
+  stops between messages; `finish()` then restarts the radio if a session
+  was opened). Progress counts RSS's 256-byte blocks, with a time estimate.
+- **Tech tab** (`web/app/tabs/tech.js`, shared connection in
+  `web/app/radioconn.js`): hex read of any address but the 68HC11 registers,
+  through the codeplug session (it sees the whole 64 KB); hex write (≤256
+  bytes) inside RAM, codeplug EEPROM or MCU EEPROM, scrambled in the
+  codeplug session as RSS writes b6a0; regions (`REGIONS` in
+  `web/lib/radio.js`) read to .bin, and EEPROM regions written from .bin
+  (only the differing bytes, then read back). Real radio: 7F00 written and
+  restored, MCU EEPROM saved and its identical file written back (nothing
+  differed), firmware read cancelled at block 3 of 128. About 100 bytes/s
+  reading and 32 bytes/s writing. Alignment controls are placeholders.
 - The port chooser lists every ttyS* as well; there is no filter, since a
   real RS-232 port is a valid choice.
 - Testing: headed Chrome on Xvfb (`--ozone-platform=x11`, no WAYLAND_DISPLAY),

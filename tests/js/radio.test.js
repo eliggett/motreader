@@ -189,3 +189,35 @@ test("S9000e: the second region is read and programmed in its own session", asyn
     await assert.rejects(new rd.Radio(std).program(img), /control head/);
     assert.equal(std.writes, 0);
 });
+
+test("readRange / writeRange: any address in block-sized sessions; registers refused", async () => {
+    const { mem } = syntheticImage();
+    for (let a = 0xB600; a < 0xB800; a++) if (!mem.has(a)) mem.set(a, a & 0xFF);
+    const fake = new FakeRadio(mem);
+    const radio = new rd.Radio(fake);
+    const got = await radio.readRange(0xB5F0, 0xB710);
+    assert.equal(got.length, 0x120);
+    assert.equal(got[0x10 + 0x81], OPTIONS[0]);
+    assert.equal(fake.sent.filter((m) => hex(m.subarray(0, 4)) === "00d10108").length, 3);   // per 0x100 block
+    await radio.writeRange(0xB6F0, fromHex("a1b2c3"));
+    assert.deepEqual([mem.get(0xB6F0), mem.get(0xB6F1), mem.get(0xB6F2)], [0xA1, 0xB2, 0xC3]);
+    await assert.rejects(radio.readRange(0x0FF0, 0x1010), RangeError);
+    assert.equal(rd.writableRegion(0xB6F0, 0xB6F3)?.id, "mcu_eeprom");
+    assert.equal(rd.writableRegion(0x9000, 0x9001), undefined);       // ROM
+    assert.equal(rd.writableRegion(0x7FFF, 0x8001), undefined);       // straddles
+});
+
+test("cancel stops a verify; finish() then restarts the radio", async () => {
+    const { cp, mem } = syntheticImage();
+    const fake = new FakeRadio(mem);
+    const radio = new rd.Radio(fake);
+    const img = await radio.program(cp);
+    let n = 0;
+    const p = radio.verify(img, { restartMs: 0, progress: () => (++n === 1 ? radio.cancel() : undefined) });
+    await assert.rejects(p, rd.Cancelled);
+    assert.equal(radio.needsReset, true);
+    await radio.finish();
+    assert.equal(hex(/** @type {Uint8Array} */ (fake.sent.at(-1)).subarray(0, 4)), "00100108");
+    // the next operation isn't cancelled
+    assert.deepEqual((await radio.readAll()).codeplug, cp);
+});

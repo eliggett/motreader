@@ -28,6 +28,7 @@ import { changes } from "../lib/document.js";
 import * as structure from "../lib/structure.js";
 import { lastDownload } from "./files.js";
 import { currentDialog } from "./modal.js";
+import * as tech from "./tabs/tech.js";
 
 /** @type {string[]} */
 const errors = [];
@@ -157,6 +158,9 @@ export function installTestApi(/** @type {Promise<void>} */ ready) {
         },
         /** Undo the last structural change: {} or { error }. */
         undo: () => editing.undoRestructure(),
+        /** Tech tab: write a region from file bytes (as Write from file… does after its picker). */
+        techWriteRegion: (/** @type {string} */ id, /** @type {Uint8Array | number[] | string} */ data) =>
+            tech.techApi?.writeRegionBytes(id, toBytes(data)) ?? Promise.reject(new Error("open the Tech tab first")),
         /** The toolbar commands (file pickers can't be driven from scripts; use load()). */
         actions,
     };
