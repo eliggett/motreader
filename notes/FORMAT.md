@@ -321,18 +321,35 @@ In the mode pointer table the trunked records come first, at their own length,
 before conventional records `0x10A` apart, and the band is voted on the
 conventional records only.
 
-### 5a-UHF2. A second UHF range — decoded, not edited (2026-10-29)
+### 5a-UHF2. The 403–441 MHz range — SOLVED (2026-10-29, RSS sweep)
 
 518ATN (model `D44ZXA5JC7AK`, K1IMD's set, format 115, standard head) has four
 47-byte trunked modes, then 24 conventional modes in the VHF record. The UHF
 codec above decodes them: modes 20–28, named `430.600` … `430.800`, decode to
 exactly those frequencies, and the rest are 430.05–430.375 RX / 431.65–431.975
-TX and one 444.1 / 449.1 MHz repeater pair (PL 123.0). **The band split
-differs from the 440–490 MHz radio's:** RX flag b2 and the TX/T·A band byte's b2
-are *set* on every 430–432 MHz field and *clear* on the 444.1 / 449.1 MHz ones.
-The 467 MHz rule doesn't apply, and the rule for this range isn't mapped, so
-motreader opens UHF codeplugs whose b2 disagrees with the 467 MHz rule
-read-only. (Its trunked modes 2–4 would make it read-only anyway.)
+TX and one 444.1 / 449.1 MHz repeater pair (PL 123.0). The band split
+differs from the 440–490 MHz radio's. `tools/scenario_freq_sweep.py` on this
+radio (145 values typed into RSS; data `notes/ground-truth/uhf_403_rss/`):
+
+| | b2 set from | RSS accepts |
+|---|---|---|
+| RX flag byte (+8) | **418.000 MHz** (417.99375 clear) | 403.000–441.000 |
+| TX / T·A band byte (+12 / +16) | **421.000 MHz** (420.99375 clear) | 403.000–441.000 |
+
+Everything else is the codec above: all 91 accepted values encode to RSS's
+exact bytes with these splits. No power limit was seen (High kept to 441 MHz).
+The splits sit at different frequencies for RX and TX (on the 440–490 MHz
+range both are 467.000), so b2 is a VCO range select tied to the radio's
+range, not to the frequency alone.
+
+motreader keeps a table of ranges (`UHF_RANGES`) and picks a codeplug's range
+by whose splits its modes' b2 bits follow, the model's band letter (the one
+after the band digit: `D44Z…` = 403–441; `D44K…`, `T44K…` = 440–490) deciding
+first. Fields outside the range's RSS limits aren't evidence: 518ATN's mode 5
+(444.1 / 449.1 MHz, b2 clear, flag b3 clear, so not written by this RSS) would
+contradict the 418 / 421 rule. A codeplug that fits no range opens read-only.
+Frequencies outside RSS's limits are written with the range's splits
+(extrapolated: RSS can't be asked) and noted in the UI.
 
 **RSS normalizations seen on re-save** (not motreader's doing; same on the
 unedited original, `vhf_band_rss/rss_617asq_resave_*`): on 617ASQ, viewing a mode

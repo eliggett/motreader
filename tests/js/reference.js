@@ -82,6 +82,7 @@ function codeplug(/** @type {Uint8Array} */ body) {
         band: cp.band,
         format_version: cp.format_version,
         ascii_names: cp.ascii_names,
+        uhf_range: cp.uhf_range?.name ?? null,
         modes: plain(cp.modes),
         zones: plain(cp.zones),
         zone_operation: zoneOperation(body),

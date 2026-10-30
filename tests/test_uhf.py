@@ -5,8 +5,10 @@ from pathlib import Path
 
 import pytest
 
-from motreader.codeplug import (uhf_decode_rx, uhf_decode_txta, uhf_encode_rx,
-                                uhf_encode_txta, uhf_step)
+from motreader.codeplug import (UHF_RANGES, uhf_decode_rx, uhf_decode_txta,
+                                uhf_encode_rx, uhf_encode_txta, uhf_step)
+
+ROOT = Path(__file__).resolve().parent.parent
 
 
 @pytest.mark.parametrize("f, want", [
@@ -39,7 +41,7 @@ def test_raster():
     assert uhf_step(460.0) == 0.00625 and uhf_step(460.005) == 0.005 and uhf_step(460.0025) is None
 
 
-A518 = Path(__file__).resolve().parent.parent / "notes" / "Codeplugs" / "K1IMD" / "A518ATN0.172"
+A518 = ROOT / "notes" / "Codeplugs" / "K1IMD" / "A518ATN0.172"
 
 
 @pytest.mark.skipif(not A518.exists(), reason="K1IMD's 518ATN (third-party, not in the repo)")
@@ -53,3 +55,22 @@ def test_uhf_after_trunked_modes():
     assert all(m.rx_mhz is None for m in cp.modes[:4])
     assert (cp.modes[4].rx_mhz, cp.modes[4].tx_mhz) == (444.1, 449.1)
     assert [m.rx_mhz for m in cp.modes[19:]] == [float(m.name) for m in cp.modes[19:]]
+    assert cp.uhf_range.name == "403-441"
+
+
+def _sweep_403():
+    """RSS's bytes for typed values on the 403-441 MHz range (518ATN)."""
+    rows = (line.split(",") for line in (ROOT / "notes/ground-truth/uhf_403_rss/sweep.csv").read_text().splitlines()
+            if line and not line.startswith(("#", "field")))
+    return [r for r in rows if r[2] == "ok"]
+
+
+@pytest.mark.parametrize("row", _sweep_403(), ids=lambda r: f"{r[0]}-{r[1]}")
+def test_403_range_matches_rss(row):
+    """b2 from 418 MHz (RX) and 421 MHz (TX / T·A) on this range."""
+    field, mhz, _, _, lo, mid, b9, fb = row
+    r = next(x for x in UHF_RANGES if x.name == "403-441")
+    enc = (uhf_encode_rx(float(mhz), r.rx_split) if field == "rx"
+           else uhf_encode_txta(float(mhz), r.tx_split))
+    got = (enc[0], enc[1], enc[2], enc[3] & 0x0D if field == "rx" else enc[3])
+    assert got == (int(lo), int(mid), int(b9), int(fb, 16))

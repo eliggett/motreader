@@ -1,0 +1,148 @@
+# 518ATN (D44ZXA, 403-441 MHz) typed into RSS R06.00.05 MODE screen, SAVEd; tools/scenario_freq_sweep.py
+# rx: lo=view+6 mid=+7 b9=+5.b0 flag=+8 (b3 masked); tx/ta: lo mid b9=tag.b1 band byte
+field,typed_mhz,status,message,lo,mid,b9,flag_or_band
+rx,400.0,refused,Outside Range,,,
+tx,400.0,refused,Outside Range,,,
+rx,403.0,ok,,24,109,0,0x08
+tx,403.0,ok,,160,91,0,0x80
+rx,406.0,ok,,56,81,0,0x08
+tx,406.0,ok,,192,63,0,0x80
+rx,410.0,ok,,56,86,0,0x08
+tx,410.0,ok,,192,68,0,0x80
+rx,415.0,ok,,24,124,0,0x08
+tx,415.0,ok,,160,106,0,0x80
+rx,420.0,ok,,120,35,0,0x0C
+tx,420.0,ok,,0,17,1,0x80
+rx,425.0,ok,,88,73,0,0x0C
+tx,425.0,ok,,224,55,0,0x84
+rx,430.0,ok,,56,111,0,0x0C
+tx,430.0,ok,,192,93,0,0x84
+rx,433.0,ok,,88,83,0,0x0C
+tx,433.0,ok,,224,65,0,0x84
+rx,435.0,ok,,152,22,0,0x0C
+tx,435.0,ok,,32,4,1,0x84
+rx,438.0,ok,,56,121,0,0x0C
+tx,438.0,ok,,192,103,0,0x84
+rx,440.0,ok,,120,60,0,0x0C
+tx,440.0,ok,,0,42,1,0x84
+rx,442.0,refused,Outside Range,,,
+tx,442.0,refused,Outside Range,,,
+rx,445.0,refused,Outside Range,,,
+tx,445.0,refused,Outside Range,,,
+rx,447.0,refused,Outside Range,,,
+tx,447.0,refused,Outside Range,,,
+rx,450.0,refused,Outside Range,,,
+tx,450.0,refused,Outside Range,,,
+rx,455.0,refused,Outside Range,,,
+tx,455.0,refused,Outside Range,,,
+rx,460.0,refused,Outside Range,,,
+tx,460.0,refused,Outside Range,,,
+rx,465.0,refused,Outside Range,,,
+tx,465.0,refused,Outside Range,,,
+rx,467.0,refused,Outside Range,,,
+tx,467.0,refused,Outside Range,,,
+rx,470.0,refused,Outside Range,,,
+tx,470.0,refused,Outside Range,,,
+rx,475.0,refused,Outside Range,,,
+tx,475.0,refused,Outside Range,,,
+rx,480.0,refused,Outside Range,,,
+tx,480.0,refused,Outside Range,,,
+rx,490.0,refused,Outside Range,,,
+tx,490.0,refused,Outside Range,,,
+rx,416.0,ok,,120,30,0,0x08
+tx,421.0,ok,,224,50,0,0x84
+rx,416.25,ok,,80,70,0,0x08
+tx,421.25,ok,,184,90,0,0x84
+rx,416.5,ok,,40,110,0,0x08
+tx,421.5,ok,,16,3,1,0x84
+rx,416.75,ok,,128,23,0,0x08
+tx,421.75,ok,,232,43,0,0x84
+rx,417.0,ok,,88,63,0,0x08
+tx,422.0,ok,,192,83,0,0x84
+rx,417.25,ok,,48,103,0,0x08
+tx,422.25,ok,,152,123,0,0x84
+rx,417.5,ok,,136,16,0,0x08
+tx,422.5,ok,,240,36,0,0x84
+rx,417.75,ok,,96,56,0,0x08
+tx,422.75,ok,,200,76,0,0x84
+rx,418.0,ok,,56,96,0,0x0C
+tx,423.0,ok,,160,116,0,0x84
+rx,418.25,ok,,144,9,0,0x0C
+tx,423.25,ok,,248,29,0,0x84
+rx,418.5,ok,,104,49,0,0x0C
+tx,423.5,ok,,208,69,0,0x84
+rx,418.75,ok,,64,89,0,0x0C
+tx,423.75,ok,,168,109,0,0x84
+rx,419.0,ok,,152,2,0,0x0C
+tx,424.0,ok,,0,22,1,0x84
+rx,419.25,ok,,112,42,0,0x0C
+tx,424.25,ok,,216,62,0,0x84
+rx,419.5,ok,,72,82,0,0x0C
+tx,424.5,ok,,176,102,0,0x84
+rx,419.75,ok,,32,122,0,0x0C
+tx,424.75,ok,,8,15,1,0x84
+rx,400.5,refused,Outside Range,,,
+tx,400.5,refused,Outside Range,,,
+rx,401.0,refused,Outside Range,,,
+tx,401.0,refused,Outside Range,,,
+rx,401.5,refused,Outside Range,,,
+tx,401.5,refused,Outside Range,,,
+rx,402.0,refused,Outside Range,,,
+tx,402.0,refused,Outside Range,,,
+rx,402.5,refused,Outside Range,,,
+tx,402.5,refused,Outside Range,,,
+rx,440.5,ok,,168,13,0,0x0C
+tx,440.5,ok,,176,122,0,0x84
+rx,441.0,ok,,88,93,0,0x0C
+tx,441.0,ok,,224,75,0,0x84
+rx,441.5,refused,Outside Range,,,
+tx,441.5,refused,Outside Range,,,
+rx,417.775,ok,,92,60,0,0x08
+tx,420.05,ok,,248,25,0,0x80
+rx,417.8,ok,,88,64,0,0x08
+tx,420.1,ok,,240,33,0,0x80
+rx,417.825,ok,,84,68,0,0x08
+tx,420.2,ok,,224,49,0,0x80
+rx,417.85,ok,,80,72,0,0x08
+tx,420.3,ok,,208,65,0,0x80
+rx,417.875,ok,,76,76,0,0x08
+tx,420.4,ok,,192,81,0,0x80
+rx,417.9,ok,,72,80,0,0x08
+tx,420.5,ok,,176,97,0,0x80
+rx,417.925,ok,,68,84,0,0x08
+tx,420.6,ok,,160,113,0,0x80
+rx,417.95,ok,,64,88,0,0x08
+tx,420.7,ok,,16,2,1,0x80
+rx,417.975,ok,,60,92,0,0x08
+tx,420.8,ok,,0,18,1,0x80
+rx,417.99375,ok,,57,95,0,0x08
+tx,420.9,ok,,240,34,0,0x80
+rx,417.98,ok,,202,116,0,0x09
+tx,420.95,ok,,232,42,0,0x80
+rx,402.75,refused,Outside Range,,,
+tx,402.75,refused,Outside Range,,,
+rx,402.9,refused,Outside Range,,,
+tx,402.9,refused,Outside Range,,,
+rx,402.95,refused,Outside Range,,,
+tx,402.95,refused,Outside Range,,,
+rx,402.99375,refused,Outside Range,,,
+tx,402.99375,refused,Outside Range,,,
+rx,441.05,refused,Outside Range,,,
+tx,441.05,refused,Outside Range,,,
+rx,441.25,refused,Outside Range,,,
+tx,441.25,refused,Outside Range,,,
+rx,441.4,refused,Outside Range,,,
+tx,441.4,refused,Outside Range,,,
+rx,441.45,refused,Outside Range,,,
+tx,441.45,refused,Outside Range,,,
+tx,420.025,ok,,252,21,0,0x80
+tx,420.975,ok,,228,46,0,0x80
+tx,420.45,ok,,184,89,0,0x80
+tx,420.55,ok,,168,105,0,0x80
+tx,420.99375,ok,,225,49,0,0x80
+tx,420.995,ok,,25,125,1,0x81
+tx,420.98,ok,,28,122,1,0x81
+rx,417.995,ok,,199,119,0,0x09
+ta,420.99375,ok,,225,49,0,0x80
+ta,421.0,ok,,224,50,0,0x84
+ta,420.975,ok,,228,46,0,0x80

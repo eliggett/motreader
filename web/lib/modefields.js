@@ -187,9 +187,10 @@ export function setModeField(cp, n, key, text) {
     if (cp.band === "vhf" && key === "rx_mhz" && want.rx_mhz !== null && vhfRxStep(/** @type {number} */ (want.rx_mhz)) === null) {
         throw new InvalidValue(`${text} MHz isn't on a 5 or 6.25 kHz raster, which VHF receive frequencies use`);
     }
-    if (cp.band === "uhf" && (key === "tx_power" || key === "ta_power") && want[key] === "High"
-        && /** @type {number} */ (m[key === "tx_power" ? "tx_mhz" : "ta_mhz"]) > 470.0) {
-        throw new InvalidValue("RSS allows only Low power above 470 MHz");
+    const lowAbove = cp.band === "uhf" ? cp.uhf_range?.lowPowerAbove ?? null : null;
+    if (lowAbove !== null && (key === "tx_power" || key === "ta_power") && want[key] === "High"
+        && /** @type {number} */ (m[key === "tx_power" ? "tx_mhz" : "ta_mhz"]) > lowAbove) {
+        throw new InvalidValue(`RSS allows only Low power above ${lowAbove} MHz`);
     }
     if (key === "ta_mhz" && cp.band === "900" && m.ta_mhz === null && want.ta_mhz !== null) {
         throw new InvalidValue("adding a talk-around frequency to a simplex 900 MHz mode isn't supported yet");
@@ -221,6 +222,12 @@ export function setModeField(cp, n, key, text) {
             }
             note = `stored as ${got.toFixed(5)} MHz, the nearest the radio holds`;
         }
+        // RSS's own entry range is information, not a limit: motreader stores what the codec holds
+        const rss = cp.band === "uhf" ? cp.uhf_range?.rss : undefined;
+        if (rss && got !== null && (got < rss[0] || got > rss[1])) {
+            note = `${note ? `${note}; ` : ""}outside the ${rss[0]}–${rss[1]} MHz RSS accepts for this radio `
+                + "(RSS would refuse to enter it; the radio may need retuning)";
+        }
         /** @type {any} */ (want)[key] = got;
         // other frequencies must read back unchanged (e.g. 900 MHz simplex <-> repeater)
         for (const k of /** @type {const} */ (["rx_mhz", "tx_mhz", "ta_mhz"])) {
@@ -242,7 +249,7 @@ export function setModeField(cp, n, key, text) {
     // a power setting appears with its frequency
     if (key === "tx_mhz" && m.tx_mhz !== null && m.tx_power === null) m.tx_power = back.tx_power;
     if (key === "ta_mhz") m.ta_power = m.ta_mhz === null ? null : m.ta_power ?? back.ta_power;
-    // UHF above 470 MHz: RSS (and the encoder) force power Low
+    // UHF above the range's power limit: RSS (and the encoder) force power Low
     if (cp.band === "uhf" && key === "tx_mhz" && back.tx_power === "Low") m.tx_power = "Low";
     if (cp.band === "uhf" && key === "ta_mhz" && back.ta_power === "Low") m.ta_power = "Low";
     return { note };

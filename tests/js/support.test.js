@@ -56,8 +56,9 @@ test("a UHF radio with four 47-byte trunked modes first decodes, read-only", { s
     assert.deepEqual([f(6)?.rx_mhz, f(6)?.tx_mhz], [430.05, 431.65]);
     // modes 20-28 are named after their frequency
     for (let n = 20; n <= 28; n++) assert.equal(f(n)?.rx_mhz?.toFixed(3), f(n)?.name);
+    assert.equal(d.cp.uhf_range?.name, "403-441");
     assert.ok(!d.support.editable);
-    assert.match(d.support.reasons.join("; "), /band split/);
+    assert.match(d.support.reasons.join("; "), /trunked modes other than mode 1/);
 });
 
 test("older format versions 112 and 114 open modes-only", { skip: !existsSync(join(SPECTRA, "AR-ORIG/A624HQE9.680")) }, () => {

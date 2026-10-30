@@ -69,7 +69,8 @@ motreader).
 | Some VHF models show Transmit Power / Talkaround Power (and on one, MPL Type) as "Not Avail" in RSS: the bits are still in the record but do nothing there. The web app doesn't know which models; a UI could hide them. | n/a |
 | 800 MHz: decoded only; such codeplugs open read-only. | read-only |
 | UHF: frequencies on a 6.25 or 5 kHz raster only (RSS refuses most others); the web app refuses them. | refused by the web app |
-| UHF: RSS forces Tx/T·A power Low above 470 MHz; the encoder does the same and the web app refuses High there. | side effect / refused |
+| UHF: RSS forces Tx/T·A power Low above 470 MHz on the 440–490 MHz range; the encoder does the same and the web app refuses High there. The 403–441 MHz range (518ATN) has no such limit inside what RSS accepts. | side effect / refused |
+| UHF entry range per radio range: 440–490 MHz (the A9 radio), 403.000–441.000 MHz (518ATN, D44ZXA; 402.99375 and 441.05 refused). The web app stores a frequency outside it when the codec holds it, with a note that RSS would refuse it (the radio may need retuning). | note (web app) |
 | UHF and VHF: entering some Rx frequencies makes RSS change uP Xtal Shift ("Crystal Frequency Will Be Shifted", F2 to continue). The web app keeps it as a setting; a UI could warn. | side effect (RSS) |
 | 900 MHz: 12.5 kHz raster; motreader reads 895–942 MHz as a 900 MHz frequency, so values outside it are refused. Adding T/A to a simplex 900 mode isn't supported yet (clearing T/A to make a mode simplex is). | refused by motreader |
 

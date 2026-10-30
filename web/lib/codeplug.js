@@ -568,12 +568,14 @@ export function vhfEncodeRx(/** @type {number} */ freq) {
 // on a 6.25 kHz or 5 kHz reference:
 //   TX / T/A: freq = step*(127*(lo + 256 + 256*tag.b1) + 128*mid); tag b1 =
 //     lo's 9th bit (b0 its complement); band byte 0x80 | b0 = 5 kHz | b2 =
-//     467 MHz and up (b1: a 2.5 kHz form RSS sometimes writes; not decoded)
+//     the upper half of the range (b1: a 2.5 kHz form RSS sometimes writes;
+//     not decoded)
 //   RX: freq = step*(127*(lo + 512 + 256*rec5.b0) + 128*mid) - 109.65 (first
-//     IF); view +5 b0 = lo's 9th bit; flag byte (+8) b0 = 5 kHz | b2 = 467 MHz
-//     and up | b3 (RSS sets it on save)
-// RSS uses 6.25 kHz when the frequency is on that raster, else 5 kHz. Above
-// 470 MHz RSS forces TX / T/A power Low.
+//     IF); view +5 b0 = lo's 9th bit; flag byte (+8) b0 = 5 kHz | b2 = the
+//     upper half | b3 (RSS sets it on save)
+// RSS uses 6.25 kHz when the frequency is on that raster, else 5 kHz. Where
+// b2 switches depends on the radio's range (UHF_RANGES). On the 440-490 MHz
+// range RSS forces TX / T/A power Low above 470 MHz.
 export const UHF_RX_IF = 109.65;
 const UHF_BAND = /** @type {const} */ ([400.0, 520.0]);
 
@@ -584,6 +586,52 @@ export function uhfStep(/** @type {number} */ freq) {
         if (Math.abs(n - Math.round(n)) < 1e-6) return step;
     }
     return null;
+}
+
+/**
+ * A UHF range's band split, from RSS sweeps: b2 is set from rxSplit (RX flag
+ * byte) and txSplit (TX / T·A band byte) MHz up. rss = the frequencies RSS
+ * lets you type (motreader stores others too, FORMAT §5a-UHF); lowPowerAbove
+ * = where RSS forces TX / T·A power Low.
+ * @typedef {{ name: string, rxSplit: number, txSplit: number, rss: [number, number], lowPowerAbove: number | null }} UhfRange
+ */
+
+/** @type {readonly UhfRange[]} */
+export const UHF_RANGES = [
+    // a 440-490 MHz A9 radio (T84FWA…) and the D44KMA / T44KMA radios
+    { name: "440-490", rxSplit: 467.0, txSplit: 467.0, rss: [440.0, 490.0], lowPowerAbove: 470.0 },
+    // 518ATN, D44ZXA: RSS takes 403-441 MHz
+    { name: "403-441", rxSplit: 418.0, txSplit: 421.0, rss: [403.0, 441.0], lowPowerAbove: null },
+];
+
+/**
+ * Do the modes' b2 bits follow r's splits (fields in r's RSS range only:
+ * others were written by something else, e.g. 518ATN's 444.1 / 449.1)?
+ * @param {UhfRange} r @param {Mode[]} modes
+ */
+function uhfRangeFits(r, modes) {
+    const [lo, hi] = r.rss;
+    for (const m of modes) {
+        const v = m.raw;
+        if (m.rx_mhz !== null && m.rx_mhz >= lo && m.rx_mhz <= hi && !!(at(v, 8) & 4) !== m.rx_mhz >= r.rxSplit) return false;
+        for (const o of [VHF_TX_OFF, VHF_TA_OFF]) {
+            if (!(at(v, o) || at(v, o + 1)) || at(v, o + 2) & 2) continue;
+            const f = /** @type {number} */ (uhfDecodeTxTa(at(v, o), at(v, o + 1), at(v, o - 1), at(v, o + 2)));
+            if (f >= lo && f <= hi && !!(at(v, o + 2) & 4) !== f >= r.txSplit) return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * The radio's UHF range: the first (the model's band letter first: the one
+ * after the band digit, Z = 403-441) whose splits the modes follow, or null.
+ * @param {string} model @param {Mode[]} modes
+ */
+function uhfRangeFor(model, modes) {
+    const letter = /^[A-Z]\d4[A-Z]/.test(model) ? model[3] : "";
+    const order = [...UHF_RANGES].sort((a, b) => Number((a.name === "403-441") !== (letter === "Z")) - Number((b.name === "403-441") !== (letter === "Z")));
+    return order.find((r) => uhfRangeFits(r, modes)) ?? null;
 }
 
 /** A UHF RX field (lo, mid, flag byte, the byte at view +5 whose b0 is lo's 9th bit) -> MHz. */
@@ -599,8 +647,8 @@ export function uhfDecodeTxTa(/** @type {number} */ lo, /** @type {number} */ mi
     return pyRound(step * (127 * (lo + 256 + 256 * ((tag >> 1) & 1)) + 128 * mid), 5);
 }
 
-/** [lo, mid, lo's 9th bit, flag bits] for a UHF RX frequency, or null if it can't be stored. */
-export function uhfEncodeRx(/** @type {number} */ freq) {
+/** [lo, mid, lo's 9th bit, flag bits] for a UHF RX frequency, or null if it can't be stored; b2 from `split` MHz up. */
+export function uhfEncodeRx(/** @type {number} */ freq, split = 467.0) {
     const step = uhfStep(freq);
     if (step === null) return null;
     const n = pyRound((freq + UHF_RX_IF) / step);
@@ -608,11 +656,11 @@ export function uhfEncodeRx(/** @type {number} */ freq) {
     const a = n - 127 * np;
     const x = np - a - 512;
     if (x < 0 || x > 511) return null;
-    return /** @type {[number, number, number, number]} */ ([x & 0xFF, a, x >> 8, 0x08 | (step === 0.005 ? 1 : 0) | (freq >= 467.0 ? 4 : 0)]);
+    return /** @type {[number, number, number, number]} */ ([x & 0xFF, a, x >> 8, 0x08 | (step === 0.005 ? 1 : 0) | (freq >= split ? 4 : 0)]);
 }
 
-/** [lo, mid, lo's 9th bit, band byte] for a UHF TX / T/A frequency, or null. */
-export function uhfEncodeTxTa(/** @type {number} */ freq) {
+/** [lo, mid, lo's 9th bit, band byte] for a UHF TX / T/A frequency, or null; b2 from `split` MHz up. */
+export function uhfEncodeTxTa(/** @type {number} */ freq, split = 467.0) {
     const step = uhfStep(freq);
     if (step === null) return null;
     const n = pyRound(freq / step);
@@ -620,7 +668,7 @@ export function uhfEncodeTxTa(/** @type {number} */ freq) {
     const a = n - 127 * np;
     const x = np - a - 256;
     if (x < 0 || x > 511) return null;
-    return /** @type {[number, number, number, number]} */ ([x & 0xFF, a, x >> 8, 0x80 | (step === 0.005 ? 1 : 0) | (freq >= 467.0 ? 4 : 0)]);
+    return /** @type {[number, number, number, number]} */ ([x & 0xFF, a, x >> 8, 0x80 | (step === 0.005 ? 1 : 0) | (freq >= split ? 4 : 0)]);
 }
 
 /**
@@ -831,11 +879,13 @@ export function find900Table(/** @type {Uint8Array} */ body) {
  *   ascii_names: [number, number] | null,
  *   zone_sections: ZoneSections | null,
  *   trunked_mode1: boolean,
+ *   uhf_range: UhfRange | null,
  * }} Codeplug
  *   `trunked_mode1`: mode 1 is a trunked record: the 566AYA-layout special one
  *   (no tone slots), or a trunked record in a VHF-layout table (no values).
  *   `format_version`: the codeplug format version in the header (115, 116; older
  *   radios 101-114), or null.
+ *   `uhf_range`: UHF: the radio's range (band split), null if its modes fit no known one.
  */
 
 const SIGNATURE = "COPYRIGHT MOTOROLA INC.,1987";
@@ -845,7 +895,7 @@ export function parseCodeplug(/** @type {Uint8Array} */ body) {
     /** @type {Codeplug} */
     const cp = {
         body, signature: "", serial: "", model: "", band: "", format_version: codeplugVersion(body), modes: [], zones: [],
-        ascii_names: null, zone_sections: null, trunked_mode1: false,
+        ascii_names: null, zone_sections: null, trunked_mode1: false, uhf_range: null,
     };
     parseHeader(cp);
     parseModes(cp);
@@ -950,6 +1000,7 @@ function parseModes(cp) {
         // UHF, 800 MHz: the VHF record layout with their own frequency codecs
         cp.band = band;
         parseModesVhf(cp, pt[2].map((t) => t - 3));
+        if (band === "uhf") cp.uhf_range = uhfRangeFor(cp.model, cp.modes.filter((m) => m.rx_mhz !== null));
         selectNameTable(cp, pt[2].length);
         for (const m of cp.modes) m.name = nameFor(cp, m.number);
         return;

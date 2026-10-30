@@ -13,7 +13,7 @@ import {
     NAME_TABLE_OFF, NAME_LEN_BYTES, packName, packMembership, modePointerTable,
     vhfDecode, vhfEncode, vhfTxBandByte, vhfDecodeRx, vhfEncodeRx, VHF_TX_COEF, VHF_SLOTS, M900_SLOTS, isTrunkedRecord,
     decode900Fields, m900RxEncode, m900FreqEncode, M900_TX, M900_TA, MPL_BY_BITS, UNMUTE_BY_BITS, VALID_CARRY_900,
-    uhfDecodeRx, uhfDecodeTxTa, uhfEncodeRx, uhfEncodeTxTa, codeplugVersion,
+    uhfDecodeRx, uhfDecodeTxTa, uhfEncodeRx, uhfEncodeTxTa, UHF_RANGES, codeplugVersion,
 } from "./codeplug.js";
 import { slotDecode, slotEncode, isDplCode } from "./tones.js";
 import { equal } from "./bytes.js";
@@ -213,11 +213,13 @@ function writeMasked(/** @type {Uint8Array} */ target, /** @type {number} */ bas
 /**
  * A UHF frequency field, re-encoded only if its value changed. RX: lo/mid and
  * the flag byte's step/band bits; TX/TA: lo/mid, lo's 9th bit in the tag, the
- * band byte, and power forced Low above 470 MHz (as RSS does).
- * @param {Uint8Array} out @param {Mode} m @param {number} foff @param {number | null} freq
+ * band byte, and power forced Low where RSS forces it. The band split is the
+ * radio's range's (440-490 MHz's if unknown).
+ * @param {Codeplug} cp @param {Uint8Array} out @param {Mode} m @param {number} foff @param {number | null} freq
  */
-function writeFieldUhf(out, m, foff, freq) {
+function writeFieldUhf(cp, out, m, foff, freq) {
     if (freq === null || freq === undefined) return;
+    const rng = cp.uhf_range ?? /** @type {import("./codeplug.js").UhfRange} */ (UHF_RANGES[0]);
     const r = m.raw;
     const rx = foff === 6;
     const cur = rx ? uhfDecodeRx(byteAt(r, 6), byteAt(r, 7), byteAt(r, 8), byteAt(r, 5))
@@ -225,7 +227,7 @@ function writeFieldUhf(out, m, foff, freq) {
     if (freq === cur) return;
     const a = m.offset + foff;
     if (rx) {
-        const enc = uhfEncodeRx(freq);
+        const enc = uhfEncodeRx(freq, rng.rxSplit);
         if (!enc) throw new InvalidValue(`mode ${m.number}: UHF RX ${freq} MHz can't be stored`);
         out[a] = enc[0];
         out[a + 1] = enc[1];
@@ -233,23 +235,23 @@ function writeFieldUhf(out, m, foff, freq) {
         out[a + 2] = (byteAt(out, a + 2) & (~0x0D & 0xFF)) | enc[3];
         return;
     }
-    const enc = uhfEncodeTxTa(freq);
+    const enc = uhfEncodeTxTa(freq, rng.txSplit);
     if (!enc) throw new InvalidValue(`mode ${m.number}: UHF TX/T·A ${freq} MHz can't be stored`);
     const [lo, mid, bit9, band] = enc;
     out[a] = lo;
     out[a + 1] = mid;
     out[a + 2] = band;
     let tag = (byteAt(out, a - 1) & (~0x03 & 0xFF)) | (bit9 ? 0x02 : 0x01);
-    if (freq > 470.0) tag &= ~0x40 & 0xFF;   // RSS: Low power only above 470 MHz
+    if (rng.lowPowerAbove !== null && freq > rng.lowPowerAbove) tag &= ~0x40 & 0xFF;   // RSS: Low power only up there
     out[a - 1] = tag;
 }
 
 /** @param {Codeplug} cp @param {Uint8Array} out @param {Mode} m */
 function writeModeVhf(cp, out, m) {
     if (cp.band === "uhf") {
-        writeFieldUhf(out, m, 6, m.rx_mhz);
-        writeFieldUhf(out, m, 10, m.tx_mhz);
-        writeFieldUhf(out, m, 14, m.ta_mhz);
+        writeFieldUhf(cp, out, m, 6, m.rx_mhz);
+        writeFieldUhf(cp, out, m, 10, m.tx_mhz);
+        writeFieldUhf(cp, out, m, 14, m.ta_mhz);
     } else {
         writeFieldVhfRx(out, m, m.rx_mhz);
         writeFieldVhf(out, m, 10, m.tx_mhz, VHF_TX_COEF, true);

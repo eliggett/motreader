@@ -616,15 +616,16 @@ def vhf_encode_rx(freq: float):
 #
 #   TX / T/A: freq = step * (127*(lo + 256 + 256*tag.b1) + 128*mid)
 #             tag (view +9 / +13): b1 = the 9th bit of lo, b0 = its complement
-#             band byte (+12 / +16): 0x80 | b0 = 5 kHz step | b2 = 467 MHz and up
-#             (b1 = a 2.5 kHz form RSS sometimes writes; not decoded)
+#             band byte (+12 / +16): 0x80 | b0 = 5 kHz step | b2 = the upper
+#             half of the range (b1 = a 2.5 kHz form RSS sometimes writes; not decoded)
 #   RX:       freq = step * (127*(lo + 512 + 256*rec5.b0) + 128*mid) - 109.65
 #             (the first IF); view +5 b0 = lo's 9th bit; flag byte (+8):
-#             b0 = 5 kHz step | b2 = 467 MHz and up | b3 (RSS sets it on save)
+#             b0 = 5 kHz step | b2 = the upper half | b3 (RSS sets it on save)
 #
 # RSS uses the 6.25 kHz reference when the frequency is on it, else 5 kHz;
-# other values it refuses. Above 470 MHz RSS forces TX / T/A power Low (tag
-# bit 6 cleared).
+# other values it refuses. Where b2 switches depends on the radio's range
+# (UHF_RANGES). On the 440-490 MHz range RSS forces TX / T/A power Low above
+# 470 MHz (tag bit 6 cleared).
 UHF_RX_IF = 109.65
 UHF_BAND = (400.0, 520.0)
 
@@ -637,6 +638,53 @@ def uhf_step(freq: float):
         if abs(n - round(n)) < 1e-6:
             return step
     return None
+
+
+@dataclass(frozen=True)
+class UhfRange:
+    """A UHF range's band split, from RSS sweeps: b2 is set from rx_split
+    (RX flag byte) and tx_split (TX / T·A band byte) MHz up. rss = the
+    frequencies RSS lets you type (motreader stores others too, FORMAT
+    §5a-UHF); low_power_above = where RSS forces TX / T·A power Low."""
+    name: str
+    rx_split: float
+    tx_split: float
+    rss: tuple
+    low_power_above: Optional[float] = None
+
+
+UHF_RANGES = (
+    # a 440-490 MHz A9 radio (T84FWA…) and the D44KMA / T44KMA radios
+    UhfRange("440-490", 467.0, 467.0, (440.0, 490.0), 470.0),
+    # 518ATN, D44ZXA: RSS takes 403-441 MHz
+    UhfRange("403-441", 418.0, 421.0, (403.0, 441.0)),
+)
+
+
+def uhf_range_fits(r: UhfRange, modes) -> bool:
+    """Do the modes' b2 bits follow r's splits (fields in r's RSS range only:
+    others were written by something else, e.g. 518ATN's 444.1 / 449.1)?"""
+    lo, hi = r.rss
+    for m in modes:
+        v = m.raw
+        if m.rx_mhz is not None and lo <= m.rx_mhz <= hi and bool(v[8] & 4) != (m.rx_mhz >= r.rx_split):
+            return False
+        for o in (VHF_TX_OFF, VHF_TA_OFF):
+            if not (v[o] or v[o + 1]) or v[o + 2] & 2:
+                continue
+            f = uhf_decode_txta(v[o], v[o + 1], v[o - 1], v[o + 2])
+            if lo <= f <= hi and bool(v[o + 2] & 4) != (f >= r.tx_split):
+                return False
+    return True
+
+
+def uhf_range_for(model: str, modes) -> Optional[UhfRange]:
+    """The radio's UHF range: the first (the model's band letter first: the
+    one after the band digit, Z = 403-441) whose splits the modes follow,
+    or None."""
+    letter = model[3:4] if _re.match(r"[A-Z]\d4[A-Z]", model) else ""
+    order = sorted(UHF_RANGES, key=lambda r: (r.name == "403-441") != (letter == "Z"))
+    return next((r for r in order if uhf_range_fits(r, modes)), None)
 
 
 def uhf_decode_rx(lo: int, mid: int, flag: int, hi: int) -> float:
@@ -652,8 +700,9 @@ def uhf_decode_txta(lo: int, mid: int, tag: int, band: int):
     return round(step * (127 * (lo + 256 + 256 * ((tag >> 1) & 1)) + 128 * mid), 5)
 
 
-def uhf_encode_rx(freq: float):
-    """(lo, mid, lo's 9th bit, flag bits) for an RX frequency, or None."""
+def uhf_encode_rx(freq: float, split: float = 467.0):
+    """(lo, mid, lo's 9th bit, flag bits) for an RX frequency, or None; b2
+    from `split` MHz up (UhfRange.rx_split)."""
     step = uhf_step(freq)
     if step is None:
         return None
@@ -662,11 +711,12 @@ def uhf_encode_rx(freq: float):
     x = np_ - a - 512
     if not 0 <= x <= 511:
         return None
-    return x & 0xFF, a, x >> 8, 0x08 | (1 if step == 0.005 else 0) | (4 if freq >= 467.0 else 0)
+    return x & 0xFF, a, x >> 8, 0x08 | (1 if step == 0.005 else 0) | (4 if freq >= split else 0)
 
 
-def uhf_encode_txta(freq: float):
-    """(lo, mid, lo's 9th bit, band byte) for a TX / T/A frequency, or None."""
+def uhf_encode_txta(freq: float, split: float = 467.0):
+    """(lo, mid, lo's 9th bit, band byte) for a TX / T/A frequency, or None;
+    b2 from `split` MHz up (UhfRange.tx_split)."""
     step = uhf_step(freq)
     if step is None:
         return None
@@ -675,7 +725,7 @@ def uhf_encode_txta(freq: float):
     x = np_ - a - 256
     if not 0 <= x <= 511:
         return None
-    return x & 0xFF, a, x >> 8, 0x80 | (1 if step == 0.005 else 0) | (4 if freq >= 467.0 else 0)
+    return x & 0xFF, a, x >> 8, 0x80 | (1 if step == 0.005 else 0) | (4 if freq >= split else 0)
 
 
 def _uhf_record(body: bytes, t: int) -> bool:
@@ -1283,6 +1333,8 @@ class Codeplug:
     zones: list = field(default_factory=list)   # list[Zone] (radio-wide)
     # (start, width) of an ASCII mode-name table (A9/expanded heads), else None.
     ascii_names: Optional[tuple] = None
+    # UHF: the radio's range (band split), None if its modes fit no known one
+    uhf_range: Optional[UhfRange] = None
 
     @classmethod
     def parse(cls, body: bytes) -> "Codeplug":
@@ -1424,6 +1476,8 @@ class Codeplug:
             # UHF, 800 MHz: the VHF record layout with their own frequency codecs
             self.band = band
             self._parse_modes_vhf([t - 3 for t in pt[2]])
+            if band == "uhf":
+                self.uhf_range = uhf_range_for(self.model, [m for m in self.modes if m.rx_mhz is not None])
             self._select_name_table(len(pt[2]))
             for m in self.modes:
                 m.name = self._name_for(m.number)
@@ -1729,9 +1783,11 @@ class Codeplug:
     def _write_field_uhf(self, out: bytearray, m: Mode, foff: int, freq) -> None:
         """A UHF frequency field, re-encoded only if its value changed. RX:
         lo/mid + the flag byte's step and band bits; TX/TA: lo/mid, lo's 9th
-        bit in the tag, the band byte, and power forced Low above 470 MHz."""
+        bit in the tag, the band byte, and power forced Low where RSS forces
+        it. The band split is the radio's range's (440-490 MHz's if unknown)."""
         if freq is None:
             return
+        rng = self.uhf_range or UHF_RANGES[0]
         rx = foff == VHF_RX_OFF
         r = m.raw
         cur = (uhf_decode_rx(r[6], r[7], r[8], r[5]) if rx
@@ -1740,21 +1796,21 @@ class Codeplug:
             return
         a = m.offset + foff
         if rx:
-            enc = uhf_encode_rx(freq)
+            enc = uhf_encode_rx(freq, rng.rx_split)
             if enc is None:
                 raise ValueError(f"mode {m.number}: UHF RX {freq} MHz can't be stored")
             out[a], out[a + 1] = enc[0], enc[1]
             out[a - 1] = (out[a - 1] & ~0x01 & 0xFF) | enc[2]
             out[a + 2] = (out[a + 2] & ~0x0D & 0xFF) | enc[3]
             return
-        enc = uhf_encode_txta(freq)
+        enc = uhf_encode_txta(freq, rng.tx_split)
         if enc is None:
             raise ValueError(f"mode {m.number}: UHF TX/T·A {freq} MHz can't be stored")
         lo, mid, bit9, band = enc
         out[a], out[a + 1], out[a + 2] = lo, mid, band
         tag = (out[a - 1] & ~0x03 & 0xFF) | (0x02 if bit9 else 0x01)
-        if freq > 470.0:
-            tag &= ~VHF_POWER_BIT & 0xFF        # RSS: Low power only above 470 MHz
+        if rng.low_power_above is not None and freq > rng.low_power_above:
+            tag &= ~VHF_POWER_BIT & 0xFF        # RSS: Low power only up there
         out[a - 1] = tag
 
     def _write_mode_vhf(self, out: bytearray, m: Mode) -> None:

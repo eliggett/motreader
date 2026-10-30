@@ -62,6 +62,7 @@ def codeplug(body: bytes) -> dict:
         "band": cp.band,
         "format_version": cp.format_version,
         "ascii_names": _plain(cp.ascii_names),
+        "uhf_range": cp.uhf_range and cp.uhf_range.name,
         "modes": _plain(cp.modes),
         "zones": _plain(cp.zones),
         "zone_operation": zone_operation(body),
