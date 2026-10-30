@@ -56,6 +56,10 @@ def test_uhf_after_trunked_modes():
     assert (cp.modes[4].rx_mhz, cp.modes[4].tx_mhz) == (444.1, 449.1)
     assert [m.rx_mhz for m in cp.modes[19:]] == [float(m.name) for m in cp.modes[19:]]
     assert cp.uhf_range.name == "403-441"
+    # mode 5 (444.1 / 449.1, above the range's top): b2 clear, which the encoder gives
+    r, v = cp.uhf_range, cp.modes[4].raw
+    assert uhf_encode_txta(449.1, r.tx_split, r.rss[1]) == (v[10], v[11], v[9] >> 1 & 1, v[12])
+    assert uhf_encode_rx(444.1, r.rx_split, r.rss[1])[3] & 4 == v[8] & 4 == 0
 
 
 def _sweep_403():

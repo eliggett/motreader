@@ -574,7 +574,7 @@ export function vhfEncodeRx(/** @type {number} */ freq) {
 //     IF); view +5 b0 = lo's 9th bit; flag byte (+8) b0 = 5 kHz | b2 = the
 //     upper half | b3 (RSS sets it on save)
 // RSS uses 6.25 kHz when the frequency is on that raster, else 5 kHz. Where
-// b2 switches depends on the radio's range (UHF_RANGES). On the 440-490 MHz
+// b2 switches depends on the radio's range (UHF_RANGES). On the 440-491 MHz
 // range RSS forces TX / T/A power Low above 470 MHz.
 export const UHF_RX_IF = 109.65;
 const UHF_BAND = /** @type {const} */ ([400.0, 520.0]);
@@ -589,35 +589,40 @@ export function uhfStep(/** @type {number} */ freq) {
 }
 
 /**
- * A UHF range's band split, from RSS sweeps: b2 is set from rxSplit (RX flag
- * byte) and txSplit (TX / T·A band byte) MHz up. rss = the frequencies RSS
- * lets you type (motreader stores others too, FORMAT §5a-UHF); lowPowerAbove
- * = where RSS forces TX / T·A power Low.
+ * A UHF range's band split (RSS's VCO split tables in SPECTRA1.EXE, 0x4E1B8
+ * RX / 0x4E308 TX; confirmed by RSS sweeps): b2 selects the upper VCO
+ * segment, set from rxSplit (RX flag byte) or txSplit (TX / T·A band byte) up
+ * to the range's top, rss[1]. rss = the frequencies RSS lets you type
+ * (motreader stores others too, FORMAT §5a-UHF). Above the top b2 is clear
+ * (K1IMD's working 444.1 / 449.1 MHz channel on a 403-441 radio).
+ * lowPowerAbove = where RSS forces TX / T·A power Low.
  * @typedef {{ name: string, rxSplit: number, txSplit: number, rss: [number, number], lowPowerAbove: number | null }} UhfRange
  */
 
 /** @type {readonly UhfRange[]} */
 export const UHF_RANGES = [
-    // a 440-490 MHz A9 radio (T84FWA…) and the D44KMA / T44KMA radios
-    { name: "440-490", rxSplit: 467.0, txSplit: 467.0, rss: [440.0, 490.0], lowPowerAbove: 470.0 },
+    // a 440-491 MHz A9 radio (T84FWA…) and the D44KMA / T44KMA radios
+    { name: "440-491", rxSplit: 467.0, txSplit: 467.0, rss: [440.0, 491.0], lowPowerAbove: 470.0 },
     // 518ATN, D44ZXA: RSS takes 403-441 MHz
     { name: "403-441", rxSplit: 418.0, txSplit: 421.0, rss: [403.0, 441.0], lowPowerAbove: null },
 ];
 
+/** The upper VCO segment: split <= freq <= top. */
+const uhfB2 = (/** @type {number} */ freq, /** @type {number} */ split, /** @type {number} */ top) => freq >= split && freq <= top;
+
 /**
- * Do the modes' b2 bits follow r's splits (fields in r's RSS range only:
- * others were written by something else, e.g. 518ATN's 444.1 / 449.1)?
+ * Do the modes' b2 bits follow r's splits?
  * @param {UhfRange} r @param {Mode[]} modes
  */
 function uhfRangeFits(r, modes) {
-    const [lo, hi] = r.rss;
+    const top = r.rss[1];
     for (const m of modes) {
         const v = m.raw;
-        if (m.rx_mhz !== null && m.rx_mhz >= lo && m.rx_mhz <= hi && !!(at(v, 8) & 4) !== m.rx_mhz >= r.rxSplit) return false;
+        if (m.rx_mhz !== null && !!(at(v, 8) & 4) !== uhfB2(m.rx_mhz, r.rxSplit, top)) return false;
         for (const o of [VHF_TX_OFF, VHF_TA_OFF]) {
             if (!(at(v, o) || at(v, o + 1)) || at(v, o + 2) & 2) continue;
             const f = /** @type {number} */ (uhfDecodeTxTa(at(v, o), at(v, o + 1), at(v, o - 1), at(v, o + 2)));
-            if (f >= lo && f <= hi && !!(at(v, o + 2) & 4) !== f >= r.txSplit) return false;
+            if (!!(at(v, o + 2) & 4) !== uhfB2(f, r.txSplit, top)) return false;
         }
     }
     return true;
@@ -647,8 +652,8 @@ export function uhfDecodeTxTa(/** @type {number} */ lo, /** @type {number} */ mi
     return pyRound(step * (127 * (lo + 256 + 256 * ((tag >> 1) & 1)) + 128 * mid), 5);
 }
 
-/** [lo, mid, lo's 9th bit, flag bits] for a UHF RX frequency, or null if it can't be stored; b2 from `split` MHz up. */
-export function uhfEncodeRx(/** @type {number} */ freq, split = 467.0) {
+/** [lo, mid, lo's 9th bit, flag bits] for a UHF RX frequency, or null if it can't be stored; b2 from `split` to `top` MHz. */
+export function uhfEncodeRx(/** @type {number} */ freq, split = 467.0, top = 491.0) {
     const step = uhfStep(freq);
     if (step === null) return null;
     const n = pyRound((freq + UHF_RX_IF) / step);
@@ -656,11 +661,11 @@ export function uhfEncodeRx(/** @type {number} */ freq, split = 467.0) {
     const a = n - 127 * np;
     const x = np - a - 512;
     if (x < 0 || x > 511) return null;
-    return /** @type {[number, number, number, number]} */ ([x & 0xFF, a, x >> 8, 0x08 | (step === 0.005 ? 1 : 0) | (freq >= split ? 4 : 0)]);
+    return /** @type {[number, number, number, number]} */ ([x & 0xFF, a, x >> 8, 0x08 | (step === 0.005 ? 1 : 0) | (uhfB2(freq, split, top) ? 4 : 0)]);
 }
 
-/** [lo, mid, lo's 9th bit, band byte] for a UHF TX / T/A frequency, or null; b2 from `split` MHz up. */
-export function uhfEncodeTxTa(/** @type {number} */ freq, split = 467.0) {
+/** [lo, mid, lo's 9th bit, band byte] for a UHF TX / T/A frequency, or null; b2 from `split` to `top` MHz. */
+export function uhfEncodeTxTa(/** @type {number} */ freq, split = 467.0, top = 491.0) {
     const step = uhfStep(freq);
     if (step === null) return null;
     const n = pyRound(freq / step);
@@ -668,7 +673,7 @@ export function uhfEncodeTxTa(/** @type {number} */ freq, split = 467.0) {
     const a = n - 127 * np;
     const x = np - a - 256;
     if (x < 0 || x > 511) return null;
-    return /** @type {[number, number, number, number]} */ ([x & 0xFF, a, x >> 8, 0x80 | (step === 0.005 ? 1 : 0) | (freq >= split ? 4 : 0)]);
+    return /** @type {[number, number, number, number]} */ ([x & 0xFF, a, x >> 8, 0x80 | (step === 0.005 ? 1 : 0) | (uhfB2(freq, split, top) ? 4 : 0)]);
 }
 
 /**

@@ -214,7 +214,7 @@ function writeMasked(/** @type {Uint8Array} */ target, /** @type {number} */ bas
  * A UHF frequency field, re-encoded only if its value changed. RX: lo/mid and
  * the flag byte's step/band bits; TX/TA: lo/mid, lo's 9th bit in the tag, the
  * band byte, and power forced Low where RSS forces it. The band split is the
- * radio's range's (440-490 MHz's if unknown).
+ * radio's range's (440-491 MHz's if unknown).
  * @param {Codeplug} cp @param {Uint8Array} out @param {Mode} m @param {number} foff @param {number | null} freq
  */
 function writeFieldUhf(cp, out, m, foff, freq) {
@@ -227,7 +227,7 @@ function writeFieldUhf(cp, out, m, foff, freq) {
     if (freq === cur) return;
     const a = m.offset + foff;
     if (rx) {
-        const enc = uhfEncodeRx(freq, rng.rxSplit);
+        const enc = uhfEncodeRx(freq, rng.rxSplit, rng.rss[1]);
         if (!enc) throw new InvalidValue(`mode ${m.number}: UHF RX ${freq} MHz can't be stored`);
         out[a] = enc[0];
         out[a + 1] = enc[1];
@@ -235,7 +235,7 @@ function writeFieldUhf(cp, out, m, foff, freq) {
         out[a + 2] = (byteAt(out, a + 2) & (~0x0D & 0xFF)) | enc[3];
         return;
     }
-    const enc = uhfEncodeTxTa(freq, rng.txSplit);
+    const enc = uhfEncodeTxTa(freq, rng.txSplit, rng.rss[1]);
     if (!enc) throw new InvalidValue(`mode ${m.number}: UHF TX/T·A ${freq} MHz can't be stored`);
     const [lo, mid, bit9, band] = enc;
     out[a] = lo;

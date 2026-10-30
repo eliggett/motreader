@@ -338,18 +338,33 @@ radio (145 values typed into RSS; data `notes/ground-truth/uhf_403_rss/`):
 
 Everything else is the codec above: all 91 accepted values encode to RSS's
 exact bytes with these splits. No power limit was seen (High kept to 441 MHz).
-The splits sit at different frequencies for RX and TX (on the 440–490 MHz
-range both are 467.000), so b2 is a VCO range select tied to the radio's
-range, not to the frequency alone.
 
-motreader keeps a table of ranges (`UHF_RANGES`) and picks a codeplug's range
-by whose splits its modes' b2 bits follow, the model's band letter (the one
-after the band digit: `D44Z…` = 403–441; `D44K…`, `T44K…` = 440–490) deciding
-first. Fields outside the range's RSS limits aren't evidence: 518ATN's mode 5
-(444.1 / 449.1 MHz, b2 clear, flag b3 clear, so not written by this RSS) would
-contradict the 418 / 421 rule. A codeplug that fits no range opens read-only.
-Frequencies outside RSS's limits are written with the range's splits
-(extrapolated: RSS can't be asked) and noted in the UI.
+**RSS's own tables (SPECTRA1.EXE, 8-byte doubles).** The splits come from per-
+range VCO tables: RX at file offset 0x4E1B8, `(low, split, split, top)` per
+range, after the VHF ones; TX at 0x4E308, `(split, top)`, repeated at 0x4E470.
+The entry limits (what RSS lets you type) are at 0x4B60A.
+
+| Range (RX low–top) | RX b2 from | TX b2 from |
+|---|---|---|
+| 403–441 | 418 | 421 |
+| 438–470 | 454 | 458 |
+| 440–491 | 467 | 467 |
+| 453–491 | 468 | 468 |
+| 475–515 | 495 | 500 |
+
+b2 selects the upper of two VCO segments, `split ≤ f ≤ top`. Two rows are
+confirmed by sweeps (403–441 here, 440–491 on the A9 radio); motreader uses
+only those two. RSS has nothing above the top. 518ATN's mode 5 (444.1 / 449.1
+MHz, PL 123.0) has b2 **clear** on both fields, and K1IMD, a Motorola tech,
+programmed it into a working radio, so above the top b2 is clear: the window
+rule. (444.1 / 449.1 is also what the 438–470 range would write, splits
+454 / 458; the channel may have been programmed under that range.)
+
+motreader keeps the ranges in `UHF_RANGES` and picks a codeplug's range by
+whose rule its modes' b2 bits follow, the model's band letter (the one after
+the band digit: `D44Z…` = 403–441; `D44K…`, `T44K…` = 440–491) deciding
+first. A codeplug that fits no range opens read-only. Frequencies outside
+RSS's entry limits are stored by the window rule and noted in the UI.
 
 **RSS normalizations seen on re-save** (not motreader's doing; same on the
 unedited original, `vhf_band_rss/rss_617asq_resave_*`): on 617ASQ, viewing a mode

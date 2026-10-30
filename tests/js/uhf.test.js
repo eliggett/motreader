@@ -77,7 +77,7 @@ test("a UHF codeplug decodes and edits", { skip: !existsSync(ASJ) }, () => {
     assert.throws(() => setModeField(cp, 2, "rx_mhz", "460.0025"), /raster/);
     setModeField(cp, 5, "rx_mhz", "444.005");
     // outside what RSS accepts on this radio, but the codec holds it: stored, with a note
-    assert.match(setModeField(cp, 6, "rx_mhz", "435.0").note ?? "", /outside the 440–490 MHz RSS accepts/);
+    assert.match(setModeField(cp, 6, "rx_mhz", "435.0").note ?? "", /outside the 440–491 MHz RSS accepts/);
     const res = exportArchive(d);
     assert.deepEqual(res.problems, []);
     const back = openDocument("x", res.bytes).cp;
@@ -99,5 +99,10 @@ test("a 403-441 MHz radio writes its own band split", { skip: !existsSync(A518) 
     assert.equal(cp.modes[7]?.tx_power, "High", "no power limit on this range");
     const out = rebuild(cp);
     const v = (/** @type {number} */ n, /** @type {number} */ o) => out[/** @type {number} */ (cp.modes[n - 1]?.offset) + o] ?? 0;
-    assert.deepEqual([v(6, 8) & 4, v(6, 12) & 4, v(6, 16) & 4, v(7, 8) & 4, v(8, 12) & 4], [4, 0, 4, 0, 4]);
+    // above the range's top (441 MHz) b2 is clear again, as on K1IMD's working 444.1 / 449.1 MHz mode 5
+    assert.deepEqual([v(6, 8) & 4, v(6, 12) & 4, v(6, 16) & 4, v(7, 8) & 4, v(8, 12) & 4], [4, 0, 4, 0, 0]);
+    const m5 = /** @type {import("../../web/lib/codeplug.js").Mode} */ (cp.modes[4]);
+    const r = /** @type {import("../../web/lib/codeplug.js").UhfRange} */ (cp.uhf_range);
+    assert.deepEqual(uhfEncodeTxTa(449.1, r.txSplit, r.rss[1]), [m5.raw[10], m5.raw[11], ((m5.raw[9] ?? 0) >> 1) & 1, m5.raw[12]]);
+    assert.equal((uhfEncodeRx(444.1, r.rxSplit, r.rss[1])?.[3] ?? 0) & 4, (m5.raw[8] ?? 0) & 4);
 });
