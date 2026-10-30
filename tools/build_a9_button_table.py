@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the A9 / S9000e button template table (motreader/_a9_table.py and
+"""Build the A9 / S9000e button template table (motreader-py/_a9_table.py and
 notes/ground-truth/buttons_a9_templates.json) from RSS cycle runs made with
 tools/scenario_cycle_button.py on 221AZN0035, one run dir per key (see RUNS).
 
@@ -126,7 +126,7 @@ for r in report:
     print("!!", r)
 print(len(table), "functions", {k: len(v) for k, v in allowed.items()})
 
-# ---- emit motreader/_a9_table.py ----
+# ---- emit motreader-py/_a9_table.py ----
 def cls(btn):
     return "ind" if btn.startswith("Ind") else "keypad" if btn.isdigit() else btn
 allowed_c = {}
@@ -151,5 +151,5 @@ L.append("ALLOWED = {")
 for k, v in allowed_c.items():
     L.append(f"    {k!r}: {v!r},")
 L.append("}")
-open(os.path.join(ROOT, "motreader/_a9_table.py"), "w").write("\n".join(L) + "\n")
+open(os.path.join(ROOT, "motreader-py/_a9_table.py"), "w").write("\n".join(L) + "\n")
 print("wrote _a9_table.py")

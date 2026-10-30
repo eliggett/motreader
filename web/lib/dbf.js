@@ -5,7 +5,7 @@
  *
  *     SERIAL C(10)  MODEL C(16)  FILENAME C(12)  DATEPGM D(8)  CUSTOMER C(15)
  *
- * Read-only for now; the Python `motreader/dbf.py` also writes it.
+ * Read-only for now; the Python `motreader-py/dbf.py` also writes it.
  */
 import { latin1 } from "./bytes.js";
 

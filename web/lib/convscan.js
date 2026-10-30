@@ -3,7 +3,7 @@
  * Scan with Zone Operation off ("conventional" scan): the per-mode SCAN
  * settings, the CHANNEL / TALKGROUP SCAN LIST of each mode (RSS mode screen
  * F6) and the CONVENTIONAL screen's Non-Priority / Priority List type. Port
- * of motreader/convscan.py (FORMAT §5m; mapped on 617ASQ, 604ATY, 604AUN,
+ * of motreader-py/convscan.py (FORMAT §5m; mapped on 617ASQ, 604ATY, 604AUN,
  * 617ASN from RSS saves).
  *
  *   * mode record (true start) +20: 0x02 SCAN Enabled, 0x01 Scan Button

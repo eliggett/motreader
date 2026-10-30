@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * Add / delete modes (channels) the way RSS's MODE UTILITY does. Port of
- * motreader/modeops.py (FORMAT §5j; byte-exact against RSS saves of ADD /
+ * motreader-py/modeops.py (FORMAT §5j; byte-exact against RSS saves of ADD /
  * DELETE MODE on 617ASN, 617ASQ, 604AUN and the A9 head 221AZN).
  *
  * RSS keeps everything in mode order, so a mode inserted after N becomes N+1

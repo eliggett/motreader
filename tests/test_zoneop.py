@@ -1,4 +1,4 @@
-"""ZONE OPERATION switch (motreader/zoneop.py) vs RSS's own re-packs.
+"""ZONE OPERATION switch (motreader-py/zoneop.py) vs RSS's own re-packs.
 
 Ground truth: notes/ground-truth/zoneop_rss/ -- plain bodies RSS saved before
 and after toggling ZONE OPERATION on every on-hand radio, plus RSS's GET +

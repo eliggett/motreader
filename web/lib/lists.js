@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * The radio-wide PHONE LIST and MPL (Multiple Private Line) list, RSS
- * CHANGE/VIEW -> CONVENTIONAL. Port of motreader/lists.py.
+ * CHANGE/VIEW -> CONVENTIONAL. Port of motreader-py/lists.py.
  *
  * PHONE LIST, 9 entries: numbers as 16 dial nibbles at 0x1E8 (8 bytes each;
  * 0xA = *, 0xB = #, 0xC = P, 0xF unused); names 6-bit at 0x230 (standard

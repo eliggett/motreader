@@ -2,7 +2,7 @@
 /**
  * Write a decoded codeplug's (edited) modes and zones back into a copy of its
  * body: template-patch. Port of Codeplug.rebuild and its helpers in
- * motreader/codeplug.py.
+ * motreader-py/codeplug.py.
  *
  * Only mapped fields are written, and each only when its decoded value
  * changed, so an unedited mode or zone re-encodes byte-identically and every

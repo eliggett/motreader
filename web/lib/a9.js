@@ -3,7 +3,7 @@
  * The A9 (S9000e / "conventional expanded") head keeps a 16-bit checksum
  * over its ASCII string block (STATUS 1 .. the last mode name). Name edits
  * must carry it, or RSS reports a bad checksum on GET. Port of
- * fix_a9_head_checksum and friends in motreader/lists.py.
+ * fix_a9_head_checksum and friends in motreader-py/lists.py.
  *
  * ASCII string block, 11 characters per slot: STATUS x8, MESSAGE x8, CODE x4,
  * UNIT x8, UNIT x8, PHONE x9, SITE x8, MPL x16, " REMOTE", then the zone

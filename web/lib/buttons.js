@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * Control-head buttons (RSS CHANGE/VIEW -> CONTROL HEAD -> F2 KEYPAD), the
- * CLI's buttons.csv. Port of motreader/buttons.py and buttons_a9.py.
+ * CLI's buttons.csv. Port of motreader-py/buttons.py and buttons_a9.py.
  *
  * Standard / Enhanced / Rotary heads: a fixed table of 20 x 4-byte function
  * codes at 0x123 (entry: Ind 1-5 = 0-4, key 0 = 8, keys 1-9 = 9-17, * / # =

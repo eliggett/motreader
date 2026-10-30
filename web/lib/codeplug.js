@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * Decode a Spectra codeplug (the decrypted archive body): header, modes and
- * zones. Port of the read side of motreader/codeplug.py; see notes/FORMAT.md
+ * zones. Port of the read side of motreader-py/codeplug.py; see notes/FORMAT.md
  * §5 for the layouts. Decoding is band-aware: the record layout and the
  * frequency codecs differ between VHF and 900 MHz, and the band is detected
  * from the body's structure.

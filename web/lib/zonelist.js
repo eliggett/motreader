@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * Add / delete zones the way RSS's ZONE NAME LIST (RADIO-WIDE F7) does. Port
- * of motreader/zonelist.py (FORMAT §5k; byte-exact against RSS saves on
+ * of motreader-py/zonelist.py (FORMAT §5k; byte-exact against RSS saves on
  * 617ASN, 604AUN and 221AZN).
  *
  * The zone tables are three contiguous sections right before the radio-wide

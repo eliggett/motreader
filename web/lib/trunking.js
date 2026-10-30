@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * Trunking detection and removal (TRUNKED DUAL MODE, 900 MHz; FORMAT §5h).
- * Port of motreader/trunking.py.
+ * Port of motreader-py/trunking.py.
  *
  * Layout (566AYA): mode 1 is the trunked mode, a 37-byte record whose word at
  * +2 points at the 27-byte personality section right after the mode records;

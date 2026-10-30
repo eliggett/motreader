@@ -2,7 +2,7 @@
 /**
  * Zone scan lists and ZONE SCAN OPTIONS (RSS RADIO-WIDE F2 -> ZONE LIST F7 ->
  * SCAN LIST F7 / SCAN OPTIONS F8), Zone Operation on. Port of
- * motreader/scanlist.py (FORMAT §5l; mapped on 604AUN, 617ASN, 566AYA).
+ * motreader-py/scanlist.py (FORMAT §5l; mapped on 604AUN, 617ASN, 566AYA).
  *
  * Each zone's W+3-byte record in the zone flag section (ext +0x56):
  *   +0      scan-options byte: 0x80 / 0x08 SCAN TYPE Talkgroup / Pri Tlkgr

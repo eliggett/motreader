@@ -1,4 +1,4 @@
-"""Add / delete modes (motreader/modeops.py) vs RSS's MODE UTILITY.
+"""Add / delete modes (motreader-py/modeops.py) vs RSS's MODE UTILITY.
 
 Ground truth: notes/ground-truth/modeops_rss/ -- RSS saves before/after ADD /
 DELETE MODE (rss_*), and RSS's GET + re-SAVE of motreader's own results

@@ -1,4 +1,4 @@
-"""Zones-off scan (motreader/convscan.py): per-mode SCAN settings, Op Select /
+"""Zones-off scan (motreader-py/convscan.py): per-mode SCAN settings, Op Select /
 Mode Slave scan lists, CONVENTIONAL list types and SCAN TYPE, vs RSS.
 
 Ground truth: notes/ground-truth/convscan_rss/ -- RSS saves with one field /

@@ -1,4 +1,4 @@
-"""Add / delete zones (motreader/zonelist.py) vs RSS's ZONE NAME LIST.
+"""Add / delete zones (motreader-py/zonelist.py) vs RSS's ZONE NAME LIST.
 
 Ground truth: notes/ground-truth/zonelist_rss/ -- RSS saves before/after ADD /
 DELETE ZONE (rss_*: the new zone gets modes 1 and 3 in the ZONE MODE LIST),

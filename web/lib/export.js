@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * Turning an edited document back into an archive file, in the order the
- * Python import applies edits (motreader/cli.py do_import):
+ * Python import applies edits (motreader-py/cli.py do_import):
  *
  *   1. modes and zones (rebuild.js) into a copy of the original body
  *   2. the phone and MPL lists (lists.js), the control-head buttons (buttons.js)

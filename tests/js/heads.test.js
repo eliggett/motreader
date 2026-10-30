@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * The generated files are up to date with their sources (the head drawings
- * in graphics/, the A9 button table in motreader/), and each drawing has the
+ * in graphics/, the A9 button table in motreader-py/), and each drawing has the
  * programmable keys RSS shows for that head.
  */
 import { test } from "node:test";
@@ -20,7 +20,7 @@ test("web/app/heads is generated from graphics/ (run tools/build_heads.py)", () 
     assert.equal(r.status, 0, r.stderr);
 });
 
-test("web/lib/a9table.js is generated from motreader/_a9_table.py (run tools/build_a9_table_js.py)", () => {
+test("web/lib/a9table.js is generated from motreader-py/_a9_table.py (run tools/build_a9_table_js.py)", () => {
     const r = check("build_a9_table_js.py");
     assert.equal(r.status, 0, r.stderr);
 });

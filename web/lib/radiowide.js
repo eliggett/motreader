@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * Radio-wide (non-per-mode) settings: the RSS RADIO-WIDE and CONVENTIONAL
- * screens (FORMAT §5f). Port of motreader/radiowide.py; decode only so far.
+ * screens (FORMAT §5f). Port of motreader-py/radiowide.py; decode only so far.
  *
  * Fields live in three areas:
  *  - `hdr`: the fixed codeplug header (absolute body offsets);

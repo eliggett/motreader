@@ -1,4 +1,4 @@
-"""Remove trunking (motreader/trunking.py) vs RSS.
+"""Remove trunking (motreader-py/trunking.py) vs RSS.
 
 566AYA (TRUNKED DUAL MODE, one system / subfleet, trunked mode 1): motreader's
 conversion GET-loads in RSS with no warning, RSS shows MAX SYSTEMS/SUBFLEETS

@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * RADIO-WIDE ZONE OPERATION switch: re-pack the codeplug the way RSS does.
- * Port of motreader/zoneop.py (FORMAT §5g; reproduced byte-exact from RSS
+ * Port of motreader-py/zoneop.py (FORMAT §5g; reproduced byte-exact from RSS
  * saves of every on-hand radio).
  *
  * zones on -> off: the zone tables (right before the radio-wide ext block)

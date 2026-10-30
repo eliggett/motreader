@@ -2,7 +2,7 @@
   "name": "motreader",
   "private": true,
   "type": "module",
-  "description": "Motorola Spectra RSS codeplug editor (web app in web/, Python tools in motreader/ and tools/)",
+  "description": "Motorola Spectra RSS codeplug editor (web app in web/, Python tools in motreader-py/ and tools/)",
   "scripts": {
     "test": "node --test \"tests/js/**/*.test.js\"",
     "check": "tsc -p web/lib/jsconfig.json && tsc -p web/app/jsconfig.json && tsc -p tests/js/jsconfig.json",

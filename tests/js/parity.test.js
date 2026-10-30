@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * The web/lib decoder must agree exactly with the Python one (motreader/) on
+ * The web/lib decoder must agree exactly with the Python one (motreader-py/) on
  * every sample on hand: the RSS ground-truth captures and, when present, the
  * real archives under ~/.dosbox. Python is the reference; tools/py_reference.py
  * dumps what it decodes and tests/js/reference.js builds the same from web/lib.

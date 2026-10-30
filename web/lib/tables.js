@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * CSV and YAML, in the motreader CLI's formats (motreader/cli.py export /
+ * CSV and YAML, in the motreader CLI's formats (motreader-py/cli.py export /
  * import), so files move freely between the web app and the CLI:
  *
  *   modes.csv   one row per mode (the editable columns, the zones-off scan

@@ -108,7 +108,7 @@ def test_button_edits_match_real_rss_display(serial):
     assert dec == shown
 
 
-# ---- A9 / S9000e head (221AZN, motreader/buttons_a9.py) ----
+# ---- A9 / S9000e head (221AZN, motreader-py/buttons_a9.py) ----
 
 A9_IND = ["Ind 1", "Ind 2", "Ind 3", "Ind 4", "Ind 5", "Ind 6"]
 A9_LABELLED = ["Mode Dn", "Mode Up", "Vol Dn", "Vol Up", "Zone Up", "Home"]

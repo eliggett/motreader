@@ -1,4 +1,4 @@
-"""Zone scan lists + ZONE SCAN OPTIONS (motreader/scanlist.py) and the radio-wide
+"""Zone scan lists + ZONE SCAN OPTIONS (motreader-py/scanlist.py) and the radio-wide
 SCAN CONFIGURATION fields vs RSS.
 
 Ground truth: notes/ground-truth/scanlist_rss/ -- RSS saves with one field /
