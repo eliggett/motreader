@@ -717,11 +717,16 @@ def _m800_record(body: bytes, t: int) -> bool:
     return M800_BAND[0] <= rx <= M800_BAND[1] and not 108.0 <= vhf <= 180.0
 
 
+# Trunked record lengths seen: 37 (800 / 900 MHz), 47 (518ATN, UHF).
+TRUNKED_REC_LENS = (0x25, 0x2F)
+
+
 def is_trunked_record(body: bytes, t: int) -> bool:
-    """A trunked record in RSS's mode table: its length byte, 0x25 (37), at
-    true start +1, after 0x1F / 0x20. A conventional record starts with a flag
-    byte that has bit 7 set (0x84, 0x94, 0xB4 on every sample)."""
-    return t + 1 < len(body) and body[t + 1] == 0x25 and body[t] < 0x80
+    """A trunked record in RSS's mode table: its length byte (0x25 = 37 or
+    0x2F = 47) at true start +1, after 0x1F / 0x20 / 0x21. A conventional
+    record starts with a flag byte that has bit 7 set (0x84, 0x94, 0xB4 on
+    every sample)."""
+    return t + 1 < len(body) and body[t + 1] in TRUNKED_REC_LENS and body[t] < 0x80
 
 
 def find_vhf_records(body: bytes) -> list[int]:
@@ -1179,8 +1184,9 @@ def mode_pointer_table(body: bytes):
     radio-wide ext block (which gives the base) and 0xED at the table. Record
     length = header 0x10A; it changes with ZONE OPERATION (per-mode scan list),
     so this is the robust way to find the records. 566AYA's first record is a
-    longer special one. motreader's per-band record views start 11 (900 MHz)
-    or 3 (VHF) bytes before the true start. The older format versions (101-114)
+    longer special one, and trunked records come first, at their own length.
+    motreader's per-band record views start 11 (900 MHz) or 3 (VHF) bytes
+    before the true start. The older format versions (101-114)
     have the same table, record length and base, but no ext block."""
     from .radiowide import find_ext_block
     if len(body) < 0x1E8:
@@ -1195,13 +1201,20 @@ def mode_pointer_table(body: bytes):
     starts = [((body[tab + 2 * i] << 8) | body[tab + 2 * i + 1]) - base for i in range(n)]
     if any(not (tab < t < len(body) - L) for t in starts):
         return None
-    if any(starts[i + 1] - starts[i] != L for i in range(1, n - 1)):
+    # the records after the first are L apart, except leading trunked ones
+    # (518ATN: four 47-byte trunked modes before its conventional ones)
+    k = 1
+    while k < n - 1 and is_trunked_record(body, starts[k]):
+        k += 1
+    if any(starts[i + 1] - starts[i] != L for i in range(k, n - 1)):
         return None
     return base, tab, starts
 
 
 def _record_band(body: bytes, starts) -> Optional[str]:
-    """Band of the records at the pointer-table starts, from their tags."""
+    """Band of the records at the pointer-table starts, from their tags
+    (trunked records don't count)."""
+    starts = [t for t in starts if not is_trunked_record(body, t)]
     # RX tag 0xA0 at +2 (b4 set = the mode scans with SCAN TYPE Talkgroup)
     s900 = sum(body[t + 2] & 0xEF == 0xA0 and body[t + 13] == 0x8C for t in starts)
     svhf = sum(body[t + 6] in (0xE9, 0xE8, 0x68) for t in starts)

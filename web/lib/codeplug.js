@@ -380,8 +380,8 @@ export function zoneOperation(/** @type {Uint8Array} */ body) {
 // The mode pointer table (FORMAT §5i): one big-endian pointer per mode (count
 // = header 0x109) to each record; pointer = body offset + base (a model EEPROM
 // base: 0x5F53 on most radios, 0x1953 on 604AUN). Record length = header
-// 0x10A. motreader's per-band record views start 11 (900) or 3 (VHF) bytes
-// before the true start.
+// 0x10A (trunked records come first, at their own length). motreader's
+// per-band record views start 11 (900) or 3 (VHF) bytes before the true start.
 
 /** The pointer base of the older format versions (no extension block to derive it from). */
 const OLD_FORMAT_BASE = 0x5F53;
@@ -398,12 +398,17 @@ export function modePointerTable(/** @type {Uint8Array} */ body) {
     if (!(tab >= 0x1E8 && tab < body.length - 2 * n) || n === 0 || L < 20) return null;
     const starts = Array.from({ length: n }, (_, i) => be16(body, tab + 2 * i) - base);
     if (starts.some((t) => !(t > tab && t < body.length - L))) return null;
-    for (let i = 1; i < n - 1; i++) if (/** @type {number} */ (starts[i + 1]) - /** @type {number} */ (starts[i]) !== L) return null;
+    // the records after the first are L apart, except leading trunked ones
+    // (518ATN: four 47-byte trunked modes before its conventional ones)
+    let k = 1;
+    while (k < n - 1 && isTrunkedRecord(body, /** @type {number} */ (starts[k]))) k++;
+    for (let i = k; i < n - 1; i++) if (/** @type {number} */ (starts[i + 1]) - /** @type {number} */ (starts[i]) !== L) return null;
     return /** @type {[number, number, number[]]} */ ([base, tab, starts]);
 }
 
-/** Band of the records at the pointer-table starts, from their tags. */
-function recordBand(/** @type {Uint8Array} */ body, /** @type {number[]} */ starts) {
+/** Band of the records at the pointer-table starts, from their tags (trunked records don't count). */
+function recordBand(/** @type {Uint8Array} */ body, /** @type {number[]} */ all) {
+    const starts = all.filter((t) => !isTrunkedRecord(body, t));
     // RX tag 0xA0 at +2 (b4 set = the mode scans with SCAN TYPE Talkgroup)
     const s900 = starts.filter((t) => (at(body, t + 2) & 0xEF) === 0xA0 && at(body, t + 13) === 0x8C).length;
     const svhf = starts.filter((t) => [0xE9, 0xE8, 0x68].includes(at(body, t + 6))).length;
@@ -1042,13 +1047,17 @@ export function readModeBack(cp, body, m) {
     return back;
 }
 
+/** Trunked record lengths seen: 37 (800 / 900 MHz), 47 (518ATN, UHF). */
+const TRUNKED_REC_LENS = [0x25, 0x2F];
+
 /**
- * A trunked record in RSS's mode table: its length byte, 0x25 (37), at true
- * start +1, after 0x1F / 0x20. A conventional record starts with a flag byte
- * that has bit 7 set (0x84, 0x94, 0xB4 on every sample).
+ * A trunked record in RSS's mode table: its length byte (0x25 = 37 or
+ * 0x2F = 47) at true start +1, after 0x1F / 0x20 / 0x21. A conventional
+ * record starts with a flag byte that has bit 7 set (0x84, 0x94, 0xB4 on
+ * every sample).
  */
 export const isTrunkedRecord = (/** @type {Uint8Array} */ body, /** @type {number} */ t) =>
-    body[t + 1] === 0x25 && /** @type {number} */ (body[t]) < 0x80;
+    TRUNKED_REC_LENS.includes(at(body, t + 1)) && at(body, t) < 0x80;
 
 /** @param {Codeplug} cp @param {number[]} starts */
 function parseModesVhf(cp, starts) {

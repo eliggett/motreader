@@ -313,10 +313,26 @@ frequencies (RX ≈ 187 MHz) and opened editable, the trunked mode 1 included.
 Encoding isn't mapped (the band byte, RX flag bits), so 800 MHz codeplugs
 open read-only.
 
-Trunked records in a VHF-layout table are recognised by `0x25` at true start +1
-after a byte below 0x80 (0x1F / 0x20); a conventional record starts with a flag
-byte with bit 7 set (0x84 / 0x94 / 0xB4 on every sample). They are listed with
-no values and never written.
+Trunked records in a VHF-layout table are recognised by their length byte at
+true start +1, `0x25` (37) or `0x2F` (47), after a byte below 0x80 (0x1F / 0x20
+/ 0x21); a conventional record starts with a flag byte with bit 7 set (0x84 /
+0x94 / 0xB4 on every sample). They are listed with no values and never written.
+In the mode pointer table the trunked records come first, at their own length,
+before conventional records `0x10A` apart, and the band is voted on the
+conventional records only.
+
+### 5a-UHF2. A second UHF range — decoded, not edited (2026-10-29)
+
+518ATN (model `D44ZXA5JC7AK`, K1IMD's set, format 115, standard head) has four
+47-byte trunked modes, then 24 conventional modes in the VHF record. The UHF
+codec above decodes them: modes 20–28, named `430.600` … `430.800`, decode to
+exactly those frequencies, and the rest are 430.05–430.375 RX / 431.65–431.975
+TX and one 444.1 / 449.1 MHz repeater pair (PL 123.0). **The band split
+differs from the 440–490 MHz radio's:** RX flag b2 and the TX/T·A band byte's b2
+are *set* on every 430–432 MHz field and *clear* on the 444.1 / 449.1 MHz ones.
+The 467 MHz rule doesn't apply, and the rule for this range isn't mapped, so
+motreader opens UHF codeplugs whose b2 disagrees with the 467 MHz rule
+read-only. (Its trunked modes 2–4 would make it read-only anyway.)
 
 **RSS normalizations seen on re-save** (not motreader's doing; same on the
 unedited original, `vhf_band_rss/rss_617asq_resave_*`): on 617ASQ, viewing a mode

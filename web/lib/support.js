@@ -59,6 +59,11 @@ export function assessSupport(cp) {
     if (cp.band === "uhf" && cp.modes.some((m) => (m.raw[12] ?? 0) & 2 || (m.raw[16] ?? 0) & 2)) {
         reasons.push("some UHF frequencies are stored in a 2.5 kHz form motreader doesn't decode yet");
     }
+    // the RX flag's b2 marks 467 MHz and up on the 440-490 MHz radio it was
+    // mapped on; 518ATN sets it at 430 MHz and clears it at 444 MHz
+    if (cp.band === "uhf" && cp.modes.some((m) => m.rx_mhz !== null && !!((m.raw[8] ?? 0) & 4) !== m.rx_mhz >= 467)) {
+        reasons.push("its UHF band split isn't the one motreader writes (a range not mapped yet)");
+    }
     const n = body[0x109] ?? 0;
     if (pt && cp.modes.length !== n && !reasons.length) {
         reasons.push(`${cp.modes.length} modes were decoded but the codeplug has ${n} (e.g. several trunked modes)`);
