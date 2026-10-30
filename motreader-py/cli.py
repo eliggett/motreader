@@ -29,7 +29,10 @@
         # session (scrambled; EEPROM at 0x6000, ROM) and/or MCU session (RAM,
         # internal EEPROM 0xB6xx). Skips the 68HC11 register block
         # 0x1000-0x103F unless --registers. Writes <session>_space.bin (0xFF
-        # where unread) and dump_map.json. A full session takes minutes.
+        # where unread), dump_map.json, and the regions split out: ram.bin,
+        # firmware_low.bin, codeplug_eeprom.bin, codeplug.bin, firmware.bin,
+        # mcu_eeprom.bin (codeplug_ext.bin on S9000e radios), README.txt.
+        # A full session takes ~11 minutes.
     python -m motreader.cli write-radio <serial_port> <archive> <outdir> --yes [--clone] [--ignore-features]
         # program a radio with an archive's codeplug, the way RSS does. Reads
         # the radio first (backup in <outdir>/backup), refuses unless the
@@ -655,6 +658,36 @@ def dump_radio(port: str, outdir: str, which: str = "both",
         logf.close()
     with open(os.path.join(outdir, "dump_map.json"), "w") as f:
         json.dump(result, f, indent=1)
+    write_dump_parts(outdir)
+
+
+def write_dump_parts(outdir: str) -> None:
+    """Split <outdir>/*_space.bin into named region files + README.txt.
+    Prefers the codeplug-session dump (it answers every block), filling gaps
+    from the MCU session."""
+    from .radio import split_dump
+
+    spaces = [os.path.join(outdir, f"{n}_space.bin") for n in ("codeplug", "mcu")]
+    spaces = [open(p, "rb").read() for p in spaces if os.path.exists(p)]
+    if not spaces:
+        return
+    space = bytearray(spaces[0])
+    for other in spaces[1:]:          # fill blocks the first session didn't give
+        for a in range(0, 0x10000, 0x100):
+            if space[a:a + 0x100] == b"\xff" * 0x100:
+                space[a:a + 0x100] = other[a:a + 0x100]
+    lines = ["Spectra memory dump (motreader dump-radio). Contains Motorola",
+             "firmware: keep it private.", ""]
+    for name, start, data, desc in split_dump(bytes(space)):
+        with open(os.path.join(outdir, name), "wb") as f:
+            f.write(data)
+        lines.append(f"{name:22} {start:#06x}-{start + len(data) - 1:#06x}  {desc}")
+    lines += ["", "*_space.bin: each session's whole 64 KB (0xFF where not read);",
+              "dump_map.json: which blocks answered. 0x1000-0x10FF is skipped",
+              "unless --registers (68HC11 registers)."]
+    with open(os.path.join(outdir, "README.txt"), "w") as f:
+        f.write("\n".join(lines) + "\n")
+    print("\n".join(lines[3:3 + len(split_dump(bytes(space)))]))
 
 
 def write_radio(port: str, archive: str, outdir: str, clone=False,

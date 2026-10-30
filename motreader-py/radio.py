@@ -62,6 +62,32 @@ OPTIONS_LEN = 16
 PROGRAMMED_FLAG = (0xB6A0, 0x39)
 
 
+def split_dump(space: bytes) -> list[tuple[str, int, bytes, str]]:
+    """Named pieces of a 64 KB address-space dump (68HC11 map as seen on a
+    617ASQ): [(filename, start, bytes, description)]. On S9000e radios the
+    0x8000-0x9FFF region is codeplug EEPROM instead of firmware."""
+    cp_len = codeplug_length(space[CODEPLUG_BASE:CODEPLUG_BASE + 0x100]) \
+        if space[CODEPLUG_BASE:CODEPLUG_BASE + 9] == b"COPYRIGHT" else 0
+    ext = bool(cp_len) and has_ext_region(space[CODEPLUG_BASE:])
+    parts = [
+        ("ram.bin", 0x0000, 0x1000, "RAM (live state when dumped)"),
+        ("firmware_low.bin", 0x1100, 0x6000, "code and tables below the codeplug"),
+        ("codeplug_eeprom.bin", 0x6000, 0x8000, "codeplug EEPROM, all 8 KB"),
+        ("codeplug.bin", 0x6000, 0x6000 + cp_len,
+         "the codeplug in use (archive body from offset 0xAD)"),
+    ]
+    if ext:
+        parts += [("codeplug_ext.bin", EXT_BASE, EXT_BASE + EXT_SIZE,
+                   "S9000e second codeplug region (archive continues with it)"),
+                  ("firmware.bin", 0xA000, 0x10000, "firmware ROM 0xA000-0xFFFF")]
+    else:
+        parts += [("firmware.bin", 0x8000, 0x10000,
+                   "firmware ROM 0x8000-0xFFFF (includes the MCU EEPROM window)")]
+    parts += [("mcu_eeprom.bin", 0xB600, 0xB800,
+               "MCU EEPROM: serial, model, option block, alignment candidates")]
+    return [(n, a, bytes(space[a:b]), d) for n, a, b, d in parts if b > a]
+
+
 class BusError(Exception):
     pass
 

@@ -206,3 +206,18 @@ def test_s9000e_image_refused_on_standard_head_radio():
     with pytest.raises(rd.ProgramRefused, match="control head"):
         rd.Radio(link).program(cp9)
     assert link.fake.writes == 0
+
+
+@pytest.mark.parametrize("s9000e", [False, True])
+def test_split_dump(s9000e):
+    cp, mem = synthetic_image(s9000e=s9000e)
+    space = bytearray(b"\xff" * 0x10000)
+    for a, v in mem.items():
+        space[a] = v
+    parts = {n: (a, d) for n, a, d, _ in rd.split_dump(bytes(space))}
+    main = cp[:-0x2000] if s9000e else cp
+    assert parts["codeplug.bin"] == (0x6000, main)
+    assert len(parts["codeplug_eeprom.bin"][1]) == 0x2000
+    assert parts["mcu_eeprom.bin"][0] == 0xB600
+    assert ("codeplug_ext.bin" in parts) == s9000e
+    assert parts["firmware.bin"][0] == (0xA000 if s9000e else 0x8000)
