@@ -15,3 +15,6 @@ node_modules/
 
 # Radio memory dumps (dump-radio, the Tech tab): Motorola firmware, never commit
 /notes/Firmware/
+
+# Built LD_PRELOAD shim (tools/ptybus/ptybus.c)
+/tools/ptybus/*.so

@@ -23,6 +23,21 @@ from motreader import sb9600 as sb  # noqa: E402
 
 SCRAMBLED_SESSIONS = (0xD1, 0x51)
 
+# What a real Spectra (617ASN, 900 MHz) puts on the bus about 10 ms after an
+# alignment command (opcode 0x0a, 0x40): TX audio routing, then display
+# messages (opcode 0x3c) spelling the test frequency, here "350125PL".
+CHATTER = bytes.fromhex(
+    "0100c01bd0" "010a003c26" "0104003c27" "01ff023c28" "01ff043cc1"
+    "01ffb33c69" "01ff353c03" "01ff303c51" "01ff313c38" "01ff323c83"
+    "01ff353c03" "01ff503c98" "01ff4c3c39" "01ff133cad")
+CHATTER_OPS = (0x0A, 0x40)
+
+
+def mcu_sum_ok(mem):
+    """MCU EEPROM 0xB6A0..0xB7FF sums to 0 mod 256 (0xB7FF is the check
+    byte); a radio with it wrong boots with FL 01/92."""
+    return sum(mem.get(a, 0xFF) for a in range(0xB6A0, 0xB800)) & 0xFF == 0
+
 
 class Radio:
     def __init__(self, mem, log):
@@ -33,6 +48,10 @@ class Radio:
         self.reads = self.writes = 0
         self.session = None        # MODE byte 1 that opened the current session
         self.chain = None          # payload[2] of the last scrambled read
+        self.chatter = b""         # unsolicited messages to send after this one
+        self.last_read = None      # (payload, scrambled) of the last read
+        self.flush = True          # flush the log on every note
+        self.sum_was_ok = mcu_sum_ok(mem)
 
     def is_scrambled(self, p):
         """Whether RSS scrambled this read. A scrambled read sends data 0, so
@@ -41,13 +60,16 @@ class Radio:
         sessions (0xd1, and 0x51 for a second control head) scramble."""
         if self.session not in SCRAMBLED_SESSIONS:
             return False
+        if self.last_read and p == self.last_read[0]:
+            return self.last_read[1]        # a retry of the same message
         if self.chain is not None and sb.unscramble(*p[:3])[2] == self.chain:
             return True
         return p[0] == p[1]
 
     def note(self, msg):
         self.log.write(f"{time.monotonic() - self.t0:9.3f} {msg}\n")
-        self.log.flush()
+        if self.flush:
+            self.log.flush()
 
     def message(self, m):
         """A full 5-byte message from RSS; returns the reply bytes (or b"")."""
@@ -56,11 +78,15 @@ class Radio:
         op = p[3]
         desc = ""
         reply = b""
+        self.chatter = CHATTER if op in CHATTER_OPS and p[0] in (0, 1) else b""
         if op != sb.OP_READ:
             self.chain = None
+            self.last_read = None
         if op == sb.OP_READ:
             scr = self.is_scrambled(p)
-            self.chain = p[2] if scr else None
+            if not (self.last_read and p == self.last_read[0]):
+                self.chain = p[2] if scr else None
+            self.last_read = (p, scr)
             hi, lo, _ = sb.unscramble(*p[:3]) if scr else (p[0], p[1], p[2])
             a = hi << 8 | lo
             data = bytes([self.mem.get(a, 0xFF), self.mem.get(a + 1, 0xFF)])
@@ -92,6 +118,10 @@ class Radio:
                 self.session = None
             elif p[0] == 0:
                 self.session = p[1]
+            if p[0] == 0 and self.sum_was_ok and not mcu_sum_ok(self.mem):
+                self.note("WARNING: MCU EEPROM sum 0xB6A0..0xB7FF is now bad "
+                          "(the radio would show FL 01/92)")
+                self.sum_was_ok = False
         else:
             desc = f"OP {op:02x} {p[:3].hex()}"
             if op & 0x80:
@@ -112,11 +142,20 @@ def serve(port, radio, dump):
     conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
     radio.note("emulator connected")
     buf = b""
+    chatter, chatter_due = b"", 0.0
     try:
         while True:
-            chunk = conn.recv(4096)
-            if not chunk:
+            if chatter:
+                conn.settimeout(max(0.0005, chatter_due - time.monotonic()))
+            else:
+                conn.settimeout(None)
+            try:
+                chunk = conn.recv(4096)
+            except socket.timeout:
+                chunk = None
+            if chunk == b"":
                 break
+            chunk = chunk or b""
             buf += chunk
             while len(buf) >= 2:
                 kind, val = buf[0], buf[1]
@@ -136,6 +175,14 @@ def serve(port, radio, dump):
                             out = b"B\x01" + b"".join(
                                 b"D" + bytes([x]) for x in reply) + b"B\x00"
                             conn.sendall(out)
+                        if radio.chatter:
+                            # about 10 ms later, holding BUSY
+                            chatter_due = time.monotonic() + 0.010
+                            chatter = radio.chatter
+            if chatter and time.monotonic() >= chatter_due:
+                conn.sendall(b"B\x01" + b"".join(
+                    b"D" + bytes([x]) for x in chatter) + b"B\x00")
+                chatter = b""
     finally:
         radio.note(f"disconnected: {radio.reads} reads, {radio.writes} writes")
         if dump:

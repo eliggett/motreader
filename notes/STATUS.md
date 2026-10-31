@@ -553,6 +553,12 @@ keystrokes ~half the time.)
    lists + flag bits remain preserved-only (not editable on the on-hand model).
 6. **UHF / lowband / 800** — no archives on hand; same inverse-oracle method when
    the user has one.
+7. **Later (owner's idea, 2026-10-31): automatic repair of checksum FL codes.**
+   A tool that reads the radio, checks every known sum (codeplug header sum
+   0x6131 and directory word 0x6042 → FL 01/82; MCU EEPROM 0xB6A0..0xB7FF →
+   FL 01/92; 0xB62D..0xB633 → 0xB661), and offers to write the corrected
+   bytes. See RADIO-PROTOCOL.md "Codeplug checksum the radio checks" and
+   "Alignment (RSS SERVICE)".
 
 ## Paths
 

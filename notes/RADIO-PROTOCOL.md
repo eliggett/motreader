@@ -332,14 +332,37 @@ recomputes this word and motreader didn't.
 - The 0x2000 extra region on the larger radios.
 - What the 16 RSS-maintained bytes encode.
 - Error-code → message mapping.
-- **Alignment data (to investigate):** TX power (high/low PA set), reference
-  oscillator warp, deviation (modulation levels), and PTT behaviour. Likely
-  outside the codeplug range (clone keeps nothing per-radio in it). Best
-  candidates from the real dump: MCU EEPROM 0xB628–0xB66F (e.g.
-  `a0 b1 b0 b2 78 41 3b 49`, `df f3 f3 e7 f3 df 07 60`). Method: run RSS's SERVICE/ALIGNMENT screens against
-  the fake radio and log which addresses each adjustment reads and writes;
-  then confirm on a real radio by reading only.
+- **Alignment** (RSS SERVICE → ALIGNMENT): see "Alignment (RSS SERVICE)".
 - Front-panel password location.
+
+## Alignment (RSS SERVICE)
+
+Traced on the 900 MHz 617ASN1665 (D37KMA7JA5DK) with
+`tools/scenario_align_recon.py` (enters each screen, never PTT, arrows or
+F8). Work in progress: values and the write side are not decoded yet.
+
+- Screens and the values RSS shows on this radio: DEFAULT SQUELCH 10,
+  TX DEVIATION 11 (0–14), REFERENCE OSCILLATOR WARP 72, TX HIGH POWER 98,
+  PA CURRENT LIMIT 7, TX LOW POWER 46.
+- New commands, both without a reply: `00 03 00 0a` (broadcast, opcode
+  0x0a) and `01 4x 10 40` / `01 11 10 40` / `01 00 00 40` (to the radio,
+  opcode 0x40; the data selects the test). About 10 ms later the radio
+  talks on its own: `01 00 c0 1b` (opcode 0x1b, TX audio routing) and a
+  dozen display messages (opcode 0x3c, `01 ff cc 3c`, one character each,
+  0x80 = decimal point), e.g. "350125PL", one every 12–20 ms, holding BUSY.
+  The control head (address 05) talks too. RSS must wait for BUSY; this
+  is what broke dosbox-x `rib:1` (below).
+- Reads seen: MCU EEPROM b62c–b62f, b634–b645, b64f, b655–b664; RAM 0589;
+  the serial 601d–6027 every ~4 s while a screen is open.
+- **Leaving SERVICE writes the radio**, F8 or not: RSS re-reads MCU EEPROM
+  0xB600–0xB7FE and rewrites 0xB660–0xB664, 0xB693, 0xB69E and **0xB7FF =
+  −(sum of 0xB6A0..0xB7FE) mod 256** (0xB6A0..0xB7FF sums to 0; holds on
+  the 617ASQ dump too). RSS doesn't check reply CRCs, so a bus error during
+  that read writes a wrong check byte: the radio then shows **FL 01/92** at
+  power-up. It happened once here (0xB7FF = 0xDA), fixed by writing 0x68
+  back. `scenario_align_recon.py` therefore never leaves SERVICE through
+  RSS on a real radio unless `--leave`; it kills dosbox-x and sends
+  MODE_DONE, and checks the sum afterwards.
 
 ## Linux / real-port problems in dosbox-x
 
@@ -378,18 +401,44 @@ With `rib:1`:
 - **Local echo** (`ribecho:1`, default): each transmitted byte is echoed to
   the program at once, and the hardware's copy is dropped when it arrives. A
   hardware byte that differs is passed on, so collisions still show.
-- **Burst send**: transmitted bytes are held and written to the port 5 at a
-  time (one SB9600 message), or once the program pauses for two byte times.
-  The radio drops a message spread over more than ~2 ms, and an emulator
-  slower than real time spreads RSS's bytes ~4 ms apart.
-- **BUSY** reported on RI and CTS = our DTR, OR the hardware BUSY (CTS or RI)
-  except for `ribholdoff:` ms (default 30) after each DTR change.
+- **Burst send** (`ribburst:1`, default): transmitted bytes are held and
+  written to the port 5 at a time (one SB9600 message), or once the program
+  pauses for two byte times. The radio drops a message spread over more than
+  ~2 ms, and one write per byte through USB goes out on the 1 ms frame
+  schedule, which can spread it that far. Bytes go out only once our BUSY
+  shows on the bus (DTR is a USB control request, the data another
+  endpoint), at most 3 ms after DTR. The port's DTR drops only once the
+  burst has left the port (RSS, seeing the local echo, drops DTR earlier).
+- **BUSY** reported on RI and CTS = our DTR, OR the hardware BUSY (CTS or
+  RI). After our DTR drops, the hardware BUSY is ignored until it reads clear
+  (our own BUSY lags ~4 ms) or `ribholdoff:` ms (default 30). A byte from
+  another device while we don't hold the bus ends that at once, and reports
+  BUSY for two byte times by itself.
+- **New message** (DTR up): unread bytes from other devices are dropped (a
+  UART would have overrun), late echoes of the last burst are still matched,
+  and unsent bytes of a message RSS abandoned are discarded.
 - **`rxdelay:50`** unless given: received bytes wait for the program.
 - **Low latency**: `ASYNC_LOW_LATENCY` on the port (FTDI drops to 1 ms).
   If that fails (logged), set it by hand:
   `echo 1 | sudo tee /sys/bus/usb-serial/devices/ttyUSB0/latency_timer`.
+  With it, modem lines come from the driver's change counters (TIOCGICOUNT)
+  when TIOCMGET is slow: on an FTDI each TIOCMGET is a 2 ms USB request, and
+  directserial asks every millisecond, which ran the emulator 3.5x slower
+  than real time.
 - `MOT_RIBDEBUG=1` in the environment logs every byte (tx, local echo,
-  dropped hardware echo, received) to the dosbox-x log.
+  dropped hardware echo, received, stale), line changes and flushes to the
+  dosbox-x log; `tools/rib_log_decode.py` decodes it into messages.
+
+Real radio (617ASN1665, 2026-10-31), dosbox-x 9697afd3a: all alignment
+screens read with 0 retries in 387 messages; RSS READ in 53 s (was 168 s),
+identical to `read-radio` apart from the RSS-maintained bytes.
+
+Testing without a radio, with BUSY: `tools/pty_rib.py --bus FILE` models the
+RIB's BUSY (measured lag: ~1.5 ms on, ~4 ms off; the radio's own BUSY while
+it talks), and `tools/ptybus/ptybus.so` (LD_PRELOAD in dosbox-x,
+MOT_PTYBUS=FILE, MOT_PTYBUS_STALL_US=2000) gives the pty those modem lines
+and the FTDI's TIOCMGET stall. `scenario_align_recon.py --link pty-bus`
+runs it; the committed build before 9697afd3a fails there as on the radio.
 
 ## Web Serial (the web app's Read Radio / Write Radio)
 
