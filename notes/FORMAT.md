@@ -456,8 +456,18 @@ this is what the write path must reproduce (see checksum note).
 > every archive on hand; motreader recomputes it on every write path
 > (`fix_header_checksum` / `fixHeaderChecksum`). The radio also maintains it
 > itself (firmware 0xB566, after storing the home mode at 0x6062). Details in
-> RADIO-PROTOCOL.md. The rest of the note below stands: the other per-save
-> bytes are stamps, not checksums.
+> RADIO-PROTOCOL.md.
+>
+> **Directory checksum — also checked (found 2026-10-30, FL 01/82 after an
+> add mode).** Body **0xEF..0xF0** (radio 0x6042) = the **16-bit sum of body
+> 0xAD..0xEE** (radio 0x6000..0x6041: copyright, save time, section pointers)
+> with its bits interleaved: sum low byte bit k → bit 2k+1, high byte bit k →
+> bit 2k, stored big-endian. It changes with the save time (so it *looked*
+> like a stamp below) and whenever add/delete mode moves the pointers at
+> 0xDD..0xEE. Body 0xDA..0xDC is the save time itself: 0xDA month,
+> 0xDB..0xDC day(5) hour(5) minute(6). `fix_header_checksum` /
+> `fixHeaderChecksum` recompute both sums. The remaining per-save bytes
+> (0x1BC–0x1BF, 0x1DF–0x1E5 history) are stamps.
 >
 > **Write-path checksums (earlier conclusion, now amended above).**
 > RSS writes two save-side artifacts the on-disk field edits don't touch:
@@ -747,9 +757,10 @@ Two storage areas:
 | +0x6A / +0x6B | Speaker B Min Volume / Speaker B VIP Number |
 | +0x6C | control-head options: b0-1 Default Dim (Off/Low/Medium/High), b2 Default Backlight, b4/b5/b6 High/Medium/Low Backlight (also changes with Control Head Type) |
 
-Header bytes 0xDE–0xEF behave like a **section directory / pointers + a header
-sum** (0xEF): they move when a table is resized (Number of MPL, Single Tone,
-RAC). Such count fields are exported read-only — template-patch never resizes.
+Header bytes 0xDD–0xEE are a **section directory** (pointers), followed by
+its checksum at 0xEF–0xF0 (the directory checksum above): they move when a
+table is resized (Number of MPL, Single Tone, RAC). Such count fields are
+exported read-only — template-patch never resizes.
 
 RSS side effects motreader deliberately does NOT replicate (it only flips the
 master bit): toggling a master override in RSS also rewrites the matching bit in

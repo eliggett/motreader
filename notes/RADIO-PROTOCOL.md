@@ -158,8 +158,8 @@ programming mode? *(guess)*), `00 10 01` (end: reset the radio *(guess)*).
 3. Write MCU 0xB6A0 (0x39 here), `MODE 00 10 01`.
 
 The result equals the archive except 16 bytes RSS maintains itself:
-0x602D–0x602F, 0x6042–0x6043, 0x610F–0x6112, 0x6132–0x6138 (dates, history,
-check values *(guess)*).
+0x602D–0x602F, 0x6042–0x6043, 0x610F–0x6112, 0x6132–0x6138 (save time and
+its checksum, history; see "Codeplug checksum the radio checks").
 
 ### PROGRAM on the real radio (617ASQ, RSS through dosbox-x)
 
@@ -239,8 +239,13 @@ Same probes, then 0x6000–0x6CFF in 0x100-byte blocks, two bytes per message.
   D43KMA7JA5BK); b68a..b68e, b69f..b6a2 (meaning unknown); ROM ffd2..ffd5
   (a version string, " 606*" here). Session 0x51 (rear head?) does answer.
 - **Bookkeeping bytes** RSS rewrites in the archive on READ (radio address):
-  0x602D–0x602F, 0x6042–0x6043, 0x610F–0x6112, 0x6131–0x6138. Encoded, not
-  yet understood; motreader keeps the radio's values, which RSS accepts.
+  0x602D–0x602F, 0x6042–0x6043, 0x610F–0x6112, 0x6131–0x6138. Now known:
+  0x602D–0x602F is the save time and 0x6042 its checksum (with the pointers),
+  0x6131 the header sum (both below, "Codeplug checksum the radio checks").
+  0x6132–0x6138 behaves like a history list: on READ, RSS pushes a new
+  2-byte entry in front and drops the last. 0x610F–0x6112 is still unknown
+  (inside the header sum; the radio boots with either RSS's value or the
+  radio's). motreader keeps the radio's values, which RSS accepts.
 - RIB timing (FT232R): BUSY appears ~1.5–2 ms after DTR on, clears ~4 ms
   after DTR off.
 
@@ -286,6 +291,38 @@ show **FL 01/82** at power-on (the owner's test, twice). Cause: radio
 - The firmware's error reporter (0x81C8) turns an index 0-4 into
   0x81/0x82/0x84/0x88/0x90, so other checks may exist; motreader also keeps
   the ext-block, mode-table, record, control-head and A9 sums.
+
+### Second one: the directory checksum at 0x6042 (also FL 01/82)
+
+Adding a mode in the web app and programming it gave FL 01/82 again (the
+owner's test, twice), with the header sum correct. Cause: radio
+**0x6042..0x6043 = the 16-bit sum of 0x6000..0x6041, bit-interleaved**: the
+sum's low byte goes in the odd bit positions (bit k → bit 2k+1) and its high
+byte in the even ones (bit k → bit 2k), stored big-endian. 0x6000..0x6041 is
+the copyright text, the save time (0x602D..0x602F) and the section pointers
+(0x6030..0x6041). Adding or deleting a mode moves the pointers; RSS
+recomputes this word and motreader didn't.
+
+- Holds in 262 of the 264 distinct codeplugs on hand; the two misses were
+  made by motreader. On the failing codeplug: stored 2b01, should be 8309.
+- How it was found: on the radio, RSS's own add-mode result
+  (rss_asqadd_after) booted and motreader's didn't. Copying RSS's bytes into
+  the radio group by group (record, names, 0x6042, then the bookkeeping
+  bytes) isolated 0x602E..0x602F: with RSS's value it boots, with the other
+  it shows FL. Those bytes are the **save time**, not a checksum
+  (0x602E..0x602F = day(5) hour(5) minute(6), e.g. f30d = the 30th, 12:13;
+  0x602D holds the month), so the checked value had to cover them. Over the
+  archives, 0x6042 changes exactly when a byte of 0x6000..0x6041 changes (and
+  never for record, name or radio-wide edits). Single-byte steps of the save
+  minute moved it monotonically, which revealed the interleaving.
+- The radio code switches ROM banks (0x0FA0, 0x0FE0); the 64 KB dump holds
+  only the bank that was mapped, which is why neither boot check shows up in
+  it. The ROM self-test (0x2BE6, FL 01/81) is visible: it XORs the firmware
+  and sets 0x81 in RAM 0x0053.
+- Confirmed on the radio: the failing codeplug with only this word corrected
+  (motreader write-radio now corrects both sums) boots with RAM 0x0053 = 0.
+- motreader recomputes both sums on every write path (`fixHeaderChecksum` /
+  `fix_header_checksum`).
 
 ## Open questions
 

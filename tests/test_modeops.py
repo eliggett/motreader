@@ -49,6 +49,23 @@ def test_add_mode_matches_rss(tag, after, zones):
     assert _diff(got, want) == []
 
 
+@pytest.mark.parametrize("tag,after,zones", [
+    ("asqadd", 10, ()), ("asqins", 1, ()), ("asnadd", 53, (1,)), ("asnins", 1, (1,)),
+])
+def test_directory_checksum_follows_mode_ops_like_rss(tag, after, zones):
+    """Adding / deleting a mode moves the section pointers at 0x6000..0x6041;
+    RSS recomputes their checksum at 0x6042 (the radio shows FL 01/82 otherwise).
+    These RSS saves kept the save time, so the whole checksum must match."""
+    from motreader.codeplug import directory_checksum, fix_header_checksum
+    base, want = _gt(f"rss_{tag}_base.plain.bin"), _gt(f"rss_{tag}_after.plain.bin")
+    assert (base[0xEF] << 8) | base[0xF0] == directory_checksum(base)
+    got = fix_header_checksum(M._change(base, after=after, record=_rss_record(want, after + 1),
+                                        name=M.default_name(after + 1), zones=zones))
+    assert got[0xEF:0xF1] == want[0xEF:0xF1] and got[0x1DE] == want[0x1DE]
+    got = fix_header_checksum(M.delete_mode(_gt("rss_asndel_base.plain.bin"), 2))
+    assert got[0xEF:0xF1] == _gt("rss_asndel_after.plain.bin")[0xEF:0xF1]
+
+
 def test_add_mode_copy_from_matches_rss():
     base, want = _gt("rss_asncopy_base.plain.bin"), _gt("rss_asncopy_after.plain.bin")
     assert _diff(M.add_mode(base, 1, copy_from=3, zones=[1]), want) == []

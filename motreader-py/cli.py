@@ -60,7 +60,7 @@ import yaml
 
 from . import buttons, convscan, lists, modeops, radiowide, scanlist, trunking, zonelist, zoneop
 from .archive import Archive
-from .codeplug import Codeplug, fix_header_checksum, header_checksum, mode_pointer_table
+from .codeplug import Codeplug, fix_header_checksum, mode_pointer_table
 from .crypto import decrypt_body, encrypt_body
 
 
@@ -704,11 +704,13 @@ def write_radio(port: str, archive: str, outdir: str, clone=False,
     from .radio import Radio, SerialLink
 
     body = decrypt_body(Archive.load(archive).body)
-    if len(body) > 0x1DE and body[0x1DE] != header_checksum(body):
-        # made by a motreader before the header checksum was known: the radio
+    fixed = fix_header_checksum(body)
+    if fixed != body:
+        # made by a motreader before these checksums were known: the radio
         # would show FL 01/82
-        print(f"header checksum corrected ({body[0x1DE]:02x} -> {header_checksum(body):02x})")
-        body = fix_header_checksum(body)
+        print(f"codeplug checksums corrected (0x6042 {body[0xEF:0xF1].hex()} -> "
+              f"{fixed[0xEF:0xF1].hex()}, 0x6131 {body[0x1DE]:02x} -> {fixed[0x1DE]:02x})")
+        body = fixed
     image, options = body[0xAD:], body[13:19]
     os.makedirs(outdir, exist_ok=True)
     logf = open(os.path.join(outdir, "radio.log"), "w")

@@ -457,9 +457,11 @@ def test_zone_operation_and_no_phantom_zones(fn):
 @pytest.mark.parametrize("serial", sorted(RADIOS))
 def test_header_checksum_holds_and_follows_edits(serial):
     # body 0x1DE = 8-bit sum of 0xF1..0x1DD; the radio checks it (FL 01/82)
-    from motreader.codeplug import fix_header_checksum, header_checksum
+    # and body 0xEF..0xF0 = the bit-interleaved 16-bit sum of 0xAD..0xEE
+    from motreader.codeplug import directory_checksum, fix_header_checksum, header_checksum
     body = _body(RADIOS[serial])
     assert body[0x1DE] == header_checksum(body)
+    assert (body[0xEF] << 8) | body[0xF0] == directory_checksum(body)
     edited = fix_header_checksum(bytes(RW.encode(body, {"mdc_unit_id": "1118"})))
     assert edited[0x1DE] == header_checksum(edited)
     assert fix_header_checksum(body) == body

@@ -1261,8 +1261,36 @@ export function headerChecksum(/** @type {Uint8Array} */ body) {
     return s & 0xFF;
 }
 
-/** Recompute the header checksum in place (no-op on a body too short to have one). */
+/**
+ * Directory checksum (also FL 01/82 when wrong): body 0xEF..0xF0 (radio
+ * 0x6042..0x6043) hold the 16-bit sum of body 0xAD..0xEE (radio
+ * 0x6000..0x6041: copyright, save time, section pointers) with its bits
+ * interleaved: low byte in the odd bit positions, high byte in the even ones.
+ * Adding or deleting a mode moves the pointers, so it changes. Holds in every
+ * archive RSS saved. See motreader-py/codeplug.py DIR_SUM.
+ */
+export const DIR_SUM = /** @type {const} */ ([0xAD, 0xEF]);
+
+/** The directory checksum `body` should have, as the 16-bit big-endian value at 0xEF. */
+export function directoryChecksum(/** @type {Uint8Array} */ body) {
+    let s = 0;
+    for (let i = DIR_SUM[0]; i < DIR_SUM[1]; i++) s += /** @type {number} */ (body[i]);
+    const lo = s & 0xFF;
+    const hi = (s >> 8) & 0xFF;
+    let v = 0;
+    for (let k = 0; k < 8; k++) v |= (((lo >> k) & 1) << (2 * k + 1)) | (((hi >> k) & 1) << (2 * k));
+    return v;
+}
+
+/**
+ * Recompute the checksums the radio checks at power-on, in place: the
+ * directory and header sums (no-op on a body too short to have them).
+ */
 export function fixHeaderChecksum(/** @type {Uint8Array} */ body) {
-    if (body.length > HEADER_SUM[1]) body[HEADER_SUM[1]] = headerChecksum(body);
+    if (body.length <= HEADER_SUM[1]) return;
+    const d = directoryChecksum(body);
+    body[DIR_SUM[1]] = d >> 8;
+    body[DIR_SUM[1] + 1] = d & 0xFF;
+    body[HEADER_SUM[1]] = headerChecksum(body);
 }
 

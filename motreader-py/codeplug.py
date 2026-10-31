@@ -2007,12 +2007,35 @@ def header_checksum(body: bytes) -> int:
     return sum(body[lo:hi]) & 0xFF
 
 
+# Directory checksum (found 2026-10-30, also FL 01/82 when wrong): body
+# 0xEF..0xF0 (radio 0x6042..0x6043) hold the 16-bit sum of body 0xAD..0xEE
+# (radio 0x6000..0x6041: copyright, save time, section pointers) with its
+# bits interleaved, low byte in the odd bit positions and high byte in the
+# even ones. Adding or deleting a mode moves the pointers, so it changes.
+# Holds in every archive RSS saved.
+DIR_SUM = (0xAD, 0xEF)
+
+
+def directory_checksum(body: bytes) -> int:
+    """The directory checksum, as the 16-bit big-endian value at body 0xEF."""
+    lo, hi = DIR_SUM
+    s = sum(body[lo:hi])
+    low, high = s & 0xFF, (s >> 8) & 0xFF
+    v = 0
+    for k in range(8):
+        v |= ((low >> k) & 1) << (2 * k + 1) | ((high >> k) & 1) << (2 * k)
+    return v
+
+
 def fix_header_checksum(body: bytes) -> bytes:
-    """``body`` with its header checksum recomputed (unchanged if too short)."""
+    """``body`` with the checksums the radio checks at power-on (directory and
+    header) recomputed (unchanged if too short)."""
     lo, hi = HEADER_SUM
     if len(body) <= hi:
         return body
     out = bytearray(body)
-    out[hi] = header_checksum(body)
+    d = directory_checksum(body)
+    out[DIR_SUM[1]], out[DIR_SUM[1] + 1] = d >> 8, d & 0xFF
+    out[hi] = header_checksum(out)
     return bytes(out)
 

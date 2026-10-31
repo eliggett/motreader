@@ -10,8 +10,8 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { openDocument, changes } from "../../web/lib/document.js";
-import { headerChecksum } from "../../web/lib/codeplug.js";
-import { openArchive } from "../../web/lib/archive.js";
+import { headerChecksum, directoryChecksum } from "../../web/lib/codeplug.js";
+import { openArchive, sealArchive, BANNER_LONG } from "../../web/lib/archive.js";
 import { exportArchive } from "../../web/lib/export.js";
 import { setModeField } from "../../web/lib/modefields.js";
 import { setRadioWide } from "../../web/lib/document.js";
@@ -20,7 +20,7 @@ import { addMode, deleteMode } from "../../web/lib/modeops.js";
 import { removeTrunking } from "../../web/lib/trunking.js";
 import * as S from "../../web/lib/structure.js";
 import { InvalidValue } from "../../web/lib/errors.js";
-import { SPECTRA, fixed } from "./util.js";
+import { SPECTRA, GROUND_TRUTH, fixed } from "./util.js";
 
 const ARCHIVE = join(SPECTRA, "ARCHIVE");
 /** The archive's path in ARCHIVE, matched case-insensitively (DOS names), or null. */
@@ -136,6 +136,28 @@ test("every archive RSS saved has the header checksum the radio checks", { skip:
         n++;
     }
     assert.ok(n > 0);
+});
+
+test("every archive RSS saved has the directory checksum the radio checks", { skip: !existsSync(ARCHIVE) }, () => {
+    let n = 0;
+    for (const f of readdirSync(ARCHIVE)) {
+        if (!/^[ab].*\.\d{3}$/i.test(f)) continue;
+        const body = openArchive(new Uint8Array(readFileSync(join(ARCHIVE, f)))).plain;
+        assert.equal((body[0xEF] << 8) | body[0xF0], directoryChecksum(body), f);
+        n++;
+    }
+    assert.ok(n > 0);
+});
+
+test("adding a mode updates the directory checksum as RSS does (FL 01/82 otherwise)", () => {
+    const gt = (/** @type {string} */ n) => new Uint8Array(readFileSync(join(GROUND_TRUTH, "modeops_rss", n)));
+    const base = gt("rss_asqadd_base.plain.bin");
+    const want = gt("rss_asqadd_after.plain.bin");
+    assert.equal((want[0xEF] << 8) | want[0xF0], directoryChecksum(want));
+    const d = S.addModeTo(openDocument("A617ASQ1.266", sealArchive(BANNER_LONG, base)), { after: 10 });
+    const plain = exportArchive(d, d.radioWideEdits).plain;
+    assert.deepEqual([...plain.subarray(0xAD, 0xEF)], [...want.subarray(0xAD, 0xEF)], "the same pointers as RSS");
+    assert.deepEqual([...plain.subarray(0xEF, 0xF1)], [...want.subarray(0xEF, 0xF1)]);
 });
 
 test("an MDC Unit ID edit updates the header checksum (FL 01/82 otherwise)", { skip: !has("a617asq1.266") }, () => {
