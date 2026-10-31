@@ -5,7 +5,11 @@
 2. Toggle DTR (the BUSY output) and time how long CTS/RI take to follow:
    RSS allows about 1 ms; motreader allows much more.
 3. Optionally (--read) read the codeplug header's first bytes, the same read
-   RSS starts with, and print the timings. Read-only.
+   RSS starts with, and print the timings. Read-only, but like any RSS READ
+   it ends with MODE_DONE, which restarts the radio.
+
+Run it with the radio connected and on: steps 1-2 only pulse BUSY (as every
+programming session does), and nothing is ever written.
 
 Usage: rib_check.py <port> [--read]
 """
@@ -67,13 +71,14 @@ def main():
         from motreader.radio import CODEPLUG_BASE, SESSION_CODEPLUG, Radio, SerialLink
         log = []
         link = SerialLink(a.port, log=log.append)
+        r = Radio(link)
         try:
-            r = Radio(link)
             t0 = time.monotonic()
             with r.session(SESSION_CODEPLUG):
                 head = r.read(CODEPLUG_BASE, 32, True)
             dt = time.monotonic() - t0
         finally:
+            r.finish()      # MODE_DONE: restarts the radio, or its panel stays frozen
             link.close()
         print(f"header read in {dt * 1000:.0f} ms: {head!r}")
         print("OK: the radio answers." if head.startswith(b"COPYRIGHT")

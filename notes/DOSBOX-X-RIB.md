@@ -95,12 +95,18 @@ RSS read the whole codeplug with up to 4 ms of delay in each direction,
 failed near the end at 8 ms, and failed at once at 16 ms. FTDI adapters work.
 Some cheap clones report the modem lines slowly or not at all.
 
-**Check the cable before starting RSS (optional).** From the motreader repo:
+**Check the cable before starting RSS (optional).** Run this with the radio
+connected through the RIB and switched on. It never writes to the radio.
+From the motreader repo:
 
 ```sh
 python3 tools/rib_check.py /dev/ttyUSB0          # BUSY lines and DTR round trip
 python3 tools/rib_check.py /dev/ttyUSB0 --read   # also reads a few header bytes (read-only)
 ```
+
+The first form only pulses BUSY three times, briefly, as every programming
+session does. `--read` opens a read session like RSS's and ends it the same
+way, so the radio restarts afterwards, just as it does after an RSS READ.
 
 ## 4. Configure dosbox-x
 
