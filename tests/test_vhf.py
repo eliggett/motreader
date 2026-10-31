@@ -209,3 +209,32 @@ def test_vhf_edit_split_is_surgical():
     assert len(diffs) == 6
     chk = Codeplug.parse(new).modes[2]
     assert (chk.rx_mhz, chk.tx_mhz, chk.ta_mhz) == (146.94, 146.34, 146.94)
+
+
+AZN = os.path.expanduser(
+    "~/Documents/Ham Radio/Motorola/SPECTRA/ARCHIVE/a221azn0.035"
+)
+
+
+def test_vhf_rx_only_blank_tx_as_rss():
+    """A blank TX / T/A (RX-only mode) is stored as RSS stores it: 221AZN's
+    mode 50 "WX1" given a TX and T/A, then blanked, is its original bytes."""
+    if not os.path.exists(AZN):
+        pytest.skip("sample not present")
+    body = decrypt_body(Archive.load(AZN).body)
+    cp = Codeplug.parse(body)
+    assert (cp.modes[49].tx_mhz, cp.modes[49].ta_mhz) == (None, None)
+    cp.modes[49].tx_mhz = cp.modes[49].ta_mhz = 162.55
+    mid = bytes(cp.rebuild())
+    assert (Codeplug.parse(mid).modes[49].tx_mhz, Codeplug.parse(mid).modes[49].ta_mhz) == (162.55, 162.55)
+    cp = Codeplug.parse(mid)
+    cp.modes[49].tx_mhz = cp.modes[49].ta_mhz = None
+    assert bytes(cp.rebuild()) == body
+    # blank a programmed mode's TX and T/A
+    cp = Codeplug.parse(body)
+    rx = cp.modes[0].rx_mhz
+    cp.modes[0].tx_mhz = cp.modes[0].ta_mhz = None
+    m = Codeplug.parse(bytes(cp.rebuild())).modes[0]
+    assert (m.rx_mhz, m.tx_mhz, m.ta_mhz, m.tx_power) == (rx, None, None, None)
+    r = m.raw
+    assert [r[9] & 0x81, r[10], r[11], r[12], r[13] & 0x81, r[14], r[15], r[16]] == [0, 0, 0, 0x80, 0, 0, 0, 0x80]

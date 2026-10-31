@@ -165,15 +165,29 @@ function writeName(/** @type {Codeplug} */ cp, /** @type {Uint8Array} */ out, /*
     if (!equal(cp.body.subarray(noff, noff + NAME_LEN_BYTES), packed)) out.set(packed, noff);
 }
 
-/** A VHF frequency field, re-encoded only if its value changed. */
+/**
+ * A VHF TX / T·A field, re-encoded only if its value changed. Blank (an
+ * RX-only mode), as RSS stores it: value bytes zero, band byte 0x80 and the
+ * tag's bits 7 and 0 clear; a programmed field has both tag bits set.
+ */
 function writeFieldVhf(/** @type {Uint8Array} */ out, /** @type {Mode} */ m, /** @type {number} */ foff,
     /** @type {number | null} */ freq, /** @type {import("./codeplug.js").Coef} */ coef, /** @type {boolean} */ hasBand) {
-    if (freq === null || freq === undefined) return;
-    if (freq === vhfDecode(byteAt(m.raw, foff), byteAt(m.raw, foff + 1), coef)) return;
+    const blank = !byteAt(m.raw, foff) && !byteAt(m.raw, foff + 1);
+    const a = m.offset + foff;
+    if (freq === null || freq === undefined) {
+        if (blank) return;
+        out[a] = 0;
+        out[a + 1] = 0;
+        if (hasBand) out[a + 2] = 0x80;
+        out[a - 1] = byteAt(out, a - 1) & (~0x81 & 0xFF);
+        return;
+    }
+    if (!blank && freq === vhfDecode(byteAt(m.raw, foff), byteAt(m.raw, foff + 1), coef)) return;
     const [lo, mid] = vhfEncode(freq, coef);
-    out[m.offset + foff] = lo;
-    out[m.offset + foff + 1] = mid;
-    if (hasBand) out[m.offset + foff + 2] = vhfTxBandByte(freq);
+    out[a] = lo;
+    out[a + 1] = mid;
+    if (hasBand) out[a + 2] = vhfTxBandByte(freq);
+    out[a - 1] = byteAt(out, a - 1) | 0x81;
 }
 
 /**

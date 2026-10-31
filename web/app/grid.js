@@ -145,7 +145,11 @@ export function createGrid(spec) {
         td.classList.add("editing");
         editing = { td, input, row, col };
         input.focus();
-        if (input instanceof HTMLInputElement && initial === null) input.select();
+        if (input instanceof HTMLInputElement) {
+            // Enter/F2/double-click: all selected; typing: the caret after the typed character
+            if (initial === null) input.select();
+            else input.setSelectionRange(input.value.length, input.value.length);
+        }
     }
 
     function cancel() {
@@ -188,11 +192,12 @@ export function createGrid(spec) {
             if (e.key === "Tab" && ((e.shiftKey && c === 0) || (!e.shiftKey && c === cols.length - 1))) return;   // leave the grid
             e.preventDefault();
             fn();
-        } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        } else if ((e.key.length === 1 || e.key === "Delete" || e.key === "Backspace") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            // typing replaces the text; Delete / Backspace start with it empty
             const ed = rows[r] !== undefined ? cols[c]?.editor?.(/** @type {R} */ (rows[r])) : null;
             if (ed?.type === "text") {
                 e.preventDefault();
-                edit(e.key);
+                edit(e.key.length === 1 ? e.key : "");
             }
         }
     });

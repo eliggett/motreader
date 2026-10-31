@@ -89,7 +89,8 @@ export async function openModeEditor(/** @type {number} */ n) {
                 msg.textContent = "";
                 msg.className = "field-msg";
                 if (input.value === fieldText(mode, f.key) || (f.kind !== "name" && f.kind !== "mhz" && input.value === "")) continue;
-                if (!applies(cp, mode, f) && input.value === "") continue;
+                // a power setting whose frequency was just blanked (RX-only) no longer applies
+                if (!applies(cp, mode, f) && (input.value === "" || f.needs)) continue;
                 const res = editMode(n, f.key, input.value);
                 if (res.error) {
                     ok = false;

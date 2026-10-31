@@ -388,6 +388,14 @@ up RX-only modes — e.g. NOAA weather — whose TX/T·A fields are blank (tag b
 TX or T·A field is **"Blank"** exactly when both value bytes are zero (the tag
 byte itself varies — `0xE9` and `0xA9` both occur for programmed T·A).
 
+**Writing a blank field** (2026-10-30, from RSS's 14 blank TX/T·A fields in the
+archives, all VHF): value bytes zero, band byte (`+12` / `+16`) `0x80`, tag bits
+7 and 0 (`0x81`) clear; the power bit (`0x40`) is left as it was. Every
+programmed field has both tag bits set, so giving a blank field a frequency sets
+them again. 221AZN's "WX1" given a TX and T·A and then blanked again comes back
+byte for byte. Not yet done for UHF / 800 / 900 (no RSS sample of a blank TX).
+Not yet tried on a radio.
+
 **Power level is encoded in the tag bytes (white-box, 2026-10-22).** The two
 "tag" bytes are not opaque markers — **bit 6 (`0x40`) = power High/Low**:
 - `rec+9`  (the `0xE9`/`0xA9` TX tag):  bit6 set → **Transmit Power High**, clear → Low.

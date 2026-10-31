@@ -73,8 +73,9 @@ function build(doc, keep = null) {
             ...(doc.trunk.info ? [{ label: "Remove trunking…", title: "Make mode 1 a conventional mode", run: () => removeTrunkingAsk() }] : []),
         ]),
         doc.trunked.length > 1 ? trunkedNote(doc) : null,
-        note(`${cp.modes.length} modes. Arrow keys move, Enter or typing edits, Escape cancels; `
+        note(`${cp.modes.length} modes. Arrow keys move, Enter or typing edits, Delete clears, Escape cancels; `
             + "Edit opens one mode as a form. Changed cells are highlighted."
+            + (cp.band === "vhf" ? " Leave Tx MHz and T/A MHz blank for an RX-only mode (e.g. NOAA weather)." : "")
             + (cp.trunked_mode1 ? " Mode 1 is the trunked mode and isn't editable." : "")
             + (editable ? "" : " This codeplug's 900 MHz mode layout isn't recognised, so modes are read-only.")),
         grid.el);

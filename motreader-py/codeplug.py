@@ -1743,18 +1743,28 @@ class Codeplug:
 
     def _write_field_vhf(self, out: bytearray, m: Mode, foff: int, freq, coef,
                          has_band: bool) -> None:
+        # Blank (an RX-only mode), as RSS stores it: value bytes zero, band
+        # byte 0x80 and the tag's bits 7 and 0 clear; a programmed field has
+        # both tag bits set.
+        blank = not m.raw[foff] and not m.raw[foff + 1]
+        a = m.offset + foff
         if freq is None:
+            if not blank:
+                out[a], out[a + 1] = 0, 0
+                if has_band:
+                    out[a + 2] = 0x80
+                out[a - 1] &= ~0x81 & 0xFF
             return
         # Lossless: a field can have several (lo, mid) encodings of the same MHz,
         # so if the value is unchanged from the original bytes, leave them as-is
         # (out already holds the original body). Only re-encode a real edit.
-        if freq == vhf_decode(m.raw[foff], m.raw[foff + 1], coef):
+        if not blank and freq == vhf_decode(m.raw[foff], m.raw[foff + 1], coef):
             return
-        base = m.offset
         lo, mid = vhf_encode(freq, coef)
-        out[base + foff], out[base + foff + 1] = lo, mid
+        out[a], out[a + 1] = lo, mid
         if has_band:
-            out[base + foff + 2] = vhf_tx_band_byte(freq)
+            out[a + 2] = vhf_tx_band_byte(freq)
+        out[a - 1] |= 0x81
 
     def _write_field_vhf_rx(self, out: bytearray, m: Mode, freq) -> None:
         """A VHF RX field, re-encoded only if its value changed: lo/mid, lo's

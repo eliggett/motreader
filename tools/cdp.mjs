@@ -23,6 +23,10 @@
  *   --chrome PATH        Chrome binary (default: google-chrome, chromium)
  *   --verbose            also print console.log / info lines
  *
+ * An expression starting with "@keys " is typed instead, as real key presses
+ * into the focused element (\t Tab, \n Enter, \e Escape, \b Backspace, \d Delete):
+ *   node tools/cdp.mjs --load A617ASQ1.266 'mr.tab("modes")' '@keys \t162.55\n'
+ *
  * Exit status is 1 if an expression threw or the page raised an uncaught error.
  */
 import { spawn, execFileSync } from "node:child_process";
@@ -231,9 +235,20 @@ async function main() {
         const b64 = readFileSync(opt.index).toString("base64");
         await evaluate(`mr.loadIndex(${JSON.stringify(basename(opt.index))}, ${JSON.stringify(b64)})`);
     }
+    /** Press each character of `text` as a key (\t Tab, \n Enter, \e Escape, \b Backspace, \d Delete). */
+    const typeKeys = async (/** @type {string} */ text) => {
+        const named = /** @type {Record<string, [string, number]>} */ ({ t: ["Tab", 9], n: ["Enter", 13], e: ["Escape", 27], b: ["Backspace", 8], d: ["Delete", 46] });
+        for (let i = 0; i < text.length; i++) {
+            const ch = /** @type {string} */ (text[i]);
+            const k = ch === "\\" ? named[text[++i] ?? ""] : undefined;
+            const ev = k ? { key: k[0], code: k[0], windowsVirtualKeyCode: k[1] } : { key: ch, text: ch };
+            await cdp.send("Input.dispatchKeyEvent", { type: k ? "rawKeyDown" : "keyDown", ...ev });
+            await cdp.send("Input.dispatchKeyEvent", { type: "keyUp", ...ev });
+        }
+    };
     for (const e of exprs) {
         try {
-            const v = await evaluate(e);
+            const v = e.startsWith("@keys ") ? await typeKeys(e.slice(6)) : await evaluate(e);
             console.log(`> ${e}\n${typeof v === "string" ? v : JSON.stringify(v, null, 2)}`);
         } catch (err) {
             failed = true;

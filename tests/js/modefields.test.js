@@ -84,6 +84,41 @@ test("A9 name edits carry the head checksum", { skip: !has("a221azn0.035") }, ()
     assert.ok(res.changed.length > 11, "name bytes and the checksum word");
 });
 
+test("VHF RX-only modes: a blank TX / T·A is stored as RSS stores it", { skip: !has("a221azn0.035") }, () => {
+    // RSS's own RX-only modes there: 50 "WX1" and 52 "WX3" (NOAA weather)
+    let d = open("a221azn0.035");
+    const wx = /** @type {any} */ (d.cp.modes[49]);
+    assert.deepEqual([wx.name, wx.tx_mhz, wx.ta_mhz], ["WX1 162 550", null, null]);
+    // give it a TX and T·A, then blank them again: the original bytes come back
+    setModeField(d.cp, 50, "tx_mhz", "162.55");
+    setModeField(d.cp, 50, "ta_mhz", "162.55");
+    assert.equal(wx.tx_power, "High");
+    let back = openDocument(d.fileName, exportArchive(d).bytes).cp.modes[49];
+    assert.deepEqual([back?.tx_mhz, back?.ta_mhz], [162.55, 162.55]);
+    setModeField(d.cp, 50, "tx_mhz", "");
+    setModeField(d.cp, 50, "ta_mhz", " ");
+    assert.equal(wx.tx_power, null);
+    assert.deepEqual([...exportArchive(d).bytes], [...d.raw]);
+    // blank a programmed mode's TX and T·A
+    d = open("a221azn0.035");
+    const m = /** @type {any} */ (d.cp.modes[0]);
+    assert.ok(m.tx_mhz !== null && m.ta_mhz !== null);
+    setModeField(d.cp, 1, "tx_mhz", "");
+    setModeField(d.cp, 1, "ta_mhz", "");
+    const res = exportArchive(d);
+    assert.deepEqual(res.problems, []);
+    back = openDocument(d.fileName, res.bytes).cp.modes[0];
+    assert.deepEqual([back?.rx_mhz, back?.tx_mhz, back?.ta_mhz, back?.tx_power], [m.rx_mhz, null, null, null]);
+    const r = /** @type {Uint8Array} */ (back?.raw);
+    assert.deepEqual([r[9] & 0x81, r[10], r[11], r[12], r[13] & 0x81, r[14], r[15], r[16]], [0, 0, 0, 0x80, 0, 0, 0, 0x80]);
+});
+
+test("blanking TX is refused where RSS's encoding isn't known yet", { skip: !has("a604aun0.331") }, () => {
+    const { cp } = open("a604aun0.331");
+    const n = cp.modes.findIndex((m) => m.tx_mhz !== null && !(cp.trunked_mode1 && m.number === 1)) + 1;
+    assert.throws(() => setModeField(cp, n, "tx_mhz", ""), /VHF only/);
+});
+
 test("a VHF TX the synthesizer can't hold is refused, not snapped", { skip: !has("A617ASQ1.266") }, () => {
     const { cp } = open("A617ASQ1.266");
     assert.throws(() => setModeField(cp, 2, "tx_mhz", "165.75"), /synthesizer/);

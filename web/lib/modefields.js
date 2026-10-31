@@ -173,10 +173,12 @@ export function setModeField(cp, n, key, text) {
     if (!applies(cp, m, f)) throw new InvalidValue(`${f.label} doesn't apply to this mode`);
     const want = parse(cp, f, text);
     if (f.kind === "mhz" && want[/** @type {keyof Mode} */ (key)] === null) {
-        const blankOk = key === "ta_mhz" && cp.band === "900" && m.ta_mhz !== null && m.tx_mhz !== null;
+        // VHF: a blank TX / T·A makes an RX-only mode (NOAA weather), stored as RSS does
+        const blankOk = (key === "ta_mhz" && cp.band === "900" && m.ta_mhz !== null && m.tx_mhz !== null)
+            || (key !== "rx_mhz" && cp.band === "vhf");
         if (m[/** @type {"rx_mhz"} */ (key)] !== null && !blankOk) {
             throw new InvalidValue(key === "rx_mhz" ? "a mode needs a receive frequency"
-                : "clearing this frequency isn't supported yet");
+                : "clearing this frequency (an RX-only mode) is supported on VHF only so far");
         }
     }
 
@@ -247,7 +249,7 @@ export function setModeField(cp, n, key, text) {
     }
     Object.assign(m, want);
     // a power setting appears with its frequency
-    if (key === "tx_mhz" && m.tx_mhz !== null && m.tx_power === null) m.tx_power = back.tx_power;
+    if (key === "tx_mhz") m.tx_power = m.tx_mhz === null ? null : m.tx_power ?? back.tx_power;
     if (key === "ta_mhz") m.ta_power = m.ta_mhz === null ? null : m.ta_power ?? back.ta_power;
     // UHF above the range's power limit: RSS (and the encoder) force power Low
     if (cp.band === "uhf" && key === "tx_mhz" && back.tx_power === "Low") m.tx_power = "Low";
