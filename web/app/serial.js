@@ -167,6 +167,19 @@ export class WebSerialLink {
         }
     }
 
+    /**
+     * Wait until nothing arrives for `quietMs` (at most `mostMs`): a radio in
+     * test mode sends bursts of display messages, which a quick retry runs
+     * into again and again (617ASQ keyed).
+     */
+    async waitQuiet(quietMs = 30, mostMs = 1000) {
+        const end = performance.now() + mostMs;
+        while (performance.now() < end) {
+            this.rx.length = 0;
+            if (!(await this.readBytes(1, quietMs)).length) return;
+        }
+    }
+
     /** Up to n received bytes, waiting at most `ms` for them all. */
     async readBytes(/** @type {number} */ n, /** @type {number} */ ms) {
         const end = performance.now() + ms;
@@ -198,6 +211,7 @@ export class WebSerialLink {
             if (attempt) {
                 this.log?.(`retrying ${hex(msg)} (try ${attempt + 1})`);
                 await sleep(5 + Math.random() * 25);
+                await this.waitQuiet();
             }
             await this.waitIdle();
             this.rx.length = 0;

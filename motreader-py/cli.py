@@ -789,7 +789,7 @@ def align(port: str, key: str, freq: str | None) -> None:
     try:
         with Aligner(radio, log=lambda m: print(f"  [{m}]", flush=True)) as al:
             v = al.enter(key, freq)
-            print(f"{adj.title}: value {v} (0..{adj.top})"
+            print(f"{adj.title} ({al.model}): value {v} (0..{al.top()})"
                   + (", test frequencies low/mid/high" if adj.freqs else ""))
             print(ALIGN_HELP)
 
@@ -810,7 +810,7 @@ def align(port: str, key: str, freq: str | None) -> None:
                 try:
                     if cmd in ("up", "down"):
                         n = int(args[0]) if args else 1
-                        al.set(max(0, min(adj.top, al.value + (n if cmd == "up" else -n))))
+                        al.set(max(0, min(al.top(), al.value + (n if cmd == "up" else -n))))
                         show()
                     elif cmd == "set":
                         al.set(int(args[0]))

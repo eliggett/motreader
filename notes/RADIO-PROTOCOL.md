@@ -406,6 +406,25 @@ limit 7 (b8), low power 46 (45).
   MODE_DONE, and checks the sum afterwards. It refuses F6 and F8 on a real
   radio.
 
+### VHF 617ASQ1266 (D43KMA7JA5BK), 2026-10-31
+
+Same messages, test-mode codes, encodings, sum bytes and RAM flags; RSS's
+values matched motreader's decode (squelch 7, deviation 1, warp 65, high
+power 54, current limit 15 = 0x78, low power 17). Differences:
+
+- **Deviation runs 0–12 in RSS** (0–14 on the D37 900 MHz). motreader reads
+  the model at 0xB675 and keeps RSS's range per model prefix
+  (`MODEL_TOPS`); unknown models get the 900 MHz ranges.
+- Test frequencies: low "146025", high "173975" on the display.
+- Keyed, this radio (known VCO fault) sends RADKEY `01 ff 01 19`,
+  `01 0b 00 3c`, `01 ff 01 1d` and redraws its display every second or so;
+  RAM 0x000d / 0x003b still read keyed throughout (0x0038 bit 5, a BUSY
+  flag, is set while keyed too). Those bursts made 10 quick retries all
+  collide (BusError). **Fix: before a retry, wait for 30 ms of silence on
+  the bus** (≤ 1 s; `SerialLink._wait_quiet`, `WebSerialLink.waitQuiet`).
+- Squelch 0–2 open, 3–15 closed on a dummy load (auto squelch: 3).
+- F8 round trip squelch 7 → 8 → 7, 0xB664 9c → 9d → 9c.
+
 ### PTT safety (motreader)
 
 Keying only in a test mode that transmits; a watchdog unkeys before 10 s

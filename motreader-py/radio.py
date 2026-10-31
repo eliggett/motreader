@@ -64,6 +64,8 @@ PROGRAMMED_FLAG = (0xB6A0, 0x39)
 # After PROGRAM's reset a 617ASQ still puts breaks on the line 7-8 s later,
 # and before that answers only after retries: wait this long (s) to verify.
 RESTART_WAIT = 10.0
+# s of silence before a retry (the radio's own display bursts)
+QUIET = 0.03
 
 
 def split_dump(space: bytes) -> list[tuple[str, int, bytes, str]]:
@@ -194,6 +196,14 @@ class SerialLink:
                 raise BusError("BUSY line stuck (radio off, or cable/RIB fault?)")
             time.sleep(0.001)
 
+    def _wait_quiet(self, quiet=QUIET, most=1.0):
+        """Wait until nothing arrives for `quiet` s (at most `most` s): a
+        radio in test mode sends bursts of display messages, which a quick
+        retry runs into again and again (617ASQ keyed)."""
+        end = time.monotonic() + most
+        while time.monotonic() < end and self._read(64, quiet):
+            pass
+
     def _read(self, n, timeout):
         self.ser.timeout = timeout
         return self.ser.read(n)
@@ -204,6 +214,7 @@ class SerialLink:
         for attempt in range(self.tries):
             if attempt:
                 time.sleep(random.uniform(0.005, 0.03))
+                self._wait_quiet()
             self._wait_idle()
             self.ser.reset_input_buffer()
             self._set_dtr(True)

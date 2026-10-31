@@ -180,3 +180,16 @@ test("auto squelch finds the lowest value without BUSY", async () => {
     assert.equal(await all.autoSquelch({ dwellMs: 0, samples: 1 }), null);
     assert.equal(all.value, 10);
 });
+
+test("slider ranges follow the model (D43 VHF: deviation 0-12)", async () => {
+    const link = new FakeLink();
+    Array.from("D43KMA7JA5BK", (c, i) => link.mem.set(0xB675 + i, c.charCodeAt(0)));
+    const al = aligner(link);
+    await al.enter("deviation");
+    assert.equal(al.model, "D43KMA7JA5BK");
+    assert.equal(al.top(), 12);
+    assert.throws(() => al.set(13), RangeError);
+    const other = aligner(new FakeLink());
+    await other.enter("deviation");
+    assert.equal(other.top(), 14);
+});

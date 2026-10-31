@@ -29,6 +29,13 @@ export const TX_FLAGS = [[0x000D, 0x08], [0x003B, 0x08]];
 /** RAM showing the receiver's squelch open (the BUSY LED, indicator 0x0a): 0x0031 is 0x0c open / 0 closed, 0x0038 bit 5 set open. */
 export const BUSY_FLAGS = [[0x0031, 0xFF], [0x0038, 0x20]];
 export const FREQS = /** @type {const} */ (["low", "mid", "high"]);
+export const MODEL_ADDR = 0xB675;   // MCU EEPROM: the model number, e.g. "D43KMA7JA5BK"
+/**
+ * RSS's slider ranges where they differ by model (first 3 characters); seen
+ * on D37 (900 MHz, deviation 0-14) and D43 (VHF, deviation 0-12).
+ * @type {Record<string, Record<string, number>>}
+ */
+export const MODEL_TOPS = { D43: { deviation: 12 } };
 
 /** @typedef {typeof FREQS[number]} Freq */
 
@@ -136,6 +143,8 @@ export class Aligner {
         this.timer = null;
         /** @type {Promise<unknown>} */
         this.queue = Promise.resolve();
+        /** @type {string | null} read on the first enter() */
+        this.model = null;
     }
 
     /** Run fn after everything queued before it. @template T @param {() => Promise<T>} fn @returns {Promise<T>} */
@@ -158,6 +167,12 @@ export class Aligner {
         return this.adj;
     }
 
+    /** The slider's top for this radio's model (RSS's range). */
+    top(/** @type {Adjustment | null} */ a = null) {
+        const adj = a ?? this.need();
+        return MODEL_TOPS[(this.model ?? "").slice(0, 3)]?.[adj.key] ?? adj.top;
+    }
+
     testCode() {
         const a = this.need();
         return this.freq === null || !a.freqs ? a.entry : /** @type {number} */ (a.freqs[FREQS.indexOf(this.freq)]);
@@ -170,6 +185,9 @@ export class Aligner {
         if (freq !== null && !a.freqs) throw new RangeError(`${key}: no test frequencies`);
         return this.locked(async () => {
             await this._unkey();
+            if (this.model === null) {
+                this.model = String.fromCharCode(...(await this.readMcu(MODEL_ADDR, 12))).trim();
+            }
             this.stored = /** @type {number} */ ((await this.readMcu(a.addr, 1))[0]);
             this.extra = a.extra === null ? null : /** @type {number} */ ((await this.readMcu(a.extra, 1))[0]);
             this.adj = a;
@@ -196,7 +214,8 @@ export class Aligner {
     /** Set the slider: sent live when RSS would (keyed, or always for squelch, warp and power). */
     set(/** @type {number} */ v) {
         const a = this.need();
-        if (!(Number.isInteger(v) && v >= 0 && v <= a.top)) throw new RangeError(`${a.key}: ${v} is outside 0..${a.top}`);
+        const top = this.top(a);
+        if (!(Number.isInteger(v) && v >= 0 && v <= top)) throw new RangeError(`${a.key}: ${v} is outside 0..${top}`);
         return this.locked(async () => {
             this.value = v;
             if (this.keyedAt !== null || a.liveUnkeyed) {
@@ -277,7 +296,7 @@ export class Aligner {
         const a = this.need();
         if (a.key !== "squelch") throw new Error("auto squelch needs the squelch screen");
         const start = this.value;
-        for (let v = 0; v <= a.top; v++) {
+        for (let v = 0; v <= this.top(a); v++) {
             await this.set(v);
             await sleep(dwellMs);
             let open = 0;

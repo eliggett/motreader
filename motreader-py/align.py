@@ -32,6 +32,10 @@ POWER_NOW = 0x000A        # RAM: the power code in use (high or low power)
 # 0x0031 is 0x0c open / 0 closed, 0x0038 bit 5 set open
 BUSY_FLAGS = ((0x0031, 0xFF), (0x0038, 0x20))
 FREQS = ("low", "mid", "high")
+MODEL_ADDR = 0xB675       # MCU EEPROM: the model number, e.g. "D43KMA7JA5BK"
+# RSS's slider ranges where they differ by model (first 3 characters); seen
+# on D37 (900 MHz, deviation 0-14) and D43 (VHF, deviation 0-12)
+MODEL_TOPS = {"D43": {"deviation": 12}}
 
 
 class PttError(BusError):
@@ -132,6 +136,7 @@ class Aligner:
         self.keyed_at: float | None = None
         self.fault: Exception | None = None   # from the watchdog
         self._timer: threading.Timer | None = None
+        self.model: str | None = None     # read on the first enter()
 
     def __enter__(self):
         return self
@@ -160,6 +165,8 @@ class Aligner:
             raise ValueError(f"{key}: no test frequency {freq!r}")
         with self.lock:
             self.unkey()
+            if self.model is None:
+                self.model = self._read_mcu(MODEL_ADDR, 12).decode("latin-1").strip()
             self.stored = self._read_mcu(adj.addr, 1)[0]
             self.extra = self._read_mcu(adj.extra, 1)[0] if adj.extra else None
             self.adj, self.freq = adj, freq
@@ -168,6 +175,11 @@ class Aligner:
             self.log(f"{adj.title}: stored {self.stored:02x} = {self.value}, "
                      f"test mode {self._test_code():02x}")
             return self.value
+
+    def top(self, adj: Adjustment | None = None) -> int:
+        """The slider's top for this radio's model (RSS's range)."""
+        adj = adj or self._need()
+        return MODEL_TOPS.get((self.model or "")[:3], {}).get(adj.key, adj.top)
 
     def _test_code(self) -> int:
         adj = self._need()
@@ -192,8 +204,8 @@ class Aligner:
         """Set the slider: sent live when RSS would (keyed, or always for
         squelch, warp and power)."""
         adj = self._need()
-        if not 0 <= v <= adj.top:
-            raise ValueError(f"{adj.key}: {v} is outside 0..{adj.top}")
+        if not 0 <= v <= self.top(adj):
+            raise ValueError(f"{adj.key}: {v} is outside 0..{self.top(adj)}")
         with self.lock:
             self.value = v
             if self.keyed_at is not None or adj.live_unkeyed:
@@ -261,7 +273,7 @@ class Aligner:
         if adj.key != "squelch":
             raise RuntimeError("auto squelch needs the squelch screen")
         start = self.value
-        for v in range(adj.top + 1):
+        for v in range(self.top(adj) + 1):
             self.set(v)
             time.sleep(dwell)
             open_ = sum(self.busy() for _ in range(samples))

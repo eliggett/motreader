@@ -215,7 +215,7 @@ motreader).
 
 | Rule | Kind |
 |---|---|
-| Slider ranges as RSS draws them: squelch 0–15, deviation 0–14, warp 0–127, high and low power 0–127, PA current limit 0–15. RSS's arrows stop at the ends; motreader refuses values outside them. | blocks |
+| Slider ranges as RSS draws them: squelch 0–15, deviation 0–14 (0–12 on the D43 VHF; per model in `MODEL_TOPS`), warp 0–127, high and low power 0–127, PA current limit 0–15. RSS's arrows stop at the ends; motreader refuses values outside them. | blocks |
 | PTT exists only on the transmit screens (not squelch). motreader also stops PTT before 10 s (watchdog), sends PTT OFF twice and reads it back; RSS has no limit. | blocks (motreader's own) |
 | Changing the test frequency while keyed: RSS unkeys, changes it and keys again; motreader unkeys and stays unkeyed. | side effect (differs) |
 | F8 writes the value and its block sum byte (0xB660..0xB664); leaving SERVICE rewrites every MCU EEPROM sum byte and 0xB7FF from what it reads (RADIO-PROTOCOL.md). motreader writes the value and its block sum only. | side effect |

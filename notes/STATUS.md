@@ -559,7 +559,8 @@ keystrokes ~half the time.)
    Tech tab. PTT with a <10 s watchdog and read-back OFF; live values and PTT
    checked on the 617ASN into a dummy load; F8 (program) round trip on the
    real radio (squelch). BUSY LED read from RAM; auto squelch (lowest value
-   with BUSY off). Open: custom test frequencies; SERVICE F4 advanced
+   with BUSY off). Same methods hold on the VHF 617ASQ (deviation 0-12 there;
+   retries now wait for a quiet bus). Open: custom test frequencies; SERVICE F4 advanced
    alignment. See RADIO-PROTOCOL.md "Alignment (RSS SERVICE)".
 8. **Later (owner's idea, 2026-10-31): automatic repair of checksum FL codes.**
    A tool that reads the radio, checks every known sum (codeplug header sum

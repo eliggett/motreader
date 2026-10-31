@@ -218,3 +218,19 @@ def test_auto_squelch_all_busy():
     al.enter("deviation")
     with pytest.raises(RuntimeError):
         al.auto_squelch()
+
+
+def test_model_ranges():
+    link = FakeLink()
+    al = aligner(link)
+    al.enter("deviation")
+    assert al.top() == 14                      # no model read: RSS's 900 MHz range
+    link = FakeLink()
+    for i, c in enumerate(b"D43KMA7JA5BK"):
+        link.mem[0xB675 + i] = c
+    al = aligner(link)
+    al.enter("deviation")
+    assert al.model == "D43KMA7JA5BK" and al.top() == 12
+    with pytest.raises(ValueError):
+        al.set(13)
+    assert al.top(ADJUSTMENTS["warp"]) == 127

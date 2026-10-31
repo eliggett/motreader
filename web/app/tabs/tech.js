@@ -403,7 +403,7 @@ function build() {
         const a = aligner?.adj;
         if (!a || !aligner) return;
         // from the value shown: the last one asked for, even if not sent yet
-        const v = Math.max(0, Math.min(a.top, Number(alNum.value) + d));
+        const v = Math.max(0, Math.min(aligner.top(a), Number(alNum.value) + d));
         alRange.value = alNum.value = String(v);
         void pushValue(v);
     }
@@ -412,10 +412,10 @@ function build() {
         void pushValue(Number(alRange.value));
     });
     alNum.addEventListener("change", () => {
-        const a = aligner?.adj;
+        const al = aligner, a = al?.adj;
         const v = Number(alNum.value);
-        if (!a || !Number.isInteger(v) || v < 0 || v > a.top) {
-            alSay(`The value is a whole number from 0 to ${a?.top ?? 0}.`, true);
+        if (!al || !a || !Number.isInteger(v) || v < 0 || v > al.top(a)) {
+            alSay(`The value is a whole number from 0 to ${al && a ? al.top(a) : 0}.`, true);
             alNum.value = String(aligner?.value ?? 0);
             return;
         }
@@ -500,9 +500,9 @@ function build() {
         busyRead.disabled = autoSq.disabled = !on;
         if (a?.key !== "squelch") busyState.textContent = "";
         if (a && al) {
-            alRange.max = alNum.max = String(a.top);
+            alRange.max = alNum.max = String(al.top(a));
             if (pending === null && !sending) alRange.value = alNum.value = String(al.value);
-            alStored.textContent = `0 to ${a.top}. In the radio: ${decode(a, al.stored)}`
+            alStored.textContent = `0 to ${al.top(a)}${al.model ? ` (${al.model})` : ""}. In the radio: ${decode(a, al.stored)}`
                 + (al.value !== decode(a, al.stored) ? `; live now: ${al.value} (not programmed)` : "");
         } else {
             alStored.textContent = "";
