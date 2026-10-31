@@ -33,9 +33,10 @@ POWER_NOW = 0x000A        # RAM: the power code in use (high or low power)
 BUSY_FLAGS = ((0x0031, 0xFF), (0x0038, 0x20))
 FREQS = ("low", "mid", "high")
 MODEL_ADDR = 0xB675       # MCU EEPROM: the model number, e.g. "D43KMA7JA5BK"
-# RSS's slider ranges where they differ by model (first 3 characters); seen
-# on D37 (900 MHz, deviation 0-14) and D43 (VHF, deviation 0-12)
-MODEL_TOPS = {"D43": {"deviation": 12}}
+# RSS's slider ranges where a model differs from the default (first 3
+# characters of the model). Deviation is 0-12 in RSS on the D43 (VHF), taken
+# as the rule for all models; the D37 (900 MHz, narrowband) shows 0-14.
+MODEL_TOPS = {"D37": {"deviation": 14}}
 
 
 class PttError(BusError):
@@ -103,7 +104,7 @@ ADJUSTMENTS = {a.key: a for a in (
     Adjustment("squelch", "DEFAULT SQUELCH", 0xB64F, (0xB645, 0xB658), 0xB664,
                15, 0x41, None, False, True),
     Adjustment("deviation", "TRANSMITTER DEVIATION", 0xB644, (0xB644, 0xB644), 0xB663,
-               14, 0x42, (0x42, 0x52, 0x62), True, False, extra=0xB645),
+               12, 0x42, (0x42, 0x52, 0x62), True, False, extra=0xB645),
     Adjustment("warp", "REFERENCE OSCILLATOR WARP", 0xB62D, (0xB62D, 0xB633), 0xB661,
                127, 0x41, None, True, True),
     Adjustment("high_power", "TRANSMITTER HIGH POWER", 0xB62F, (0xB62D, 0xB633), 0xB661,

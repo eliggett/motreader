@@ -349,7 +349,7 @@ on the 900 MHz 617ASN1665 (D37KMA7JA5DK) into a dummy load with
 | Screen (RSS key) | EEPROM byte | stored as | range | live message | test mode: entry; F2 / F3 / F4 |
 |---|---|---|---|---|---|
 | DEFAULT SQUELCH (F2) | 0xB64F | v | 0–15 | `01 02 v 28` | 41; — |
-| TX DEVIATION (F3) | 0xB644 | v | 0–14 | `01 (v+1)<<4 [B645] 32`, keyed only | 42; 42 / 52 / 62 |
+| TX DEVIATION (F3) | 0xB644 | v | 0–12 (D37 900 MHz: 0–14) | `01 (v+1)<<4 [B645] 32`, keyed only | 42; 42 / 52 / 62 |
 | REF OSC WARP (F5) | 0xB62D | rev7(v) | 0–127 | `01 00 rev7(v) 43` | 41; — |
 | TX HIGH POWER (F7) | 0xB62F | rev7(127−v) | 0–127 | `01 01 rev7(127−v) 33` | 11; 41 / 51 / 61 |
 | PA CURRENT LIMIT (F7, F9) | 0xB62C | 0x80 \| v<<3 | 0–15 | `01 00 v<<3 42` + `01 01 [B62F] 33` | 11; 42 / 52 / 62 |
@@ -412,9 +412,10 @@ Same messages, test-mode codes, encodings, sum bytes and RAM flags; RSS's
 values matched motreader's decode (squelch 7, deviation 1, warp 65, high
 power 54, current limit 15 = 0x78, low power 17). Differences:
 
-- **Deviation runs 0–12 in RSS** (0–14 on the D37 900 MHz). motreader reads
-  the model at 0xB675 and keeps RSS's range per model prefix
-  (`MODEL_TOPS`); unknown models get the 900 MHz ranges.
+- **Deviation runs 0–12 in RSS** (0–14 on the D37 900 MHz). The owner
+  (2026-10-31): take VHF as the rule for all models, the 900 MHz (the only
+  narrowband Spectra) as the exception. motreader reads the model at 0xB675;
+  deviation is 0–12 unless `MODEL_TOPS` says otherwise (D37: 0–14).
 - Test frequencies: low "146025", high "173975" on the display.
 - Keyed, this radio (known VCO fault) sends RADKEY `01 ff 01 19`,
   `01 0b 00 3c`, `01 ff 01 1d` and redraws its display every second or so;

@@ -13,6 +13,7 @@ from motreader.radio import Radio
 EEPROM = {0xB62C: 0xB8, 0xB62D: 0x09, 0xB62E: 0x45, 0xB62F: 0x5C, 0xB630: 0xFF,
           0xB631: 0xFF, 0xB632: 0xFF, 0xB633: 0xFF, 0xB644: 0x0B, 0xB645: 0x0A,
           0xB64F: 0x0A}
+EEPROM.update({0xB675 + i: c for i, c in enumerate(b"D37KMA7JA5DK")})
 
 
 class FakeLink:
@@ -221,16 +222,16 @@ def test_auto_squelch_all_busy():
 
 
 def test_model_ranges():
-    link = FakeLink()
-    al = aligner(link)
+    al = aligner(FakeLink())                   # the 617ASN, D37 (900 MHz)
     al.enter("deviation")
-    assert al.top() == 14                      # no model read: RSS's 900 MHz range
-    link = FakeLink()
-    for i, c in enumerate(b"D43KMA7JA5BK"):
-        link.mem[0xB675 + i] = c
-    al = aligner(link)
-    al.enter("deviation")
-    assert al.model == "D43KMA7JA5BK" and al.top() == 12
-    with pytest.raises(ValueError):
-        al.set(13)
-    assert al.top(ADJUSTMENTS["warp"]) == 127
+    assert al.model == "D37KMA7JA5DK" and al.top() == 14
+    for model in (b"D43KMA7JA5BK", b"\xff" * 12):   # VHF; no model: the default
+        link = FakeLink()
+        for i, c in enumerate(model):
+            link.mem[0xB675 + i] = c
+        al = aligner(link)
+        al.enter("deviation")
+        assert al.top() == 12
+        with pytest.raises(ValueError):
+            al.set(13)
+        assert al.top(ADJUSTMENTS["warp"]) == 127

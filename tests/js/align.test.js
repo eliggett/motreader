@@ -11,7 +11,8 @@ import { ADJUSTMENTS, Aligner, PttError, PTT_OFF, PTT_ON, decode, encode, rev7 }
 // MCU EEPROM of the 617ASN as RSS read it (squelch 10, deviation 11, warp
 // 72, high power 98, current limit 7, low power 46)
 const EEPROM = [[0xB62C, 0xB8], [0xB62D, 0x09], [0xB62E, 0x45], [0xB62F, 0x5C], [0xB630, 0xFF], [0xB631, 0xFF],
-    [0xB632, 0xFF], [0xB633, 0xFF], [0xB644, 0x0B], [0xB645, 0x0A], [0xB64F, 0x0A]];
+    [0xB632, 0xFF], [0xB633, 0xFF], [0xB644, 0x0B], [0xB645, 0x0A], [0xB64F, 0x0A],
+    ...Array.from("D37KMA7JA5DK", (c, i) => [0xB675 + i, c.charCodeAt(0)])];
 
 /** Answers MCU reads and scrambled writes; keys on PTT ON, unkeys on PTT OFF unless `stuck`. */
 class FakeLink {
@@ -181,15 +182,17 @@ test("auto squelch finds the lowest value without BUSY", async () => {
     assert.equal(all.value, 10);
 });
 
-test("slider ranges follow the model (D43 VHF: deviation 0-12)", async () => {
-    const link = new FakeLink();
-    Array.from("D43KMA7JA5BK", (c, i) => link.mem.set(0xB675 + i, c.charCodeAt(0)));
-    const al = aligner(link);
-    await al.enter("deviation");
-    assert.equal(al.model, "D43KMA7JA5BK");
-    assert.equal(al.top(), 12);
-    assert.throws(() => al.set(13), RangeError);
-    const other = aligner(new FakeLink());
-    await other.enter("deviation");
-    assert.equal(other.top(), 14);
+test("slider ranges follow the model (deviation 0-12; D37 900 MHz 0-14)", async () => {
+    const asn = aligner(new FakeLink());
+    await asn.enter("deviation");
+    assert.equal(asn.model, "D37KMA7JA5DK");
+    assert.equal(asn.top(), 14);
+    for (const model of ["D43KMA7JA5BK", "\xff".repeat(12)]) {
+        const link = new FakeLink();
+        Array.from(model, (c, i) => link.mem.set(0xB675 + i, c.charCodeAt(0)));
+        const al = aligner(link);
+        await al.enter("deviation");
+        assert.equal(al.top(), 12);
+        assert.throws(() => al.set(13), RangeError);
+    }
 });

@@ -31,11 +31,12 @@ export const BUSY_FLAGS = [[0x0031, 0xFF], [0x0038, 0x20]];
 export const FREQS = /** @type {const} */ (["low", "mid", "high"]);
 export const MODEL_ADDR = 0xB675;   // MCU EEPROM: the model number, e.g. "D43KMA7JA5BK"
 /**
- * RSS's slider ranges where they differ by model (first 3 characters); seen
- * on D37 (900 MHz, deviation 0-14) and D43 (VHF, deviation 0-12).
+ * RSS's slider ranges where a model differs from the default (first 3
+ * characters of the model). Deviation is 0-12 in RSS on the D43 (VHF), taken
+ * as the rule for all models; the D37 (900 MHz, narrowband) shows 0-14.
  * @type {Record<string, Record<string, number>>}
  */
-export const MODEL_TOPS = { D43: { deviation: 12 } };
+export const MODEL_TOPS = { D37: { deviation: 14 } };
 
 /** @typedef {typeof FREQS[number]} Freq */
 
@@ -68,7 +69,7 @@ export const ADJUSTMENTS = [
     { key: "squelch", title: "DEFAULT SQUELCH", addr: 0xB64F, block: [0xB645, 0xB658], sumAddr: 0xB664,
         top: 15, entry: 0x41, freqs: null, transmits: false, liveUnkeyed: true, extra: null },
     { key: "deviation", title: "TRANSMITTER DEVIATION", addr: 0xB644, block: [0xB644, 0xB644], sumAddr: 0xB663,
-        top: 14, entry: 0x42, freqs: [0x42, 0x52, 0x62], transmits: true, liveUnkeyed: false, extra: 0xB645 },
+        top: 12, entry: 0x42, freqs: [0x42, 0x52, 0x62], transmits: true, liveUnkeyed: false, extra: 0xB645 },
     { key: "warp", title: "REFERENCE OSCILLATOR WARP", addr: 0xB62D, block: [0xB62D, 0xB633], sumAddr: 0xB661,
         top: 127, entry: 0x41, freqs: null, transmits: true, liveUnkeyed: true, extra: null },
     { key: "high_power", title: "TRANSMITTER HIGH POWER", addr: 0xB62F, block: [0xB62D, 0xB633], sumAddr: 0xB661,
