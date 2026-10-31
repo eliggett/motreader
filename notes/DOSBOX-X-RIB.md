@@ -90,6 +90,24 @@ To make it stick, add a udev rule such as
 ACTION=="add", SUBSYSTEM=="usb-serial", DRIVER=="ftdi_sio", ATTR{latency_timer}="1"
 ```
 
+**On Windows** (not yet tested with this branch): the 16 ms delay comes from
+the FTDI chip, not from Linux, so it applies here too. dosbox-x can't change
+it on Windows, so set it by hand with FTDI's VCP driver:
+
+1. Open Device Manager, expand **Ports (COM & LPT)**, and open the
+   properties of **USB Serial Port (COMn)**.
+2. On the **Port Settings** tab, click **Advanced…**.
+3. Under **BM Options**, set **Latency Timer (msec)** to **1** and click OK.
+   The same dialog sets the COM port number, which goes in the dosbox-x
+   config as `realport:COMn`.
+4. Unplug the adapter and plug it back in.
+
+The setting is kept when you replug the adapter, but only for that adapter
+(Windows stores it per FTDI serial number). It lives in the registry as the
+DWORD `LatencyTimer` under
+`HKLM\SYSTEM\CurrentControlSet\Enum\FTDIBUS\<device>\0000\Device Parameters`.
+Other chips (CP210x, CH340, Prolific) have no such setting.
+
 A low-latency port is required whatever the emulator does. In simulation,
 RSS read the whole codeplug with up to 4 ms of delay in each direction,
 failed near the end at 8 ms, and failed at once at 16 ms. FTDI adapters work.
