@@ -29,14 +29,16 @@ TEST_EXIT = bytes([0x01, 0x00, 0x00, 0x40])
 TX_FLAGS = ((0x000D, 0x08), (0x003B, 0x08))  # RAM bits set only while keyed
 POWER_NOW = 0x000A        # RAM: the power code in use (high or low power)
 # RAM showing the receiver's squelch open (the BUSY LED, indicator 0x0a):
-# 0x0031 is 0x0c open / 0 closed, 0x0038 bit 5 set open
-BUSY_FLAGS = ((0x0031, 0xFF), (0x0038, 0x20))
+# 0x0031 bits 2-3 (0x0c open / 0 closed; the UHF D44 keeps bit 5 set too)
+# and 0x0038 bit 5
+BUSY_FLAGS = ((0x0031, 0x0C), (0x0038, 0x20))
 FREQS = ("low", "mid", "high")
 MODEL_ADDR = 0xB675       # MCU EEPROM: the model number, e.g. "D43KMA7JA5BK"
 # RSS's slider ranges where a model differs from the default (first 3
 # characters of the model). Deviation is 0-12 in RSS on the D43 (VHF), taken
-# as the rule for all models; the D37 (900 MHz, narrowband) shows 0-14.
-MODEL_TOPS = {"D37": {"deviation": 14}}
+# as the rule for all models; the D37 (900 MHz, narrowband) and the D44 (UHF)
+# show 0-14.
+MODEL_TOPS = {"D37": {"deviation": 14}, "D44": {"deviation": 14}}
 
 
 class PttError(BusError):

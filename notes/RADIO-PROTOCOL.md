@@ -380,7 +380,8 @@ limit 7 (b8), low power 46 (45).
 - **Squelch / BUSY LED** (squelch screen, test mode 41): the radio
   broadcasts indicator 0x0a, the BUSY LED: `01 0a 01 3c` on, `01 0a 00 3c`
   off, with `01 xx 03 1e` + `01 00 01 1d` (open) / `01 00 00 1e` + `01 00 00
-  1d` (closed). In RAM, **0x0031 = 0x0c open / 0 closed** and **0x0038 bit
+  1d` (closed). In RAM, **0x0031 bits 0x0c set open** (0x0c / 0 on the
+  900 MHz; the UHF keeps bit 5 set) and **0x0038 bit
   5** (also 0x0005 bit 6) follow it; motreader reads 0x0031 and 0x0038. On
   the 617ASN into a dummy load, squelch 0 is open and 1..15 closed, swept
   both ways, 6 reads each. motreader's auto squelch steps up from 0 to the
@@ -425,6 +426,22 @@ power 54, current limit 15 = 0x78, low power 17). Differences:
   the bus** (≤ 1 s; `SerialLink._wait_quiet`, `WebSerialLink.waitQuiet`).
 - Squelch 0–2 open, 3–15 closed on a dummy load (auto squelch: 3).
 - F8 round trip squelch 7 → 8 → 7, 0xB664 9c → 9d → 9c.
+
+### UHF D44KXA7JA7BK (serial field "WA6VVCUHF100"), 2026-10-31
+
+First UHF Spectra on the bus. Same messages, test-mode codes, encodings, sum
+bytes and PTT RAM flags; RSS's values matched motreader's decode (squelch
+12, deviation 5, warp 70, high power 85, current limit 11 = 0xd8, low power
+25). Display "450025PL" on the low test frequency. Keyed 2 s at each test
+frequency: keyed throughout, unkeyed after. Live power read back in 0x000a.
+F8 round trip squelch 12 → 13 → 12, 0xB664 cc → cd → cc.
+
+- **Deviation 0–14 in RSS**, like the 900 MHz D37; only the D43 VHF shows
+  0–12 so far (`MODEL_TOPS` has D37 and D44 at 14; the default stays 12 as
+  the owner chose before this radio).
+- **RAM 0x0031 keeps bit 5 set** here (0x2c open / 0x20 closed), so the
+  BUSY test reads only bits 0x0c (0x0c open on the 900 MHz too). With it:
+  squelch 0–5 open, 6 flickers, 7–15 closed (both ways); auto squelch 7.
 
 ### PTT safety (motreader)
 

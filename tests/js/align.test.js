@@ -45,7 +45,8 @@ class FakeLink {
             assert.equal(this.session, 0x93);
             const a = (p0 << 8) | p1;
             const busy = this.squelch < this.quietFrom;
-            const get = (/** @type {number} */ x) => x === 0x0031 ? (busy ? 0x0C : 0) : x === 0x0038 ? (busy ? 0x28 : 0x08)
+            const get = (/** @type {number} */ x) => x === 0x0031 ? (busy ? 0x2C : 0x20)   // bit 5 as on the UHF D44
+                : x === 0x0038 ? (busy ? 0x28 : 0x08)
                 : x === 0x000D ? (this.keyed ? 0x08 : 0)
                 : x === 0x003B ? (this.keyed ? 0x18 : 0x10) : this.mem.get(x) ?? 0xFF;
             return sb.readReply([get(a), get(a + 1)], false, p0);

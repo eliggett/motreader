@@ -50,7 +50,8 @@ class FakeLink:
             a = p[0] << 8 | p[1]
             busy = self.squelch < self.quiet_from
             ram = {0x000D: 0x08 if self.keyed else 0, 0x003B: 0x18 if self.keyed else 0x10,
-                   0x0031: 0x0C if busy else 0, 0x0038: 0x28 if busy else 0x08}
+                   0x0031: 0x2C if busy else 0x20,   # bit 5 as on the UHF D44
+                   0x0038: 0x28 if busy else 0x08}
             get = lambda x: ram.get(x, self.mem.get(x, 0xFF))  # noqa: E731
             return sb.read_reply(bytes([get(a), get(a + 1)]), False, r0=p[0])
         return None

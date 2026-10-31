@@ -551,7 +551,8 @@ keystrokes ~half the time.)
    config (F4→F3): MDC Unit/Group/Fleet IDs, # MPL. (Zones DONE — see above.)
 5. ~~Zones~~ ✅ DONE (name + membership, read+write, RSS-validated). Per-zone scan
    lists + flag bits remain preserved-only (not editable on the on-hand model).
-6. **UHF / lowband / 800** — no archives on hand; same inverse-oracle method when
+6. **UHF / lowband / 800** — no archives on hand (a UHF D44KXA7JA7BK radio is
+   now on the bench, 2026-10-31: its codeplug can be read with read-radio); same inverse-oracle method when
    the user has one.
 7. **Alignment** ✅ DONE (2026-10-31): RSS's SERVICE → ALIGNMENT screens
    (squelch, deviation, warp, high/low power, PA current limit) decoded and
@@ -560,7 +561,8 @@ keystrokes ~half the time.)
    checked on the 617ASN into a dummy load; F8 (program) round trip on the
    real radio (squelch). BUSY LED read from RAM; auto squelch (lowest value
    with BUSY off). Same methods hold on the VHF 617ASQ (deviation 0-12 there, now the default for every model; 0-14 only on the 900 MHz D37;
-   retries now wait for a quiet bus). Open: custom test frequencies; SERVICE F4 advanced
+   retries now wait for a quiet bus) and on the first UHF, a D44 (deviation
+   0-14 like the 900; BUSY flag mask fixed, auto squelch 7). Open: custom test frequencies; SERVICE F4 advanced
    alignment. See RADIO-PROTOCOL.md "Alignment (RSS SERVICE)".
 8. **Later (owner's idea, 2026-10-31): automatic repair of checksum FL codes.**
    A tool that reads the radio, checks every known sum (codeplug header sum
