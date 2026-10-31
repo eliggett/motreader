@@ -141,6 +141,10 @@ programming mode? *(guess)*), `00 10 01` (end: reset the radio *(guess)*).
   of the 57 archives on hand; the exceptions (221 800 MHz trunked, 604ATY,
   617AWJ) carry an extra 0x2000 bytes, presumably a second region — not
   mapped yet. A blank radio (0xFF) makes RSS read up to 0x7DFF.
+  **The byte wraps**: the UHF D44KXA7JA7BK's codeplug (128 modes) fills the
+  whole 8 KB EEPROM and has 0x601C = 0x04 (256 + 4). motreader reads
+  `((k − 4) mod 256 or 256) × 32`, at most 0x2000; before that fix it read
+  only the first block. Its read matches the EEPROM dump byte for byte.
 - Header pointers are radio addresses: 0x6030 → section after the pointer
   table (FORMAT.md "header 0xDD"), 0x6038, 0x603A.
 - RSS checks before PROGRAM: model at 0x6044–0x6057 (`" 503D37KMA7JA5DK    "`,
@@ -577,6 +581,13 @@ WEBWRITE. Findings:
   restored, MCU EEPROM saved and its identical file written back (nothing
   differed), firmware read cancelled at block 3 of 128. About 100 bytes/s
   reading and 32 bytes/s writing. Alignment: see "Alignment (RSS SERVICE)".
+  **Read & save all** (Memory regions): the codeplug as Read Radio reads it
+  (an RSS archive), then every region (the S9000e one only when the header
+  says so), in one .zip with a README (`web/lib/zip.js`: stored, CRC-32).
+  About 12 minutes (11:38 on the UHF D44 through Chrome); its codeplug,
+  codeplug EEPROM, firmware and MCU EEPROM matched dump-radio byte for byte.
+  0x4000–0x4FFF (inside "code below the codeplug") is live memory: it
+  changes between reads on the UHF and the VHF 617ASQ alike.
 - The port chooser lists every ttyS* as well; there is no filter, since a
   real RS-232 port is a valid choice.
 - Testing: headed Chrome on Xvfb (`--ozone-platform=x11`, no WAYLAND_DISPLAY),

@@ -22,9 +22,11 @@ import { connection, connect, disconnect, withRadio, onConnectionChange } from "
 import { serialHelp, reporter, mmss } from "../radioio.js";
 import { hex, hexdumpLine, latin1 } from "../../lib/bytes.js";
 import {
-    REGIONS, BLOCK, HC11_REGISTERS, Cancelled, MODEL, CODEPLUG_BASE, serialOf, modelOf,
+    REGIONS, BLOCK, HC11_REGISTERS, Cancelled, MODEL, CODEPLUG_BASE, serialOf, modelOf, archiveFile, hasExtRegion,
     parseHexNumber as parseHex, parseHexWrite, MAX_HEX_WRITE,
 } from "../../lib/radio.js";
+import { zip } from "../../lib/zip.js";
+import { VERSION } from "../version.js";
 import { ADJUSTMENTS, Aligner, PttError, FREQS, PTT_LIMIT_MS, PTT_MARGIN_MS, decode, encode } from "../../lib/align.js";
 
 /** The adjustments as the RSS alignment menu lists them. @type {Record<string, string>} */
@@ -36,6 +38,8 @@ const ALIGN_LABELS = {
 /** Measured on a 617ASQ through Chrome: bytes per second reading (2 per message) and writing (1 per message). */
 const READ_BPS = 100;
 const WRITE_BPS = 32;
+/** Read & save all: the codeplug read (~1 min) and every region but the S9000e one. */
+const ALL_SECS = 60 + REGIONS.filter((r) => r.session === "codeplug").reduce((n, r) => n + r.end - r.start, 0) / READ_BPS;
 
 const errText = (/** @type {unknown} */ e) => (e instanceof Error ? e.message : String(e));
 const h4 = (/** @type {number} */ n) => n.toString(16).toUpperCase().padStart(4, "0");
@@ -252,6 +256,47 @@ function build() {
         download(b, name);
         log.info(`Tech: saved ${r.name} ${h4(r.start)}-${h4(r.end - 1)} as ${name}`);
         return `Saved ${name} (${b.length} bytes, ${b.length / BLOCK} blocks).`;
+    }, true);
+
+    /**
+     * Read & save all: the codeplug as Read Radio reads it (saved as an
+     * archive, as RSS would), then every region, in one .zip with a README.
+     */
+    const saveAll = () => run("Reading everything", async (radio) => {
+        const t0 = performance.now();
+        const res = await radio.readAll(reporter(ui, "Reading the codeplug"), false);
+        const arch = archiveFile(res);
+        const serial = serialOf(res.codeplug).trim() || "radio";
+        const model = modelOf(res.codeplug);
+        const regions = REGIONS.filter((r) => r.session !== "ext" || hasExtRegion(res.codeplug));
+        const total = regions.reduce((n, r) => n + r.end - r.start, 0);
+        const rep = reporter(ui, "Reading memory");
+        let done = 0;
+        /** @type {{ name: string, bytes: Uint8Array | string }[]} */
+        const files = [{ name: arch.name, bytes: arch.bytes }];
+        const rows = [];
+        for (const r of regions) {
+            const b = await radio.readRange(r.start, r.end, { session: r.session, progress: (d) => rep(done + d, total) });
+            done += b.length;
+            const name = `${serial}-${r.id}-${h4(r.start)}.bin`;
+            files.push({ name, bytes: b });
+            rows.push(`${name.padEnd(36)} ${h4(r.start)}-${h4(r.end - 1)}  ${r.name}: ${r.note}`);
+        }
+        const mcu = [...res.mcu].map(([a, v]) => `  ${h4(a)}: ${hex(v, " ")}`);
+        files.push({ name: "README.txt", bytes: [
+            `Spectra ${serial}, model ${model}: everything motreader can read over SB9600`,
+            `(motreader ${VERSION}, Tech tab, Read & save all; ${new Date().toISOString()}).`,
+            "Contains Motorola firmware: keep it private.", "",
+            `${arch.name.padEnd(36)} the codeplug as an RSS archive (Read Radio's read)`,
+            ...rows, "",
+            "Not read: 0x1000-0x10FF (the 68HC11 registers; reading some has side effects).",
+            "MCU bytes Read Radio reads (also inside the firmware region):", ...mcu, ""].join("\n") });
+        const name = `${serial}-all.zip`;
+        download(zip(files), name, "application/zip");
+        progress.hidden = true;
+        const secs = (performance.now() - t0) / 1000;
+        log.info(`Tech: saved ${name}: archive ${arch.name} + ${regions.length} regions (${done} bytes) in ${mmss(secs)}`);
+        return `Saved ${name}: the archive ${arch.name} and ${regions.length} regions (${done} bytes), in ${mmss(secs)}.`;
     }, true);
 
     /**
@@ -540,31 +585,6 @@ function build() {
                 + "Restart radio (or Disconnect) restarts it. Read Radio and Write Radio use this connection while it is open."),
             serialHelp(!serialSupported())),
         h("div", { class: "tech-progress" }, progress, h("div", { class: "tech-stage-row" }, stage, cancel)),
-        section("Read memory (hex)",
-            h("div", { class: "tech-row" },
-                h("label", { for: "tech-read-addr" }, "Address"), rdAddr,
-                h("label", { for: "tech-read-len" }, "Length"), rdLen,
-                rdExt, h("label", { for: "tech-read-ext" }, "S9000e session (8000-9FFF)"),
-                hexRead),
-            note("Any address 0000-FFFF except the 68HC11 registers (1000-103F), through the codeplug session as RSS reads; "
-                + "about 100 bytes a second."),
-            out),
-        section("Write memory (hex)",
-            h("div", { class: "tech-row" },
-                h("label", { for: "tech-write-addr", title: wrAddr.title }, "Address"), wrAddr,
-                h("label", { for: "tech-write-data", title: wrData.title }, "Bytes"), wrData,
-                hexWrite),
-            wrMsg,
-            note("Hex throughout: an address like 6000 or 0x6000, bytes like 5a 01 ff, 5A01FF or 0x5a,0x01,0xff "
-                + "(hover a field for more). Up to 256 bytes inside one writable region: RAM 0000-0FFF, codeplug EEPROM 6000-7FFF, MCU EEPROM B600-B7FF. "
-                + "The current bytes are read and shown before anything is written, and the result is read back.")),
-        section("Memory regions",
-            h("table", { class: "tech-regions" },
-                h("thead", {}, h("tr", {}, ["Region", "Addresses", "Size", "Read time", ""].map((t) => h("th", {}, t)))),
-                h("tbody", {}, regionRows)),
-            note("Read & save writes a .bin file of the region. Write from file compares a .bin of the same size with the "
-                + "radio and writes only the bytes that differ, after you confirm, then reads them back. "
-                + "Firmware is ROM and can't be written.")),
         section("Alignment",
             h("div", { class: "warn-box" }, "These are RSS's SERVICE → ALIGNMENT adjustments. PTT ON transmits into whatever is on the "
                 + `antenna jack: use a dummy load. PTT switches off by itself after ${(PTT_LIMIT_MS - PTT_MARGIN_MS) / 1000} s `
@@ -585,7 +605,34 @@ function build() {
                 + "MCU EEPROM with its block sum. Leave test mode restarts the radio, which drops values not programmed. "
                 + "The test frequencies are the radio's own three (its display shows the frequency's digits, e.g. "
                 + "350125); other frequencies can't be chosen yet. Squelch doesn't transmit; on its screen, Find lowest quiet value "
-                + "steps up from 0 to the first value where the radio's BUSY stays off.")));
+                + "steps up from 0 to the first value where the radio's BUSY stays off.")),
+        section("Read memory (hex)",
+            h("div", { class: "tech-row" },
+                h("label", { for: "tech-read-addr" }, "Address"), rdAddr,
+                h("label", { for: "tech-read-len" }, "Length"), rdLen,
+                rdExt, h("label", { for: "tech-read-ext" }, "S9000e session (8000-9FFF)"),
+                hexRead),
+            note("Any address 0000-FFFF except the 68HC11 registers (1000-103F), through the codeplug session as RSS reads; "
+                + "about 100 bytes a second."),
+            out),
+        section("Write memory (hex)",
+            h("div", { class: "tech-row" },
+                h("label", { for: "tech-write-addr", title: wrAddr.title }, "Address"), wrAddr,
+                h("label", { for: "tech-write-data", title: wrData.title }, "Bytes"), wrData,
+                hexWrite),
+            wrMsg,
+            note("Hex throughout: an address like 6000 or 0x6000, bytes like 5a 01 ff, 5A01FF or 0x5a,0x01,0xff "
+                + "(hover a field for more). Up to 256 bytes inside one writable region: RAM 0000-0FFF, codeplug EEPROM 6000-7FFF, MCU EEPROM B600-B7FF. "
+                + "The current bytes are read and shown before anything is written, and the result is read back.")),
+        section("Memory regions",
+            h("div", { class: "tech-row" }, action("Read & save all…", saveAll),
+                h("span", { class: "note" }, `Everything below and the codeplug as an archive, in one .zip (about ${mmss(ALL_SECS)}).`)),
+            h("table", { class: "tech-regions" },
+                h("thead", {}, h("tr", {}, ["Region", "Addresses", "Size", "Read time", ""].map((t) => h("th", {}, t)))),
+                h("tbody", {}, regionRows)),
+            note("Read & save writes a .bin file of the region. Write from file compares a .bin of the same size with the "
+                + "radio and writes only the bytes that differ, after you confirm, then reads them back. "
+                + "Firmware is ROM and can't be written.")));
 
     refresh = () => {
         const c = connection();

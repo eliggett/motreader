@@ -76,7 +76,7 @@ export const REGIONS = [
     { id: "ram", name: "RAM", start: 0x0000, end: 0x1000, session: "codeplug", writable: true,
         note: "live state; anything written is lost when the radio restarts" },
     { id: "firmware_low", name: "Code below the codeplug", start: 0x1100, end: 0x6000, session: "codeplug", writable: false,
-        note: "code and tables" },
+        note: "code and tables; 0x4000-0x4FFF changes between reads (live memory)" },
     { id: "codeplug_eeprom", name: "Codeplug EEPROM", start: 0x6000, end: 0x8000, session: "codeplug", writable: true,
         note: "all 8 KB: the codeplug and the unused rest" },
     { id: "firmware", name: "Firmware ROM", start: 0x8000, end: 0x10000, session: "codeplug", writable: false,
@@ -138,9 +138,14 @@ const hex = (/** @type {Uint8Array} */ b) => Array.from(b, (x) => x.toString(16)
  */
 export const hasExtRegion = (/** @type {Uint8Array} */ cp) => !(/** @type {number} */ (cp[0x60]) & 0x20);
 
-/** Codeplug size from its header byte 0x1C: (k - 4) * 32, rounded up to whole blocks. */
+/**
+ * Codeplug size from its header byte 0x1C: (k - 4) * 32, rounded up to whole
+ * blocks. The byte wraps: a codeplug filling the whole 8 KB EEPROM has
+ * k = 0x04 (256 + 4; the UHF D44).
+ */
 export function codeplugLength(/** @type {Uint8Array} */ header) {
-    const n = (/** @type {number} */ (header[0x1C]) - 4) * 32;
+    const units = ((/** @type {number} */ (header[0x1C]) - 4) & 0xFF) || 0x100;
+    const n = Math.min(units * 32, EEPROM_SIZE);
     return Math.ceil(n / BLOCK) * BLOCK;
 }
 

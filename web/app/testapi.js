@@ -136,7 +136,10 @@ export function installTestApi(/** @type {Promise<void>} */ ready) {
             const b = lastDownload.bytes;
             return {
                 name: lastDownload.name, size: b.length,
-                base64: typeof b === "string" ? btoa(b) : btoa(String.fromCharCode(...b)),
+                // in chunks: one spread of a large file overflows the call stack
+                base64: btoa(typeof b === "string" ? b
+                    : Array.from({ length: Math.ceil(b.length / 0x8000) },
+                        (_, i) => String.fromCharCode(...b.subarray(i * 0x8000, (i + 1) * 0x8000))).join("")),
             };
         },
         /** Set a field of the open dialog by element id and fire its change. */

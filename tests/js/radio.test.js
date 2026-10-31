@@ -233,3 +233,11 @@ test("parseHexWrite: the Tech tab's write fields", () => {
     assert.throws(() => rd.parseHexWrite("7fff", "00 00"), /7FFF-8000 isn't inside one writable region/);
     assert.throws(() => rd.parseHexWrite("1000", "00"), /isn't inside one writable region/);
 });
+
+test("codeplug length from header byte 0x1C, wrapping at 8 KB", () => {
+    const hdr = (/** @type {number} */ k) => Uint8Array.from({ length: 0x1D }, (_, i) => (i === 0x1C ? k : 0));
+    assert.equal(rd.codeplugLength(hdr(0x6C)), 0xD00);
+    assert.equal(rd.codeplugLength(hdr(0x22)), 0x400);
+    assert.equal(rd.codeplugLength(hdr(0x04)), 0x2000);     // the UHF D44 fills the EEPROM
+    assert.equal(rd.codeplugLength(hdr(0x03)), 0x2000);
+});

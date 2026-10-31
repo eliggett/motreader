@@ -62,6 +62,9 @@ def test_codeplug_length():
     # rounds up: reading a little extra is harmless (604HNU 0x22 -> 0x400;
     # 604AUN's 0x65 is the one archive that is a block shorter than this)
     assert rd.codeplug_length(bytes(0x1C) + b"\x22") == 0x400
+    # wraps for a codeplug filling the 8 KB EEPROM (UHF D44: k = 0x04)
+    assert rd.codeplug_length(bytes(0x1C) + b"\x04") == 0x2000
+    assert rd.codeplug_length(bytes(0x1C) + b"\x03") == 0x2000
 
 
 def test_read_all_in_process():

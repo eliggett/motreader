@@ -551,8 +551,11 @@ keystrokes ~half the time.)
    config (F4→F3): MDC Unit/Group/Fleet IDs, # MPL. (Zones DONE — see above.)
 5. ~~Zones~~ ✅ DONE (name + membership, read+write, RSS-validated). Per-zone scan
    lists + flag bits remain preserved-only (not editable on the on-hand model).
-6. **UHF / lowband / 800** — no archives on hand (a UHF D44KXA7JA7BK radio is
-   now on the bench, 2026-10-31: its codeplug can be read with read-radio); same inverse-oracle method when
+6. **UHF / lowband / 800** — first UHF codeplug read 2026-10-31 from a
+   D44KXA7JA7BK (serial field WA6VVCUHF1, 128 modes, the full 8 KB): codeplug,
+   archive and full memory dump in notes/Firmware/UHF-D44KXA7JA7BK/ (local
+   only). motreader exports it, but the frequencies decode wrong (e.g. 8.61
+   MHz): the UHF codec isn't mapped for this radio yet; same inverse-oracle method when
    the user has one.
 7. **Alignment** ✅ DONE (2026-10-31): RSS's SERVICE → ALIGNMENT screens
    (squelch, deviation, warp, high/low power, PA current limit) decoded and

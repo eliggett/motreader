@@ -22,6 +22,10 @@
  *   --url URL            use an already-running server instead of starting one
  *   --chrome PATH        Chrome binary (default: google-chrome, chromium)
  *   --verbose            also print console.log / info lines
+ *   --headed             a visible Chrome on $DISPLAY (X11), e.g. on Xvfb: Web
+ *                        Serial's port chooser only exists there (pick the
+ *                        port with xdotool; headless Chrome shows none)
+ *   --timeout MS         per-expression time limit (default 30000)
  *
  * An expression starting with "@keys " is typed instead, as real key presses
  * into the focused element (\t Tab, \n Enter, \e Escape, \b Backspace, \d Delete):
@@ -46,6 +50,7 @@ const exprs = [];
 for (let i = 0; i < args.length; i++) {
     const a = /** @type {string} */ (args[i]);
     if (a === "--verbose") opt.verbose = true;
+    else if (a === "--headed") opt.headed = true;
     else if (a.startsWith("--")) opt[a.slice(2)] = args[++i] ?? "";
     else exprs.push(a);
 }
@@ -170,7 +175,8 @@ async function main() {
     profile = mkdtempSync(join(tmpdir(), "motreader-chrome-"));
     const [w, h] = String(opt.size || "1280x900").split("x");
     const chrome = spawn(findChrome(), [
-        "--headless=new", `--remote-debugging-port=${dport}`, `--user-data-dir=${profile}`,
+        ...(opt.headed ? ["--ozone-platform=x11"] : ["--headless=new"]),
+        `--remote-debugging-port=${dport}`, `--user-data-dir=${profile}`,
         "--ignore-certificate-errors", "--no-first-run", "--no-default-browser-check",
         "--disable-extensions", `--window-size=${w},${h}`, "about:blank",
     ], { stdio: "ignore", detached: true });
@@ -219,7 +225,8 @@ async function main() {
     await loaded;
 
     const evaluate = async (/** @type {string} */ expression) => {
-        const r = await cdp.send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true, timeout: 30000 });
+        const r = await cdp.send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true, userGesture: true,
+            timeout: Number(opt.timeout || 30000) });
         if (r.exceptionDetails) {
             throw new Error(r.exceptionDetails.exception?.description ?? r.exceptionDetails.text);
         }

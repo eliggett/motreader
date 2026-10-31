@@ -113,8 +113,9 @@ def codeplug_length(header: bytes) -> int:
     """Codeplug size from its header byte 0x1C: (k - 4) * 32, rounded up to
     whole blocks. Matches 51 of 57 archives on hand; of the rest, 604AUN's
     archive is one block shorter (reading extra is harmless) and the larger
-    radios add a 0x2000 region not mapped yet."""
-    n = (header[0x1C] - 4) * 32
+    radios add a 0x2000 region not mapped yet. The byte wraps: a codeplug
+    filling the whole 8 KB EEPROM has k = 0x04 (256 + 4; the UHF D44)."""
+    n = min((((header[0x1C] - 4) & 0xFF) or 0x100) * 32, EEPROM_SIZE)
     return -(-n // BLOCK) * BLOCK
 
 
