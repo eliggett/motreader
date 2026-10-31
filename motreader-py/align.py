@@ -28,6 +28,9 @@ PTT_OFF = bytes([0x00, 0x03, 0x00, 0x0A])    # released
 TEST_EXIT = bytes([0x01, 0x00, 0x00, 0x40])
 TX_FLAGS = ((0x000D, 0x08), (0x003B, 0x08))  # RAM bits set only while keyed
 POWER_NOW = 0x000A        # RAM: the power code in use (high or low power)
+# RAM showing the receiver's squelch open (the BUSY LED, indicator 0x0a):
+# 0x0031 is 0x0c open / 0 closed, 0x0038 bit 5 set open
+BUSY_FLAGS = ((0x0031, 0xFF), (0x0038, 0x20))
 FREQS = ("low", "mid", "high")
 
 
@@ -242,6 +245,32 @@ class Aligner:
         """Read the transmit state from RAM."""
         with self.lock:
             return any(self._read_mcu(a, 1)[0] & bit for a, bit in TX_FLAGS)
+
+    def busy(self) -> bool:
+        """Whether the squelch is open (the BUSY LED) now."""
+        with self.lock:
+            return any(self._read_mcu(a, 1)[0] & mask for a, mask in BUSY_FLAGS)
+
+    def auto_squelch(self, dwell: float = 0.5, samples: int = 5,
+                     progress=None) -> int | None:
+        """On the squelch screen: the lowest value at which BUSY stays off
+        (samples reads after dwell seconds at each value), left set live
+        (not programmed). None, and the old value back, if every value is
+        busy (a signal on the test frequency?)."""
+        adj = self._need()
+        if adj.key != "squelch":
+            raise RuntimeError("auto squelch needs the squelch screen")
+        start = self.value
+        for v in range(adj.top + 1):
+            self.set(v)
+            time.sleep(dwell)
+            open_ = sum(self.busy() for _ in range(samples))
+            if progress:
+                progress(v, open_, samples)
+            if not open_:
+                return v
+        self.set(start)
+        return None
 
     def unkey(self, tries: int = 5) -> bool:
         """PTT OFF twice, then read back that the radio isn't transmitting.

@@ -770,6 +770,8 @@ ALIGN_HELP = """commands (one per line):
   key [secs]          PTT ON; it switches off by itself before 10 s
   off                 PTT OFF (sent twice, then read back)
   wait S              wait S seconds (for piped commands)
+  busy                squelch open (the BUSY LED)?
+  auto                squelch: the lowest value with BUSY off (not programmed)
   program             write the slider value into the radio (RSS's F8)
   show                the value, stored value and PTT state
   quit                PTT OFF, leave test mode, restart the radio"""
@@ -828,6 +830,13 @@ def align(port: str, key: str, freq: str | None) -> None:
                         r = al.program()
                         print("unchanged: nothing written" if r is None else
                               f"programmed: stored {r[0]:02x} -> {r[1]:02x}")
+                    elif cmd == "busy":
+                        print("BUSY (squelch open)" if al.busy() else "not busy")
+                    elif cmd == "auto":
+                        v = al.auto_squelch(progress=lambda v, n, of: print(
+                            f"  squelch {v}: busy in {n} of {of} reads", flush=True))
+                        print("busy at every value: unchanged" if v is None else
+                              f"lowest quiet squelch: {v} (live; 'program' to keep it)")
                     elif cmd == "show":
                         show()
                     elif cmd == "quit":

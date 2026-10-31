@@ -377,6 +377,15 @@ limit 7 (b8), low power 46 (45).
   0x000c..0x0012 (synthesizer) after keying to show "TRANSMITTER ON nnn.nnnn
   MHz". Changing the test frequency while keyed, RSS unkeys, sends the test
   mode and keys again; motreader leaves it unkeyed.
+- **Squelch / BUSY LED** (squelch screen, test mode 41): the radio
+  broadcasts indicator 0x0a, the BUSY LED: `01 0a 01 3c` on, `01 0a 00 3c`
+  off, with `01 xx 03 1e` + `01 00 01 1d` (open) / `01 00 00 1e` + `01 00 00
+  1d` (closed). In RAM, **0x0031 = 0x0c open / 0 closed** and **0x0038 bit
+  5** (also 0x0005 bit 6) follow it; motreader reads 0x0031 and 0x0038. On
+  the 617ASN into a dummy load, squelch 0 is open and 1..15 closed, swept
+  both ways, 6 reads each. motreader's auto squelch steps up from 0 to the
+  first value with BUSY off in 5 reads (500 ms after each change), left live
+  for F8 (it found 1 here).
 - **F8 PROGRAM VALUE**: in the codeplug session (scrambled, as RSS writes the
   MCU EEPROM), write the byte; read it back in the MCU session; read the
   block and write its **sum byte** (8-bit sum, no negation); read it back.
@@ -406,7 +415,8 @@ up to 1 s late); every PTT OFF is sent twice and then read back (RAM 0x000d,
 Leaving (or a crash in Python's `with Aligner`) unkeys, leaves test mode and
 restarts the radio; the web app also unkeys on leaving the page. Tested on
 the real radio: keyed 1.4–3.4 s at a time, watchdog-only unkey at 2 s.
-Programming (F8) has been tested only on the emulated radio so far.
+Programming (F8) tested on the real radio with squelch 10 → 11 → 10: value
+and 0xB664 sum (df → e0 → df) read back each time.
 
 ## Linux / real-port problems in dosbox-x
 

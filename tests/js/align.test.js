@@ -15,7 +15,9 @@ const EEPROM = [[0xB62C, 0xB8], [0xB62D, 0x09], [0xB62E, 0x45], [0xB62F, 0x5C], 
 
 /** Answers MCU reads and scrambled writes; keys on PTT ON, unkeys on PTT OFF unless `stuck`. */
 class FakeLink {
-    constructor(stuck = false) {
+    constructor(stuck = false, quietFrom = 3) {
+        this.squelch = 10;         // live squelch; BUSY below quietFrom
+        this.quietFrom = quietFrom;
         /** @type {Map<number, number>} */
         this.mem = new Map(/** @type {[number, number][]} */ (EEPROM));
         /** @type {Uint8Array[]} */
@@ -33,6 +35,7 @@ class FakeLink {
         if (op === sb.OP_MODE) this.session = p1 === 0x90 || p1 === 0x92 ? null : p1;
         else if (hex(p) === hex(PTT_ON)) this.keyed = true;
         else if (hex(p) === hex(PTT_OFF)) { if (!this.stuck) this.keyed = false; }
+        else if (op === 0x28) this.squelch = p2;
         else if (op === sb.OP_WRITE) {
             assert.equal(this.session, 0xD1);
             const [hi, lo, v] = sb.unscramble(p0, p1, p2);
@@ -40,7 +43,9 @@ class FakeLink {
         } else if (op === sb.OP_READ) {
             assert.equal(this.session, 0x93);
             const a = (p0 << 8) | p1;
-            const get = (/** @type {number} */ x) => x === 0x000D ? (this.keyed ? 0x08 : 0)
+            const busy = this.squelch < this.quietFrom;
+            const get = (/** @type {number} */ x) => x === 0x0031 ? (busy ? 0x0C : 0) : x === 0x0038 ? (busy ? 0x28 : 0x08)
+                : x === 0x000D ? (this.keyed ? 0x08 : 0)
                 : x === 0x003B ? (this.keyed ? 0x18 : 0x10) : this.mem.get(x) ?? 0xFF;
             return sb.readReply([get(a), get(a + 1)], false, p0);
         }
@@ -158,4 +163,20 @@ test("leave unkeys and leaves test mode", async () => {
     await al.leave();
     assert.ok(!link.keyed);
     assert.ok(link.sent.some((p) => hex(p) === "01000040"));
+});
+
+test("auto squelch finds the lowest value without BUSY", async () => {
+    const link = new FakeLink(false, 3);
+    const al = aligner(link);
+    await al.enter("squelch");
+    /** @type {[number, number][]} */
+    const seen = [];
+    assert.equal(await al.autoSquelch({ dwellMs: 0, progress: (v, n) => seen.push([v, n]) }), 3);
+    assert.deepEqual(seen, [[0, 5], [1, 5], [2, 5], [3, 0]]);
+    assert.equal(await al.busy(), false);
+    assert.equal(link.mem.get(0xB64F), 0x0A);           // not programmed
+    const all = aligner(new FakeLink(false, 99));
+    await all.enter("squelch");
+    assert.equal(await all.autoSquelch({ dwellMs: 0, samples: 1 }), null);
+    assert.equal(all.value, 10);
 });

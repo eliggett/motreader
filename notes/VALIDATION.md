@@ -220,3 +220,4 @@ motreader).
 | Changing the test frequency while keyed: RSS unkeys, changes it and keys again; motreader unkeys and stays unkeyed. | side effect (differs) |
 | F8 writes the value and its block sum byte (0xB660..0xB664); leaving SERVICE rewrites every MCU EEPROM sum byte and 0xB7FF from what it reads (RADIO-PROTOCOL.md). motreader writes the value and its block sum only. | side effect |
 | Leaving a screen with an unprogrammed value: the radio keeps the live value until it restarts; motreader restarts it on leaving test mode. | side effect |
+| Auto squelch (motreader only): steps up from 0 and stops at the first value with BUSY off (5 reads); sets it live, doesn't program it. On a dummy load (no signal) that is 1 on the 617ASN. RSS has no such button. | n/a |

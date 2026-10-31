@@ -19,8 +19,10 @@ class FakeLink:
     """Answers reads (MCU RAM/EEPROM, scrambled codeplug-session writes),
     keys on PTT ON and unkeys on PTT OFF unless `stuck`."""
 
-    def __init__(self, stuck=False):
+    def __init__(self, stuck=False, quiet_from=3):
         self.mem = dict(EEPROM)
+        self.squelch = 10          # live squelch; BUSY below quiet_from
+        self.quiet_from = quiet_from
         self.sent = []
         self.keyed = False
         self.stuck = stuck
@@ -36,6 +38,8 @@ class FakeLink:
             self.keyed = True
         elif p == PTT_OFF and not self.stuck:
             self.keyed = False
+        elif op == 0x28:
+            self.squelch = p[2]
         elif op == sb.OP_WRITE:
             assert self.session == 0xD1
             hi, lo, v = sb.unscramble(*p[:3])
@@ -43,7 +47,9 @@ class FakeLink:
         elif op == sb.OP_READ:
             assert self.session == 0x93
             a = p[0] << 8 | p[1]
-            ram = {0x000D: 0x08 if self.keyed else 0, 0x003B: 0x18 if self.keyed else 0x10}
+            busy = self.squelch < self.quiet_from
+            ram = {0x000D: 0x08 if self.keyed else 0, 0x003B: 0x18 if self.keyed else 0x10,
+                   0x0031: 0x0C if busy else 0, 0x0038: 0x28 if busy else 0x08}
             get = lambda x: ram.get(x, self.mem.get(x, 0xFF))  # noqa: E731
             return sb.read_reply(bytes([get(a), get(a + 1)]), False, r0=p[0])
         return None
@@ -190,3 +196,25 @@ def test_leave_unkeys_and_exits_test_mode():
     assert not link.keyed
     sent = [p.hex() for p in link.sent]
     assert "01000040" in sent and sent[-1] == "00100108"     # test exit, MODE_DONE
+
+
+def test_auto_squelch():
+    link = FakeLink(quiet_from=3)
+    al = aligner(link)
+    al.enter("squelch")
+    seen = []
+    assert al.auto_squelch(dwell=0, progress=lambda v, n, of: seen.append((v, n))) == 3
+    assert seen == [(0, 5), (1, 5), (2, 5), (3, 0)]
+    assert al.value == 3 and not al.busy()
+    assert link.mem[0xB64F] == 0x0A            # not programmed
+
+
+def test_auto_squelch_all_busy():
+    link = FakeLink(quiet_from=99)
+    al = aligner(link)
+    al.enter("squelch")
+    assert al.auto_squelch(dwell=0, samples=1) is None
+    assert al.value == 10 and link.squelch == 10
+    al.enter("deviation")
+    with pytest.raises(RuntimeError):
+        al.auto_squelch()

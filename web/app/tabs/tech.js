@@ -347,7 +347,25 @@ function build() {
     const pttOn = /** @type {HTMLButtonElement} */ (h("button", { class: "danger", onclick: () => act((al) => al.key()) }, "PTT ON"));
     const pttOff = /** @type {HTMLButtonElement} */ (h("button", { class: "primary", onclick: () => act((al) => al.unkey()) }, "PTT OFF"));
     const pttState = h("span", { class: "tech-ptt", "aria-live": "polite" });
+    const pttRow = h("div", { class: "tech-row" }, h("label", {}, "Transmit"), pttOn, pttOff, pttState);
     const alProgram = /** @type {HTMLButtonElement} */ (h("button", { onclick: () => void programValue() }, "Program value…"));
+    const busyState = h("span", { class: "tech-ptt", "aria-live": "polite" });
+    const showBusy = (/** @type {boolean} */ b) => {
+        busyState.textContent = b ? "BUSY: squelch open" : "Not busy: squelch closed";
+        busyState.className = `tech-ptt${b ? " on" : ""}`;
+    };
+    const busyRead = /** @type {HTMLButtonElement} */ (h("button", { onclick: () => act(async (al) => showBusy(await al.busy())) }, "Read BUSY"));
+    const autoSq = /** @type {HTMLButtonElement} */ (h("button", {
+        title: "Step up from 0 and stop at the first value where the radio's BUSY stays off (5 reads); not programmed",
+        onclick: () => act(async (al) => {
+            alSay("Finding the lowest quiet squelch…");
+            const v = await al.autoSquelch({ progress: (x, n, of) => alSay(`Squelch ${x}: busy in ${n} of ${of} reads…`) });
+            showBusy(await al.busy());
+            alSay(v === null ? "BUSY at every value (a signal on the test frequency?): squelch put back."
+                : `Lowest quiet squelch: ${v}, set live. Program value keeps it.`);
+        }),
+    }, "Find lowest quiet value"));
+    const busyRow = h("div", { class: "tech-row" }, h("label", {}, "Signal"), busyRead, autoSq, busyState);
 
     /** Run an aligner call, showing its error; a failed PTT OFF also goes to the log. */
     async function act(/** @type {(al: Aligner) => Promise<unknown>} */ fn) {
@@ -477,7 +495,10 @@ function build() {
         const keyed = al?.keyedAt !== null && al?.keyedAt !== undefined;
         pttOn.disabled = !on || !a?.transmits || keyed;
         pttOff.disabled = !al;
-        pttOn.hidden = pttOff.hidden = on && !a?.transmits;
+        pttRow.hidden = on && !a?.transmits;
+        busyRow.hidden = a?.key !== "squelch";
+        busyRead.disabled = autoSq.disabled = !on;
+        if (a?.key !== "squelch") busyState.textContent = "";
         if (a && al) {
             alRange.max = alNum.max = String(a.top);
             if (pending === null && !sending) alRange.value = alNum.value = String(al.value);
@@ -555,14 +576,16 @@ function build() {
                     h("label", { for: "tech-align-value" }, "Value"), alRange, alDown, alNum, alUp),
                 h("div", { class: "tech-row" }, alStored),
                 freqRow,
-                h("div", { class: "tech-row" }, h("label", {}, "Transmit"), pttOn, pttOff, pttState),
+                pttRow,
+                busyRow,
                 h("div", { class: "tech-row" }, alProgram),
                 alMsg),
             note("Start test mode puts the radio on a test frequency, as RSS's screen does. Moving the value changes the "
                 + "running radio (deviation only while transmitting, as in RSS); Program value writes it into the radio's "
                 + "MCU EEPROM with its block sum. Leave test mode restarts the radio, which drops values not programmed. "
                 + "The test frequencies are the radio's own three (its display shows the frequency's digits, e.g. "
-                + "350125); other frequencies can't be chosen yet. Squelch doesn't transmit.")));
+                + "350125); other frequencies can't be chosen yet. Squelch doesn't transmit; on its screen, Find lowest quiet value "
+                + "steps up from 0 to the first value where the radio's BUSY stays off.")));
 
     refresh = () => {
         const c = connection();

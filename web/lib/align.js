@@ -26,6 +26,8 @@ export const PTT_OFF = Uint8Array.of(0x00, 0x03, 0x00, 0x0A);    // released
 export const TEST_EXIT = Uint8Array.of(0x01, 0x00, 0x00, 0x40);
 /** RAM bits set only while keyed. */
 export const TX_FLAGS = [[0x000D, 0x08], [0x003B, 0x08]];
+/** RAM showing the receiver's squelch open (the BUSY LED, indicator 0x0a): 0x0031 is 0x0c open / 0 closed, 0x0038 bit 5 set open. */
+export const BUSY_FLAGS = [[0x0031, 0xFF], [0x0038, 0x20]];
 export const FREQS = /** @type {const} */ (["low", "mid", "high"]);
 
 /** @typedef {typeof FREQS[number]} Freq */
@@ -252,6 +254,39 @@ export class Aligner {
             if (/** @type {number} */ ((await this.readMcu(/** @type {number} */ (addr), 1))[0]) & /** @type {number} */ (bit)) return true;
         }
         return false;
+    }
+
+    /** Whether the squelch is open (the BUSY LED) now. */
+    busy() {
+        return this.locked(async () => {
+            for (const [addr, mask] of BUSY_FLAGS) {
+                if (/** @type {number} */ ((await this.readMcu(/** @type {number} */ (addr), 1))[0]) & /** @type {number} */ (mask)) return true;
+            }
+            return false;
+        });
+    }
+
+    /**
+     * On the squelch screen: the lowest value at which BUSY stays off
+     * (`samples` reads after `dwellMs` at each value), left set live (not
+     * programmed). Resolves null, with the old value back, if every value is
+     * busy (a signal on the test frequency?).
+     * @param {{ dwellMs?: number, samples?: number, progress?: (v: number, busy: number, of: number) => void }} [opt]
+     */
+    async autoSquelch({ dwellMs = 500, samples = 5, progress } = {}) {
+        const a = this.need();
+        if (a.key !== "squelch") throw new Error("auto squelch needs the squelch screen");
+        const start = this.value;
+        for (let v = 0; v <= a.top; v++) {
+            await this.set(v);
+            await sleep(dwellMs);
+            let open = 0;
+            for (let i = 0; i < samples; i++) if (await this.busy()) open++;
+            progress?.(v, open, samples);
+            if (!open) return v;
+        }
+        await this.set(start);
+        return null;
     }
 
     /** PTT OFF twice, then read back that the radio isn't transmitting. Safe when not keyed. */
