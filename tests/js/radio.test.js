@@ -221,3 +221,15 @@ test("cancel stops a verify; finish() then restarts the radio", async () => {
     // the next operation isn't cancelled
     assert.deepEqual((await radio.readAll()).codeplug, cp);
 });
+
+test("parseHexWrite: the Tech tab's write fields", () => {
+    const w = rd.parseHexWrite("0x6000", "5a 01");
+    assert.deepEqual([w.addr, [...w.data], w.region.id], [0x6000, [0x5a, 0x01], "codeplug_eeprom"]);
+    assert.equal(rd.parseHexWrite("b7ff", "00").region.id, "mcu_eeprom");
+    assert.throws(() => rd.parseHexWrite("60g0", "00"), /Address: "60g0" is not a hex number/);
+    assert.throws(() => rd.parseHexWrite("6000", ""), /Bytes: none given/);
+    assert.throws(() => rd.parseHexWrite("6000", "5"), /Bytes: "5" has an odd/);
+    assert.throws(() => rd.parseHexWrite("6000", "00".repeat(257)), /at most 256/);
+    assert.throws(() => rd.parseHexWrite("7fff", "00 00"), /7FFF-8000 isn't inside one writable region/);
+    assert.throws(() => rd.parseHexWrite("1000", "00"), /isn't inside one writable region/);
+});

@@ -10,7 +10,7 @@
  * doesn't answer. web/app/serial.js is the Web Serial one.
  */
 import * as sb from "./sb9600.js";
-import { latin1, equal, concat } from "./bytes.js";
+import { latin1, equal, concat, parseHexBytes } from "./bytes.js";
 import { BANNER_LONG, sealArchive } from "./archive.js";
 
 export const CODEPLUG_BASE = 0x6000;
@@ -93,6 +93,39 @@ export const HC11_REGISTERS = [0x1000, 0x1040];
 /** The writable region (codeplug session) holding all of [start, end), or undefined. */
 export const writableRegion = (/** @type {number} */ start, /** @type {number} */ end) =>
     REGIONS.find((r) => r.session === "codeplug" && r.writable && start >= r.start && end <= r.end);
+
+const h4 = (/** @type {number} */ n) => n.toString(16).toUpperCase().padStart(4, "0");
+
+/** A hex number typed in a field ("6000", "0x6000"); throws a readable error. */
+export function parseHexNumber(/** @type {string} */ text, /** @type {string} */ what) {
+    const t = text.trim().replace(/^0x/i, "");
+    if (!/^[0-9a-f]{1,5}$/i.test(t)) throw new Error(`${what}: "${text.trim()}" is not a hex number (e.g. 6000 or 0x6000)`);
+    return parseInt(t, 16);
+}
+
+/** Most bytes one Tech write takes. */
+export const MAX_HEX_WRITE = 0x100;
+
+/**
+ * The Tech tab's Write memory fields: the address and bytes as typed,
+ * checked as the write would be. Throws an Error starting with the field.
+ */
+export function parseHexWrite(/** @type {string} */ addrText, /** @type {string} */ bytesText) {
+    const addr = parseHexNumber(addrText, "Address");
+    /** @type {Uint8Array} */
+    let data;
+    try {
+        data = parseHexBytes(bytesText);
+    } catch (e) {
+        throw new Error(`Bytes: ${/** @type {Error} */ (e).message}`);
+    }
+    if (!data.length) throw new Error("Bytes: none given (e.g. 5a 01 ff)");
+    if (data.length > MAX_HEX_WRITE) throw new Error(`Bytes: ${data.length} given; at most ${MAX_HEX_WRITE} in one write`);
+    const region = writableRegion(addr, addr + data.length);
+    if (!region) throw new Error(`${h4(addr)}-${h4(addr + data.length - 1)} isn't inside one writable region `
+        + "(RAM 0000-0FFF, codeplug EEPROM 6000-7FFF, MCU EEPROM B600-B7FF)");
+    return { addr, data, region };
+}
 
 // setTimeout is in every host this runs in (page, Node) but not in plain ECMAScript
 const sleep = (/** @type {number} */ ms) => new Promise((r) => /** @type {any} */ (globalThis).setTimeout(r, ms));

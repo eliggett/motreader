@@ -64,3 +64,16 @@ test("hexdump of a short, ragged input matches hexdump -C", { skip: !hasCommand(
         assert.equal(B.hexdump(data), want, `length ${n}`);
     }
 });
+
+test("parseHexBytes: spaces, commas, 0x and runs of pairs; lone digits refused", () => {
+    const want = [0x5a, 0x01, 0xff];
+    for (const s of ["5a 01 ff", "5A01FF", "0x5a, 0x01, 0xff", "0x5a,0x01,0xff", "5a01 ff", "  5a\t01\nff  "]) {
+        assert.deepEqual([...B.parseHexBytes(s)], want, s);
+    }
+    assert.deepEqual([...B.parseHexBytes("")], []);
+    assert.throws(() => B.parseHexBytes("5 a"), /odd number of digits/);
+    assert.throws(() => B.parseHexBytes("5a 1ff"), /"1ff"/);
+    assert.throws(() => B.parseHexBytes("5g"), /"5g" isn't hex/);
+    assert.throws(() => B.parseHexBytes("0x"), /isn't hex/);
+    assert.throws(() => B.parseHexBytes("a0x1"), /isn't hex/);
+});

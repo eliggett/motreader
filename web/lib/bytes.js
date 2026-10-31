@@ -108,6 +108,24 @@ export function fromHex(/** @type {string} */ s) {
 }
 
 /**
+ * Bytes typed as hex: "5a 01 ff", "5A01FF", "0x5a, 0x01, 0xff". Groups are
+ * split by spaces or commas; each is an even number of digits (a lone digit
+ * is refused rather than guessed as 05 or 50), with an optional 0x.
+ * Throws a SyntaxError naming the bad group.
+ */
+export function parseHexBytes(/** @type {string} */ s) {
+    /** @type {number[]} */
+    const out = [];
+    for (const group of s.split(/[\s,]+/).filter(Boolean)) {
+        const t = group.replace(/^0x/i, "");
+        if (!t || /[^0-9a-fA-F]/.test(t)) throw new SyntaxError(`"${group}" isn't hex`);
+        if (t.length % 2) throw new SyntaxError(`"${group}" has an odd number of digits: write each byte as two (05, not 5)`);
+        for (let i = 0; i < t.length; i += 2) out.push(parseInt(t.slice(i, i + 2), 16));
+    }
+    return new Uint8Array(out);
+}
+
+/**
  * One `hexdump -C` line for the 16 bytes at `off`:
  * `00000010  48 65 6c 6c 6f 20 77 6f  72 6c 64 0a              |Hello world.|`
  */

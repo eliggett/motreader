@@ -344,6 +344,9 @@ dialog.dos::backdrop { background: rgb(0 0 0 / 0.75); }
 .tech-buttons { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 .tech-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
 .tech-row > label { color: var(--muted); }
+.tech-row > label[title] { cursor: help; text-decoration: underline dotted; }
+.tech input[aria-invalid] { border-color: var(--error); outline-color: var(--error); }
+.tech-write-msg { min-height: 1.2em; margin: -0.25rem 0 0.5rem; font-family: var(--mono); }
 .tech-status { margin: 0 0 0.5rem; }
 .tech-progress { position: sticky; top: 0; z-index: 1; background: var(--bg); padding: 0.25rem 0 0.5rem; }
 .tech-progress progress { width: 100%; accent-color: var(--accent); }

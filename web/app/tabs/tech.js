@@ -20,9 +20,10 @@ import { note, section } from "./common.js";
 import { serialSupported } from "../serial.js";
 import { connection, connect, disconnect, withRadio, onConnectionChange } from "../radioconn.js";
 import { serialHelp, reporter, mmss } from "../radioio.js";
-import { hex, fromHex, hexdumpLine, latin1 } from "../../lib/bytes.js";
+import { hex, hexdumpLine, latin1 } from "../../lib/bytes.js";
 import {
-    REGIONS, BLOCK, HC11_REGISTERS, Cancelled, writableRegion, MODEL, CODEPLUG_BASE, serialOf, modelOf,
+    REGIONS, BLOCK, HC11_REGISTERS, Cancelled, MODEL, CODEPLUG_BASE, serialOf, modelOf,
+    parseHexNumber as parseHex, parseHexWrite, MAX_HEX_WRITE,
 } from "../../lib/radio.js";
 
 /** Measured on a 617ASQ through Chrome: bytes per second reading (2 per message) and writing (1 per message). */
@@ -39,13 +40,6 @@ function dump(/** @type {Uint8Array} */ b, /** @type {number} */ base) {
         lines.push(hexdumpLine(b, off).replace(/^[0-9a-f]{8}/, h4(base + off)));
     }
     return lines.join("\n");
-}
-
-/** A hex number from a field ("6000", "0x6000"); throws a readable error. */
-function parseHex(/** @type {string} */ text, /** @type {string} */ what) {
-    const t = text.trim().replace(/^0x/i, "");
-    if (!/^[0-9a-f]{1,5}$/i.test(t)) throw new Error(`${what}: "${text}" is not a hex number`);
-    return parseInt(t, 16);
 }
 
 /** Runs of differing bytes [start, end), joining runs closer than 4 bytes. */
@@ -156,6 +150,40 @@ function build() {
     const out = h("pre", { class: "hexdump tech-out" });
     const wrAddr = field("tech-write-addr", "");
     const wrData = field("tech-write-data", "", 40);
+    wrAddr.title = "Hex address of the first byte, with or without 0x: 6000, 0x6000, b600";
+    wrData.title = `Hex bytes, two digits each, up to ${MAX_HEX_WRITE}. Spaces or commas between bytes are optional:\n`
+        + "  5a 01 ff\n  5A01FF\n  0x5a, 0x01, 0xff\n  5a01 ff00 (groups of pairs)\n"
+        + "A lone digit (5) is refused: write 05.";
+    const wrMsg = h("p", { class: "field-msg tech-write-msg", "aria-live": "polite" });
+    /** Check the Write fields as they're typed: the target range, or what's wrong. */
+    function checkWrite() {
+        if (!wrAddr.value.trim() && !wrData.value.trim()) {
+            wrMsg.textContent = "";
+            wrMsg.className = "field-msg tech-write-msg";
+            wrAddr.removeAttribute("aria-invalid");
+            wrData.removeAttribute("aria-invalid");
+            return;
+        }
+        /** @type {HTMLInputElement | null} */
+        let bad = null;
+        try {
+            const { addr, data, region } = parseHexWrite(wrAddr.value, wrData.value);
+            wrMsg.textContent = `${data.length} byte${data.length === 1 ? "" : "s"} at `
+                + `${h4(addr)}-${h4(addr + data.length - 1)} (${region.name}): ${hex(data, " ")}`;
+            wrMsg.className = "field-msg tech-write-msg";
+        } catch (e) {
+            const text = errText(e);
+            // the field at fault (a range outside the regions: the address); one still blank isn't an error yet
+            const field = text.startsWith("Bytes") ? wrData : wrAddr;
+            if (field.value.trim()) bad = field;
+            wrMsg.textContent = bad ? text : "";
+            wrMsg.className = `field-msg tech-write-msg${bad ? " error" : ""}`;
+        }
+        wrAddr.toggleAttribute("aria-invalid", bad === wrAddr);
+        wrData.toggleAttribute("aria-invalid", bad === wrData);
+    }
+    wrAddr.addEventListener("input", checkWrite);
+    wrData.addEventListener("input", checkWrite);
 
     const hexRead = action("Read", async () => {
         let addr, len;
@@ -180,14 +208,9 @@ function build() {
     const hexWrite = action("Write…", async () => {
         let addr, data, region;
         try {
-            addr = parseHex(wrAddr.value, "Address");
-            data = fromHex(wrData.value);
-            if (!data.length || data.length > 0x100) throw new Error("Bytes: 1 to 256 hex bytes, e.g. \"5a 01 ff\"");
-            region = writableRegion(addr, addr + data.length);
-            if (!region) throw new Error(`${h4(addr)}-${h4(addr + data.length - 1)} isn't inside one writable region `
-                + "(RAM 0000-0FFF, codeplug EEPROM 6000-7FFF, MCU EEPROM B600-B7FF)");
+            ({ addr, data, region } = parseHexWrite(wrAddr.value, wrData.value));
         } catch (e) {
-            return say(e instanceof SyntaxError ? `Bytes: ${e.message}` : errText(e), true);
+            return say(errText(e), true);
         }
         const range = `${h4(addr)}-${h4(addr + data.length - 1)}`;
         await run(`Writing ${range}`, async (radio) => {
@@ -318,10 +341,12 @@ function build() {
             out),
         section("Write memory (hex)",
             h("div", { class: "tech-row" },
-                h("label", { for: "tech-write-addr" }, "Address"), wrAddr,
-                h("label", { for: "tech-write-data" }, "Bytes"), wrData,
+                h("label", { for: "tech-write-addr", title: wrAddr.title }, "Address"), wrAddr,
+                h("label", { for: "tech-write-data", title: wrData.title }, "Bytes"), wrData,
                 hexWrite),
-            note("Up to 256 bytes inside one writable region: RAM 0000-0FFF, codeplug EEPROM 6000-7FFF, MCU EEPROM B600-B7FF. "
+            wrMsg,
+            note("Hex throughout: an address like 6000 or 0x6000, bytes like 5a 01 ff, 5A01FF or 0x5a,0x01,0xff "
+                + "(hover a field for more). Up to 256 bytes inside one writable region: RAM 0000-0FFF, codeplug EEPROM 6000-7FFF, MCU EEPROM B600-B7FF. "
                 + "The current bytes are read and shown before anything is written, and the result is read back.")),
         section("Memory regions",
             h("table", { class: "tech-regions" },
