@@ -32,6 +32,15 @@ CHATTER = bytes.fromhex(
     "01ff353c03" "01ff503c98" "01ff4c3c39" "01ff133cad")
 CHATTER_OPS = (0x0A, 0x40)
 
+# MCU RAM of the same radio (read in MCU session 0x93, not keyed): RSS reads
+# 0x0589 on entering a test screen (0x88 as RSS saw it in SERVICE) and
+# 0x000c..0x0012 after keying (F6).
+MCU_RAM = {base + i: v for base, data in (
+    (0x0000, "a500c0cb24a0180a0009003f030050b0206b49611c008c"),
+    (0x0580, "94f7a050b000e8dc3f88e90c178c952c874f874f04000000"
+             "20ff947fa0857b00"),
+) for i, v in enumerate(bytes.fromhex(data))}
+
 
 def mcu_sum_ok(mem):
     """MCU EEPROM 0xB6A0..0xB7FF sums to 0 mod 256 (0xB7FF is the check
@@ -42,6 +51,7 @@ def mcu_sum_ok(mem):
 class Radio:
     def __init__(self, mem, log):
         self.mem = mem
+        self.ram = dict(MCU_RAM)   # MCU session reads below 0x0600 come from here
         self.log = log
         self.t0 = time.monotonic()
         self.rx = bytearray()      # bytes of the message in progress
@@ -89,7 +99,8 @@ class Radio:
             self.last_read = (p, scr)
             hi, lo, _ = sb.unscramble(*p[:3]) if scr else (p[0], p[1], p[2])
             a = hi << 8 | lo
-            data = bytes([self.mem.get(a, 0xFF), self.mem.get(a + 1, 0xFF)])
+            src = self.ram if self.session == 0x93 and a < 0x600 else self.mem
+            data = bytes([src.get(a, 0xFF), src.get(a + 1, 0xFF)])
             if scr:
                 reply = sb.read_reply(data, True)
             elif self.session == 0xB1:

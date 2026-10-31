@@ -332,37 +332,81 @@ recomputes this word and motreader didn't.
 - The 0x2000 extra region on the larger radios.
 - What the 16 RSS-maintained bytes encode.
 - Error-code → message mapping.
-- **Alignment** (RSS SERVICE → ALIGNMENT): see "Alignment (RSS SERVICE)".
+- Alignment test frequencies other than the radio's three (RSS has no way
+  either); the advanced alignment screens (SERVICE F4) not looked at.
 - Front-panel password location.
 
 ## Alignment (RSS SERVICE)
 
-Traced on the 900 MHz 617ASN1665 (D37KMA7JA5DK) with
-`tools/scenario_align_recon.py` (enters each screen, never PTT, arrows or
-F8). Work in progress: values and the write side are not decoded yet.
+Decoded by pressing every key of every screen in RSS against the emulated
+radio (`tools/scenario_align_recon.py --link pty-bus --keys ...`), then checked
+on the 900 MHz 617ASN1665 (D37KMA7JA5DK) into a dummy load with
+`tools/align_ptt_probe.py` and `motreader-py/align.py`. Implemented in
+`motreader-py/align.py` (CLI `align`) and `web/lib/align.js` (Tech tab).
 
-- Screens and the values RSS shows on this radio: DEFAULT SQUELCH 10,
-  TX DEVIATION 11 (0–14), REFERENCE OSCILLATOR WARP 72, TX HIGH POWER 98,
-  PA CURRENT LIMIT 7, TX LOW POWER 46.
-- New commands, both without a reply: `00 03 00 0a` (broadcast, opcode
-  0x0a) and `01 4x 10 40` / `01 11 10 40` / `01 00 00 40` (to the radio,
-  opcode 0x40; the data selects the test). About 10 ms later the radio
-  talks on its own: `01 00 c0 1b` (opcode 0x1b, TX audio routing) and a
-  dozen display messages (opcode 0x3c, `01 ff cc 3c`, one character each,
-  0x80 = decimal point), e.g. "350125PL", one every 12–20 ms, holding BUSY.
-  The control head (address 05) talks too. RSS must wait for BUSY; this
-  is what broke dosbox-x `rib:1` (below).
-- Reads seen: MCU EEPROM b62c–b62f, b634–b645, b64f, b655–b664; RAM 0589;
-  the serial 601d–6027 every ~4 s while a screen is open.
+### Screens
+
+| Screen (RSS key) | EEPROM byte | stored as | range | live message | test mode: entry; F2 / F3 / F4 |
+|---|---|---|---|---|---|
+| DEFAULT SQUELCH (F2) | 0xB64F | v | 0–15 | `01 02 v 28` | 41; — |
+| TX DEVIATION (F3) | 0xB644 | v | 0–14 | `01 (v+1)<<4 [B645] 32`, keyed only | 42; 42 / 52 / 62 |
+| REF OSC WARP (F5) | 0xB62D | rev7(v) | 0–127 | `01 00 rev7(v) 43` | 41; — |
+| TX HIGH POWER (F7) | 0xB62F | rev7(127−v) | 0–127 | `01 01 rev7(127−v) 33` | 11; 41 / 51 / 61 |
+| PA CURRENT LIMIT (F7, F9) | 0xB62C | 0x80 \| v<<3 | 0–15 | `01 00 v<<3 42` + `01 01 [B62F] 33` | 11; 42 / 52 / 62 |
+| TX LOW POWER (F8) | 0xB62E | rev7(127−v) | 0–127 | `01 01 rev7(127−v) 33` | 41; 42 / 52 / 62 |
+
+rev7 = the low 7 bits reversed. Values on this radio: squelch 10 (0a),
+deviation 11 (0b, B645 = 0a), warp 72 (09), high power 98 (5c), current
+limit 7 (b8), low power 46 (45).
+
+- **Test mode** `01 XX 10 40` (no reply): the radio goes to one of its own
+  test frequencies and shows it on its display (`01 ff cc 3c` messages, e.g.
+  "350125PL"; "350125CS" in mode 11). `01 00 00 40` leaves test mode. Only
+  these three frequencies are known; RSS can't set others.
+- **Live values** (no reply) change the running radio until it restarts.
+  RSS sends deviation only while keyed (on PTT ON and on each arrow); squelch,
+  warp and power on each arrow; warp, power and current limit also on PTT ON.
+  RAM **0x000a** holds the power code in use (read back 7c after high power
+  96, 65 after low power 44).
+- **PTT**: `00 03 01 0a` (SETBUT broadcast, button 3 = PTT, pressed) and
+  `00 03 00 0a` (released). RSS sends the release on entering every screen.
+  Keyed, the radio broadcasts `01 00 01 19` (RADKEY) and `01 0b 01 3c` (TX
+  indicator on); released, `01 0b 00 3c` and `01 00 c0 1b`. In RAM, **0x000d
+  bit 3 and 0x003b bit 3 are set only while keyed** (0x0030 goes 82 → 00
+  too); motreader reads them back after every PTT OFF. RSS reads RAM
+  0x000c..0x0012 (synthesizer) after keying to show "TRANSMITTER ON nnn.nnnn
+  MHz". Changing the test frequency while keyed, RSS unkeys, sends the test
+  mode and keys again; motreader leaves it unkeyed.
+- **F8 PROGRAM VALUE**: in the codeplug session (scrambled, as RSS writes the
+  MCU EEPROM), write the byte; read it back in the MCU session; read the
+  block and write its **sum byte** (8-bit sum, no negation); read it back.
+  Blocks: **0xB660 = Σ 0xB600..0xB62C**, **0xB661 = Σ 0xB62D..0xB633** (the
+  firmware's 0xC673 computes this one), **0xB662 = Σ 0xB634..0xB643**,
+  **0xB663 = 0xB644**, **0xB664 = Σ 0xB645..0xB658**, 0xB693 = Σ
+  0xB665..0xB674, 0xB69E = Σ 0xB694..0xB69D. None is in the 0xB7FF range.
+- Reads seen on entering screens: MCU EEPROM b62c–b62f, b634–b645, b64f,
+  b655–b664; RAM 0589; the serial 601d–6027 every ~4 s while a screen is open.
 - **Leaving SERVICE writes the radio**, F8 or not: RSS re-reads MCU EEPROM
-  0xB600–0xB7FE and rewrites 0xB660–0xB664, 0xB693, 0xB69E and **0xB7FF =
+  0xB600–0xB7FE and rewrites every sum byte above and **0xB7FF =
   −(sum of 0xB6A0..0xB7FE) mod 256** (0xB6A0..0xB7FF sums to 0; holds on
   the 617ASQ dump too). RSS doesn't check reply CRCs, so a bus error during
   that read writes a wrong check byte: the radio then shows **FL 01/92** at
   power-up. It happened once here (0xB7FF = 0xDA), fixed by writing 0x68
   back. `scenario_align_recon.py` therefore never leaves SERVICE through
   RSS on a real radio unless `--leave`; it kills dosbox-x and sends
-  MODE_DONE, and checks the sum afterwards.
+  MODE_DONE, and checks the sum afterwards. It refuses F6 and F8 on a real
+  radio.
+
+### PTT safety (motreader)
+
+Keying only in a test mode that transmits; a watchdog unkeys before 10 s
+(Python at 9 s, the web app at 8.8 s since a background tab's timers can be
+up to 1 s late); every PTT OFF is sent twice and then read back (RAM 0x000d,
+0x003b), retried 5 times, else an error saying to switch the radio off.
+Leaving (or a crash in Python's `with Aligner`) unkeys, leaves test mode and
+restarts the radio; the web app also unkeys on leaving the page. Tested on
+the real radio: keyed 1.4–3.4 s at a time, watchdog-only unkey at 2 s.
+Programming (F8) has been tested only on the emulated radio so far.
 
 ## Linux / real-port problems in dosbox-x
 
@@ -485,7 +529,7 @@ WEBWRITE. Findings:
   (only the differing bytes, then read back). Real radio: 7F00 written and
   restored, MCU EEPROM saved and its identical file written back (nothing
   differed), firmware read cancelled at block 3 of 128. About 100 bytes/s
-  reading and 32 bytes/s writing. Alignment controls are placeholders.
+  reading and 32 bytes/s writing. Alignment: see "Alignment (RSS SERVICE)".
 - The port chooser lists every ttyS* as well; there is no filter, since a
   real RS-232 port is a valid choice.
 - Testing: headed Chrome on Xvfb (`--ozone-platform=x11`, no WAYLAND_DISPLAY),

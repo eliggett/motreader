@@ -40,6 +40,12 @@
         # verifies by reading back. --clone (RSS's CLONE): another radio of
         # the same model; the radio keeps its serial number, and the
         # archive's options must match the radio's (--ignore-features)
+    python -m motreader.cli align <serial_port> <screen> [low|mid|high]
+        # RSS's SERVICE -> ALIGNMENT screens (motreader/align.py); screen is
+        # squelch, deviation, warp, high_power, current_limit or low_power.
+        # Commands from the prompt or piped in (type help). PTT switches off
+        # by itself before 10 s, and PTT OFF is sent twice and read back.
+        # Transmits into whatever is connected: use a dummy load.
 
 Export writes one CSV per multi-row category (modes.csv, phones.csv, mpl.csv,
 buttons.csv)
@@ -757,6 +763,84 @@ def _save_read(res, outdir: str) -> None:
         os.path.join(outdir, f"A{serial[:7]}.{serial[7:]}"))
 
 
+ALIGN_HELP = """commands (one per line):
+  up [n] / down [n]   move the slider (sent live as RSS does)
+  set N               set the slider to N
+  low / mid / high    test frequency (unkeys first)
+  key [secs]          PTT ON; it switches off by itself before 10 s
+  off                 PTT OFF (sent twice, then read back)
+  wait S              wait S seconds (for piped commands)
+  program             write the slider value into the radio (RSS's F8)
+  show                the value, stored value and PTT state
+  quit                PTT OFF, leave test mode, restart the radio"""
+
+
+def align(port: str, key: str, freq: str | None) -> None:
+    import time
+
+    from .align import ADJUSTMENTS, Aligner
+    from .radio import Radio, SerialLink
+
+    adj = ADJUSTMENTS[key]
+    link = SerialLink(port)
+    radio = Radio(link)
+    try:
+        with Aligner(radio, log=lambda m: print(f"  [{m}]", flush=True)) as al:
+            v = al.enter(key, freq)
+            print(f"{adj.title}: value {v} (0..{adj.top})"
+                  + (", test frequencies low/mid/high" if adj.freqs else ""))
+            print(ALIGN_HELP)
+
+            def show():
+                ptt = f"PTT ON, {al.remaining():.1f} s left" if al.keyed_at else "PTT off"
+                print(f"value {al.value}, stored {adj.decode(al.stored)} "
+                      f"({al.stored:02x}), {al.freq or 'entry'} test frequency, {ptt}")
+
+            while True:
+                try:
+                    line = input("align> ")
+                except EOFError:
+                    break
+                words = line.split()
+                if not words:
+                    continue
+                cmd, args = words[0], words[1:]
+                try:
+                    if cmd in ("up", "down"):
+                        n = int(args[0]) if args else 1
+                        al.set(max(0, min(adj.top, al.value + (n if cmd == "up" else -n))))
+                        show()
+                    elif cmd == "set":
+                        al.set(int(args[0]))
+                        show()
+                    elif cmd in ("low", "mid", "high"):
+                        al.set_freq(cmd)
+                        show()
+                    elif cmd == "key":
+                        secs = al.key(float(args[0]) if args else None)
+                        print(f"PTT ON: off in {secs:.1f} s at the latest")
+                    elif cmd == "off":
+                        al.unkey()
+                        show()
+                    elif cmd == "wait":
+                        time.sleep(float(args[0]))
+                    elif cmd == "program":
+                        r = al.program()
+                        print("unchanged: nothing written" if r is None else
+                              f"programmed: stored {r[0]:02x} -> {r[1]:02x}")
+                    elif cmd == "show":
+                        show()
+                    elif cmd == "quit":
+                        break
+                    else:
+                        print(ALIGN_HELP)
+                except (ValueError, IndexError, RuntimeError) as e:
+                    print(f"error: {e}")
+    finally:
+        link.close()
+    print("PTT off, test mode left; the radio is restarting")
+
+
 def main(argv: list[str]) -> int:
     if len(argv) < 2:
         print(__doc__)
@@ -788,6 +872,11 @@ def main(argv: list[str]) -> int:
           and set(argv[5:]) <= {"--yes", "--clone", "--ignore-features"}):
         write_radio(argv[2], argv[3], argv[4], clone="--clone" in argv[5:],
                     ignore_features="--ignore-features" in argv[5:])
+    elif (cmd == "align" and len(argv) in (4, 5)
+          and argv[3] in ("squelch", "deviation", "warp", "high_power",
+                          "current_limit", "low_power")
+          and (len(argv) == 4 or argv[4] in ("low", "mid", "high"))):
+        align(argv[2], argv[3], argv[4] if len(argv) == 5 else None)
     else:
         print(__doc__)
         return 1

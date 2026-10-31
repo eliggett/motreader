@@ -210,3 +210,13 @@ motreader).
 | Offered functions per key class (RSS's DOWN-arrow lists, in `motreader/_a9_table.ALLOWED`): Ind 2-6 = 50 incl. siren set, Emer, Scan, Phone, Data, Pass/Emp No; keypad keys 1-9 = 33 (no Scan/Emer/siren-on/PA, but Zone Up/Dn, MAck); labelled keys = 50 incl. Mode/Vol/Zone/Scroll, Del/RCL/Sql/Clr/Sel/Home. motreader refuses functions not offered on that key, except as an experimental edit (any template, the key's home code). SECURENET appears in the lists but is never offered by motreader (encryption is not exposed). | blocks |
 | **Byte-identical pairs**: Vol Dn = V/A Dn, Vol Up = V/A Up, Mode Dn = Scrl-Lt, Mode Up = Scrl-Rt, Sel = Send-A, Emp No = Pass. A saved codeplug can't tell them apart; RSS shows the first name after GET, so motreader exports that name and accepts either on import. A GUI should present them as one choice (or note the alias). | n/a |
 | Copy 2 of the key map is the trunking layer: some functions write Blank there (Dir, StsR, MsgR, ST, MPL, M/WT, MAck, Sql) or a trunked variant (Phone, Call-A/B, Page-A, Sts, Msg). Handled by the templates; nothing for a GUI to do. | n/a |
+
+## Alignment (RSS SERVICE → ALIGNMENT; Tech tab, CLI `align`)
+
+| Rule | Kind |
+|---|---|
+| Slider ranges as RSS draws them: squelch 0–15, deviation 0–14, warp 0–127, high and low power 0–127, PA current limit 0–15. RSS's arrows stop at the ends; motreader refuses values outside them. | blocks |
+| PTT exists only on the transmit screens (not squelch). motreader also stops PTT before 10 s (watchdog), sends PTT OFF twice and reads it back; RSS has no limit. | blocks (motreader's own) |
+| Changing the test frequency while keyed: RSS unkeys, changes it and keys again; motreader unkeys and stays unkeyed. | side effect (differs) |
+| F8 writes the value and its block sum byte (0xB660..0xB664); leaving SERVICE rewrites every MCU EEPROM sum byte and 0xB7FF from what it reads (RADIO-PROTOCOL.md). motreader writes the value and its block sum only. | side effect |
+| Leaving a screen with an unprogrammed value: the radio keeps the live value until it restarts; motreader restarts it on leaving test mode. | side effect |

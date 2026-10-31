@@ -29,6 +29,8 @@ import * as structure from "../lib/structure.js";
 import { lastDownload } from "./files.js";
 import { currentDialog } from "./modal.js";
 import * as tech from "./tabs/tech.js";
+import * as radioconn from "./radioconn.js";
+import * as sb from "../lib/sb9600.js";
 
 /** @type {string[]} */
 const errors = [];
@@ -161,6 +163,39 @@ export function installTestApi(/** @type {Promise<void>} */ ready) {
         /** Tech tab: write a region from file bytes (as Write from file… does after its picker). */
         techWriteRegion: (/** @type {string} */ id, /** @type {Uint8Array | number[] | string} */ data) =>
             tech.techApi?.writeRegionBytes(id, toBytes(data)) ?? Promise.reject(new Error("open the Tech tab first")),
+        /**
+         * Connect the Tech tab to a simulated radio (no serial port): it
+         * answers MCU reads from `mem` (address -> byte), takes scrambled
+         * writes, and keys on PTT ON (RAM 0x000d / 0x003b bit 3) until PTT OFF.
+         * Resolves with the link; `link.sent` holds every payload as hex.
+         */
+        simRadio: (/** @type {Record<string, number>} */ mem = {}) => {
+            const m = new Map(Object.entries(mem).map(([a, v]) => [Number(a), v]));
+            /** @type {{ sent: string[], keyed: boolean, session: number | null, mem: Map<number, number>, close: () => Promise<void>, transact: (p: Uint8Array) => Promise<Uint8Array | null> }} */
+            const link = {
+                sent: [], keyed: false, session: null,
+                close: async () => {},
+                transact: async (/** @type {Uint8Array} */ p) => {
+                    const [p0, p1, p2, op] = /** @type {[number, number, number, number]} */ (Array.from(p));
+                    link.sent.push(Array.from(p, (b) => b.toString(16).padStart(2, "0")).join(""));
+                    if (op === sb.OP_MODE) link.session = p1 === 0x90 || p1 === 0x92 ? null : p1;
+                    else if (op === 0x0A && p1 === 0x03) link.keyed = p2 === 1;
+                    else if (op === sb.OP_WRITE) {
+                        const [hi, lo, v] = sb.unscramble(p0, p1, p2);
+                        m.set((hi << 8) | lo, v);
+                    } else if (op === sb.OP_READ) {
+                        const get = (/** @type {number} */ a) => a === 0x000D ? (link.keyed ? 0x08 : 0)
+                            : a === 0x003B ? (link.keyed ? 0x18 : 0x10) : m.get(a) ?? 0xFF;
+                        const a = (p0 << 8) | p1;
+                        return sb.readReply([get(a), get(a + 1)], false, p0);
+                    }
+                    return null;
+                },
+                mem: m,
+            };
+            radioconn.attach(link, "simulated radio");
+            return link;
+        },
         /** The toolbar commands (file pickers can't be driven from scripts; use load()). */
         actions,
     };

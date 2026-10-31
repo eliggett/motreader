@@ -358,8 +358,10 @@ dialog.dos::backdrop { background: rgb(0 0 0 / 0.75); }
 .tech-regions th { text-align: left; color: var(--muted); font-weight: normal; padding: 0.25rem 1rem 0.25rem 0; }
 .tech-regions td { vertical-align: top; padding: 0.35rem 1rem 0.35rem 0; border-top: 1px solid var(--border); }
 .tech-regions .note { margin: 0; font-size: 0.85em; }
-.tech-align { border: 1px dashed var(--border); border-radius: 4px; padding: 0.75rem; margin: 0; }
-.tech-align:disabled { opacity: 0.6; }
+.tech-align { border: 1px solid var(--border); border-radius: 4px; padding: 0.75rem; margin: 0; }
+button.danger { color: var(--error); border-color: var(--error); font-weight: 600; }
+.tech-ptt { color: var(--muted); }
+.tech-ptt.on { color: var(--error); font-weight: 700; }
 .tech-slider { display: grid; grid-template-columns: 14rem 1fr auto auto auto; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
 .tech-slider > label { color: var(--muted); }
 @media (max-width: 40rem) {

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Boot RSS and walk SERVICE -> ALIGNMENT: open each adjustment screen, wait,
-print it, and leave with F10. Never presses PTT (F6), the arrows or F8, so
-RSS only reads and sets up the radio as it does on entering a screen.
+print it, and leave with F10. By default it presses nothing else, so RSS
+only reads and sets up the radio as it does on entering a screen; --keys
+presses more in each screen (arrows, F2-F4, F6 PTT, F8 program), F6 and F8
+only on an emulated radio.
 MOT_RIBDEBUG=1 puts every byte in dosbox.log; decode it with
 tools/rib_log_decode.py.
 
@@ -107,7 +109,15 @@ def main():
                     help="leave SERVICE through RSS (it rewrites MCU EEPROM "
                          "bytes, 0xB7FF among them); default: kill dosbox-x "
                          "in SERVICE and restart the radio with MODE_DONE")
+    ap.add_argument("--keys", default="",
+                    help="keys pressed in each screen after it opens, e.g. "
+                         "up,up,down,f3,f6,f6,f8 (F6 = PTT, F8 = program: "
+                         "refused on the real radio)")
+    ap.add_argument("--key-dwell", type=float, default=3)
     a = ap.parse_args()
+    actions = [k for k in a.keys.split(",") if k]
+    if a.link == "real" and {"f6", "f8"} & set(actions):
+        sys.exit("refusing F6 (PTT) / F8 (program) on the real radio")
     os.makedirs(a.workdir, exist_ok=True)
     os.environ["MOT_RIBDEBUG"] = "1"
     opts = (" " + a.serial_opts) if a.serial_opts else ""
@@ -160,6 +170,10 @@ def main():
                         print("MARK", spec, k, time.time(), flush=True)
                         d.send_keys(k)
                         settle(d, a.dwell)
+                    for k in actions:
+                        print("MARK", spec, "key", k, time.time(), flush=True)
+                        d.send_keys(k)
+                        settle(d, a.key_dwell)
                     for k in keys:
                         print("MARK", spec, "f10", time.time(), flush=True)
                         d.send_keys("f10")

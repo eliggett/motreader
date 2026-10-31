@@ -3,7 +3,7 @@
  * Tech: direct access to the radio over the RIB, without a codeplug open.
  * Read and write any address in hex, save the known memory regions (RAM,
  * firmware, EEPROMs) as binary files and write the EEPROM ones back from
- * files, and (disabled until the commands are found) alignment controls.
+ * files, and RSS's alignment adjustments (lib/align.js), PTT included.
  *
  * The tab keeps one connection open between operations (radioconn.js). Each
  * operation leaves the radio waiting with its control head frozen; Restart
@@ -25,6 +25,13 @@ import {
     REGIONS, BLOCK, HC11_REGISTERS, Cancelled, MODEL, CODEPLUG_BASE, serialOf, modelOf,
     parseHexNumber as parseHex, parseHexWrite, MAX_HEX_WRITE,
 } from "../../lib/radio.js";
+import { ADJUSTMENTS, Aligner, PttError, FREQS, PTT_LIMIT_MS, PTT_MARGIN_MS, decode, encode } from "../../lib/align.js";
+
+/** The adjustments as the RSS alignment menu lists them. @type {Record<string, string>} */
+const ALIGN_LABELS = {
+    squelch: "Default squelch (F2)", deviation: "Deviation (F3)", warp: "Reference oscillator warp (F5)",
+    high_power: "Transmitter high power (F7)", current_limit: "PA current limit (F7, F9)", low_power: "Transmitter low power (F8)",
+};
 
 /** Measured on a 617ASQ through Chrome: bytes per second reading (2 per message) and writing (1 per message). */
 const READ_BPS = 100;
@@ -312,12 +319,194 @@ function build() {
                 }, { "data-never": writeWhy ? "1" : null, title: writeWhy || null })));
     });
 
-    // --- alignment placeholders ---------------------------------------------
-    const slider = (/** @type {string} */ label, /** @type {string} */ unit) => h("div", { class: "tech-slider" },
-        h("label", {}, label),
-        h("input", { type: "range", min: 0, max: 255, value: 128, disabled: true }),
-        h("input", { type: "text", value: "", size: 5, disabled: true, placeholder: unit }),
-        h("button", { disabled: true }, "Get"), h("button", { disabled: true }, "Set"));
+    // --- alignment ----------------------------------------------------------
+    /** @type {Aligner | null} */
+    let aligner = null;
+    /** @type {(() => void) | null} ends the alignment operation */
+    let stopAlign = null;
+    /** @type {any} the PTT countdown's interval */
+    let ticker = null;
+    const alMsg = h("p", { class: "note tech-align-msg", "aria-live": "polite" });
+    const alSay = (/** @type {string} */ text, warn = false) => {
+        alMsg.textContent = text;
+        alMsg.className = `${warn ? "warn-box" : "note"} tech-align-msg`;
+    };
+    const alScreen = /** @type {HTMLSelectElement} */ (h("select", { id: "tech-align-screen" },
+        ADJUSTMENTS.map((a) => h("option", { value: a.key }, ALIGN_LABELS[a.key] ?? a.title))));
+    const alStart = /** @type {HTMLButtonElement} */ (h("button", { class: "primary", onclick: () => startAlign() }, "Start test mode"));
+    const alStop = /** @type {HTMLButtonElement} */ (h("button", { onclick: () => stopAlign?.() }, "Leave test mode"));
+    const alRange = /** @type {HTMLInputElement} */ (h("input", { type: "range", id: "tech-align-value", min: 0, max: 15, value: 0 }));
+    const alNum = /** @type {HTMLInputElement} */ (h("input", { type: "number", id: "tech-align-num", min: 0, max: 15, value: 0, class: "mono" }));
+    const alDown = /** @type {HTMLButtonElement} */ (h("button", { title: "Down arrow in RSS", onclick: () => nudge(-1) }, "−"));
+    const alUp = /** @type {HTMLButtonElement} */ (h("button", { title: "Up arrow in RSS", onclick: () => nudge(1) }, "+"));
+    const alStored = h("span", { class: "note" });
+    const freqInputs = /** @type {HTMLInputElement[]} */ (["default", ...FREQS].map((f) =>
+        h("input", { type: "radio", name: "tech-align-freq", id: `tech-align-freq-${f}`, value: f, checked: f === "default" ? true : null })));
+    const freqRow = h("div", { class: "tech-row" }, h("label", {}, "Test frequency"),
+        freqInputs.flatMap((el) => [el, h("label", { for: el.id }, el.value === "default" ? "As RSS opens it" : `${el.value[0]?.toUpperCase()}${el.value.slice(1)} (F${2 + FREQS.indexOf(/** @type {any} */ (el.value))})`)]));
+    const pttOn = /** @type {HTMLButtonElement} */ (h("button", { class: "danger", onclick: () => act((al) => al.key()) }, "PTT ON"));
+    const pttOff = /** @type {HTMLButtonElement} */ (h("button", { class: "primary", onclick: () => act((al) => al.unkey()) }, "PTT OFF"));
+    const pttState = h("span", { class: "tech-ptt", "aria-live": "polite" });
+    const alProgram = /** @type {HTMLButtonElement} */ (h("button", { onclick: () => void programValue() }, "Program value…"));
+
+    /** Run an aligner call, showing its error; a failed PTT OFF also goes to the log. */
+    async function act(/** @type {(al: Aligner) => Promise<unknown>} */ fn) {
+        const al = aligner;
+        if (!al) return;
+        try {
+            await fn(al);
+            if (alMsg.className.startsWith("warn-box")) alSay("");
+        } catch (e) {
+            if (e instanceof PttError) log.error(`Tech: ${errText(e)}`);
+            alSay(errText(e), true);
+        }
+        alignRefresh();
+    }
+
+    // slider moves arrive faster than the bus takes them: send only the latest
+    /** @type {number | null} */
+    let pending = null;
+    let sending = false;
+    async function pushValue(/** @type {number} */ v) {
+        pending = v;
+        if (sending) return;
+        sending = true;
+        try {
+            while (pending !== null && aligner) {
+                const x = pending;
+                pending = null;
+                await act((al) => al.set(x));
+            }
+        } finally {
+            sending = false;
+        }
+    }
+    function nudge(/** @type {number} */ d) {
+        const a = aligner?.adj;
+        if (!a || !aligner) return;
+        // from the value shown: the last one asked for, even if not sent yet
+        const v = Math.max(0, Math.min(a.top, Number(alNum.value) + d));
+        alRange.value = alNum.value = String(v);
+        void pushValue(v);
+    }
+    alRange.addEventListener("input", () => {
+        alNum.value = alRange.value;
+        void pushValue(Number(alRange.value));
+    });
+    alNum.addEventListener("change", () => {
+        const a = aligner?.adj;
+        const v = Number(alNum.value);
+        if (!a || !Number.isInteger(v) || v < 0 || v > a.top) {
+            alSay(`The value is a whole number from 0 to ${a?.top ?? 0}.`, true);
+            alNum.value = String(aligner?.value ?? 0);
+            return;
+        }
+        alRange.value = String(v);
+        void pushValue(v);
+    });
+    alScreen.addEventListener("change", () => {
+        if (!aligner) return;
+        for (const el of freqInputs) el.checked = el.value === "default";
+        void act((al) => al.enter(alScreen.value));
+    });
+    for (const el of freqInputs) {
+        el.addEventListener("change", () => {
+            if (el.checked && el.value !== "default") void act((al) => al.setFreq(/** @type {any} */ (el.value)));
+            else if (el.checked) void act((al) => al.enter(alScreen.value));
+        });
+    }
+
+    /** Hold the connection in test mode until Leave test mode; then PTT OFF, test mode off, restart. */
+    function startAlign() {
+        if (!connection() || aligner) return;
+        for (const el of freqInputs) el.checked = el.value === "default";
+        alSay("Starting test mode…");
+        withRadio(async (radio) => {
+            const al = new Aligner(radio, { log: (m) => log.info(`Tech: ${m}`), onChange: () => alignRefresh() });
+            aligner = al;
+            refresh?.();
+            try {
+                await al.enter(alScreen.value);
+                alSay("In test mode. Changes are live; Program value writes one into the radio.");
+                alignRefresh();
+                await new Promise((resolve) => { stopAlign = () => resolve(undefined); });
+            } finally {
+                stopAlign = null;
+                try {
+                    await al.leave();
+                } finally {
+                    aligner = null;
+                    refresh?.();
+                }
+            }
+        }).then(() => alSay("Test mode left; the radio is restarting (live values are dropped)."),
+            (e) => {
+                if (e instanceof PttError) log.error(`Tech: ${errText(e)}`);
+                alSay(`Alignment stopped: ${errText(e)}`, true);
+            });
+    }
+
+    async function programValue() {
+        const al = aligner, a = al?.adj;
+        if (!al || !a) return;
+        const next = encode(a, al.value, al.stored);
+        const h2 = (/** @type {number} */ n) => n.toString(16).padStart(2, "0");
+        if (next === al.stored) return alSay(`The radio already holds ${al.value}: nothing to program.`);
+        const ok = await confirmModal(`Program ${ALIGN_LABELS[a.key] ?? a.title}?`, h("div", {},
+            h("p", {}, `Write ${al.value} into the radio, in place of ${decode(a, al.stored)} `
+                + `(MCU EEPROM ${h4(a.addr)}: ${h2(al.stored)} → ${h2(next)}, then its block sum at ${h4(a.sumAddr)}), as RSS's F8 PROGRAM VALUE does.`),
+            h("p", { class: "warn-box" }, "This is the radio's alignment: it stays until programmed again. "
+                + `Note the old value (${decode(a, al.stored)}).`)), "Program");
+        if (!ok) return alSay("Nothing was programmed.");
+        await act(async (x) => {
+            const r = await x.program();
+            alSay(r ? `Programmed ${x.value}; it reads back correctly.` : "Unchanged: nothing written.");
+        });
+    }
+
+    function alignRefresh() {
+        const al = aligner, a = al?.adj ?? null;
+        const c = connection();
+        alStart.disabled = !!al || !c || c.busy;
+        alStop.disabled = !al;
+        alScreen.disabled = !!c?.busy && !al;
+        const on = !!a;
+        for (const el of [alRange, alNum, alDown, alUp, alProgram]) el.disabled = !on;
+        for (const el of freqInputs) el.disabled = !on || !a?.freqs;
+        freqRow.hidden = on && !a?.freqs;
+        const keyed = al?.keyedAt !== null && al?.keyedAt !== undefined;
+        pttOn.disabled = !on || !a?.transmits || keyed;
+        pttOff.disabled = !al;
+        pttOn.hidden = pttOff.hidden = on && !a?.transmits;
+        if (a && al) {
+            alRange.max = alNum.max = String(a.top);
+            if (pending === null && !sending) alRange.value = alNum.value = String(al.value);
+            alStored.textContent = `0 to ${a.top}. In the radio: ${decode(a, al.stored)}`
+                + (al.value !== decode(a, al.stored) ? `; live now: ${al.value} (not programmed)` : "");
+        } else {
+            alStored.textContent = "";
+        }
+        if (keyed && !ticker) ticker = setInterval(tick, 100);
+        if (!keyed && ticker) {
+            clearInterval(ticker);
+            ticker = null;
+        }
+        tick();
+    }
+    function tick() {
+        const al = aligner;
+        const keyed = al?.keyedAt !== null && al?.keyedAt !== undefined;
+        pttState.textContent = !al ? "" : al.fault ? "PTT OFF FAILED: switch the radio off"
+            : keyed ? `TRANSMITTING: off in ${(al.remainingMs() / 1000).toFixed(1)} s` : "Not transmitting";
+        pttState.className = `tech-ptt${keyed || al?.fault ? " on" : ""}`;
+    }
+    // leaving the page while keyed: unkey (the dialog gives the message time to go out)
+    addEventListener("beforeunload", (e) => {
+        if (aligner?.keyedAt === null || !aligner) return;
+        void aligner.unkey();
+        e.preventDefault();
+    });
+    addEventListener("pagehide", () => void aligner?.unkey());
 
     root = h("div", { class: "tech" },
         h("div", { class: "warn-box" }, "Direct access to the radio's memory. Reads are safe; writes change the radio "
@@ -355,19 +544,25 @@ function build() {
             note("Read & save writes a .bin file of the region. Write from file compares a .bin of the same size with the "
                 + "radio and writes only the bytes that differ, after you confirm, then reads them back. "
                 + "Firmware is ROM and can't be written.")),
-        section("Alignment (not available yet)",
-            note("Placeholders: the commands RSS's alignment screens use haven't been found yet "
-                + "(notes/RADIO-PROTOCOL.md, Open questions). These controls do nothing until they are."),
-            h("fieldset", { class: "tech-align", disabled: true },
-                slider("Reference oscillator (warp)", "warp"),
-                slider("Deviation (modulation level)", "dev"),
-                slider("Power output", "power"),
+        section("Alignment",
+            h("div", { class: "warn-box" }, "These are RSS's SERVICE → ALIGNMENT adjustments. PTT ON transmits into whatever is on the "
+                + `antenna jack: use a dummy load. PTT switches off by itself after ${(PTT_LIMIT_MS - PTT_MARGIN_MS) / 1000} s `
+                + `(never more than ${PTT_LIMIT_MS / 1000}); PTT OFF is sent twice and read back from the radio.`),
+            h("div", { class: "tech-align" },
                 h("div", { class: "tech-row" },
-                    h("label", {}, "Transmit"), h("button", { disabled: true }, "PTT ON"), h("button", { disabled: true }, "PTT OFF")),
-                h("div", { class: "tech-row" },
-                    h("label", {}, "Current frequency"),
-                    h("input", { type: "text", size: 10, disabled: true, placeholder: "MHz" }),
-                    h("button", { disabled: true }, "Get"), h("button", { disabled: true }, "Set")))));
+                    h("label", { for: "tech-align-screen" }, "Adjustment"), alScreen, alStart, alStop),
+                h("div", { class: "tech-slider" },
+                    h("label", { for: "tech-align-value" }, "Value"), alRange, alDown, alNum, alUp),
+                h("div", { class: "tech-row" }, alStored),
+                freqRow,
+                h("div", { class: "tech-row" }, h("label", {}, "Transmit"), pttOn, pttOff, pttState),
+                h("div", { class: "tech-row" }, alProgram),
+                alMsg),
+            note("Start test mode puts the radio on a test frequency, as RSS's screen does. Moving the value changes the "
+                + "running radio (deviation only while transmitting, as in RSS); Program value writes it into the radio's "
+                + "MCU EEPROM with its block sum. Leave test mode restarts the radio, which drops values not programmed. "
+                + "The test frequencies are the radio's own three (its display shows the frequency's digits, e.g. "
+                + "350125); other frequencies can't be chosen yet. Squelch doesn't transmit.")));
 
     refresh = () => {
         const c = connection();
@@ -376,7 +571,9 @@ function build() {
         /** @type {HTMLButtonElement} */ (connectBtn).disabled = !!c || !serialSupported();
         status.textContent = !c ? "Not connected."
             : `Connected through ${c.name}${radioName ? `: ${radioName}` : ""}. `
-                + (c.busy ? "Working…" : c.radio.needsReset ? "The radio is waiting (control head frozen) until it is restarted." : "The radio is running.");
+                + (aligner ? "In alignment test mode." : c.busy ? "Working…"
+                    : c.radio.needsReset ? "The radio is waiting (control head frozen) until it is restarted." : "The radio is running.");
+        alignRefresh();
     };
     onConnectionChange(() => refresh?.());
     refresh();

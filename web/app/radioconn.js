@@ -58,6 +58,17 @@ export async function connect() {
     return !!conn;
 }
 
+/**
+ * Use `link` as the shared connection (scripts and tests: a simulated radio
+ * in place of a serial port).
+ * @param {{ transact: (p: Uint8Array) => Promise<Uint8Array | null>, close: () => Promise<void> }} link
+ */
+export function attach(link, name = "test link") {
+    if (conn) throw new Error("already connected");
+    conn = { link: /** @type {any} */ (link), radio: new Radio(link), name, busy: false };
+    changed();
+}
+
 /** Restart the radio if it is waiting, and close the shared connection. */
 export async function disconnect() {
     const c = conn;
