@@ -616,24 +616,32 @@ def vhf_encode_rx(freq: float):
 #
 #   TX / T/A: freq = step * (127*(lo + 256 + 256*tag.b1) + 128*mid)
 #             tag (view +9 / +13): b1 = the 9th bit of lo, b0 = its complement
-#             band byte (+12 / +16): 0x80 | b0 = 5 kHz step | b2 = the upper
-#             half of the range (b1 = a 2.5 kHz form RSS sometimes writes; not decoded)
-#   RX:       freq = step * (127*(lo + 512 + 256*rec5.b0) + 128*mid) - 109.65
-#             (the first IF); view +5 b0 = lo's 9th bit; flag byte (+8):
-#             b0 = 5 kHz step | b2 = the upper half | b3 (RSS sets it on save)
+#             band byte (+12 / +16): 0x80 | b0 = 5 kHz step | b1 = 7.5 kHz
+#             step | b2 = the upper half of the range
+#   RX:       freq = step * (P*X + (P+1)*mid) - 109.65 (the first IF), with
+#             X = lo + 256*rec5.b0 + 512*rec5.b1 and P = 127 when rec5.b5
+#             is set (every mode RSS writes: rec5 = 0xa2 / 0xa3), else 123;
+#             flag byte (+8): b0 = 5 kHz step | b1 = 7.5 kHz step | b2 = the
+#             upper half | b3 (RSS sets it on save)
 #
-# RSS uses the 6.25 kHz reference when the frequency is on it, else 5 kHz;
-# other values it refuses. Where b2 switches depends on the radio's range
+# The 7.5 kHz step (450.0525 MHz = 60007 * 7.5 kHz) and the 123/124 form
+# (rec5 = 0x82) are in the UHF D44KXA7JA7BK's archive (2026-10-31): RSS's
+# MODE SUMMARY of it matches motreader on all 384 RX/TX/TA fields of its 128
+# modes. RSS uses the 6.25 kHz reference when the frequency is on it, else
+# 5 kHz; motreader also stores 7.5 kHz-raster ones (as that archive has them). Where b2 switches depends on the radio's range
 # (UHF_RANGES). On the 440-491 MHz range RSS forces TX / T/A power Low above
 # 470 MHz (tag bit 6 cleared).
 UHF_RX_IF = 109.65
 UHF_BAND = (400.0, 520.0)
 
 
+UHF_STEP_BITS = {0.00625: 0, 0.005: 1, 0.0075: 2}   # flag / band byte b0, b1
+
+
 def uhf_step(freq: float):
-    """The reference RSS uses for freq: 6.25 kHz if it's on that raster, else
-    5 kHz, else None (not storable)."""
-    for step in (0.00625, 0.005):
+    """The reference for freq: 6.25 kHz if it's on that raster, else 5 kHz
+    (RSS's choices), else 7.5 kHz, else None (not storable)."""
+    for step in UHF_STEP_BITS:
         n = freq / step
         if abs(n - round(n)) < 1e-6:
             return step
@@ -677,7 +685,7 @@ def uhf_range_fits(r: UhfRange, modes) -> bool:
         if m.rx_mhz is not None and bool(v[8] & 4) != uhf_b2(m.rx_mhz, r.rx_split, top):
             return False
         for o in (VHF_TX_OFF, VHF_TA_OFF):
-            if not (v[o] or v[o + 1]) or v[o + 2] & 2:
+            if not (v[o] or v[o + 1]):
                 continue
             f = uhf_decode_txta(v[o], v[o + 1], v[o - 1], v[o + 2])
             if bool(v[o + 2] & 4) != uhf_b2(f, r.tx_split, top):
@@ -694,31 +702,37 @@ def uhf_range_for(model: str, modes) -> Optional[UhfRange]:
     return next((r for r in order if uhf_range_fits(r, modes)), None)
 
 
+def _uhf_ref(bits: int) -> float:
+    """The reference step from a flag / band byte's b0 (5 kHz), b1 (7.5 kHz)."""
+    return 0.0075 if bits & 2 else 0.005 if bits & 1 else 0.00625
+
+
 def uhf_decode_rx(lo: int, mid: int, flag: int, hi: int) -> float:
-    """hi = the byte at view +5, whose bit 0 is lo's 9th bit."""
-    step = 0.005 if flag & 1 else 0.00625
-    return round(step * (127 * (lo + 512 + 256 * (hi & 1)) + 128 * mid) - UHF_RX_IF, 5)
+    """hi = the byte at view +5: b0, b1 = bits 8, 9 of X; b5 clear = the
+    123/124 divider."""
+    p = 127 if hi & 0x20 else 123
+    x = lo + 256 * (hi & 1) + 512 * ((hi >> 1) & 1)
+    return round(_uhf_ref(flag) * (p * x + (p + 1) * mid) - UHF_RX_IF, 5)
 
 
-def uhf_decode_txta(lo: int, mid: int, tag: int, band: int):
-    if band & 2:
-        return None                       # RSS's 2.5 kHz form: not decoded
-    step = 0.005 if band & 1 else 0.00625
-    return round(step * (127 * (lo + 256 + 256 * ((tag >> 1) & 1)) + 128 * mid), 5)
+def uhf_decode_txta(lo: int, mid: int, tag: int, band: int) -> float:
+    return round(_uhf_ref(band) * (127 * (lo + 256 + 256 * ((tag >> 1) & 1)) + 128 * mid), 5)
 
 
 def uhf_encode_rx(freq: float, split: float = 467.0, top: float = 491.0):
-    """(lo, mid, lo's 9th bit, flag bits) for an RX frequency, or None; b2
+    """(lo, mid, view +5 bits, flag bits) for an RX frequency in the form RSS
+    writes (127/128: +5 bit 5 set; bits 0-1 = bits 8-9 of X), or None; b2
     from `split` to `top` MHz (UhfRange.rx_split, .rss[1])."""
     step = uhf_step(freq)
     if step is None:
         return None
     n = round((freq + UHF_RX_IF) / step)
     np_, a = divmod(n, 127)
-    x = np_ - a - 512
-    if not 0 <= x <= 511:
+    x = np_ - a
+    if not 0 <= x <= 1023:
         return None
-    return x & 0xFF, a, x >> 8, 0x08 | (1 if step == 0.005 else 0) | (4 if uhf_b2(freq, split, top) else 0)
+    return (x & 0xFF, a, 0x20 | (x >> 8),
+            0x08 | UHF_STEP_BITS[step] | (4 if uhf_b2(freq, split, top) else 0))
 
 
 def uhf_encode_txta(freq: float, split: float = 467.0, top: float = 491.0):
@@ -732,14 +746,15 @@ def uhf_encode_txta(freq: float, split: float = 467.0, top: float = 491.0):
     x = np_ - a - 256
     if not 0 <= x <= 511:
         return None
-    return x & 0xFF, a, x >> 8, 0x80 | (1 if step == 0.005 else 0) | (4 if uhf_b2(freq, split, top) else 0)
+    return x & 0xFF, a, x >> 8, 0x80 | UHF_STEP_BITS[step] | (4 if uhf_b2(freq, split, top) else 0)
 
 
 def _uhf_record(body: bytes, t: int) -> bool:
-    """The record at true start t is UHF: TX tag E9/EA, a TX band byte of
-    0x80..0x87 (VHF's always has bit 3 or 5 set: 0xA4/0x88/0xA8/0x8C/0xAC) and
-    an RX that reads as UHF."""
-    return (body[t + 6] in (0xE9, 0xEA) and body[t + 9] & 0xF8 == 0x80
+    """The record at true start t is UHF: TX tag E9/EA (or 68, receive only:
+    88 of the UHF D44's 128 modes), a TX band byte of 0x80..0x87 (VHF's
+    always has bit 3 or 5 set: 0xA4/0x88/0xA8/0x8C/0xAC) and an RX that
+    reads as UHF."""
+    return (body[t + 6] in (0xE9, 0xEA, 0x68) and body[t + 9] & 0xF8 == 0x80
             and UHF_BAND[0] <= uhf_decode_rx(body[t + 3], body[t + 4], body[t + 5], body[t + 2]) <= UHF_BAND[1])
 
 
@@ -1817,8 +1832,8 @@ class Codeplug:
             if enc is None:
                 raise ValueError(f"mode {m.number}: UHF RX {freq} MHz can't be stored")
             out[a], out[a + 1] = enc[0], enc[1]
-            out[a - 1] = (out[a - 1] & ~0x01 & 0xFF) | enc[2]
-            out[a + 2] = (out[a + 2] & ~0x0D & 0xFF) | enc[3]
+            out[a - 1] = (out[a - 1] & ~0x23 & 0xFF) | enc[2]
+            out[a + 2] = (out[a + 2] & ~0x0F & 0xFF) | enc[3]
             return
         enc = uhf_encode_txta(freq, rng.tx_split, rng.rss[1])
         if enc is None:

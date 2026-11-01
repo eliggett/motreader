@@ -31,8 +31,10 @@ def test_band_byte(f, band):
     (489.995, (135, 41, 1, 0x0D)), (444.005, (245, 114, 0, 0x09)), (440.205, (237, 116, 0, 0x09)),
 ])
 def test_rx_matches_rss(f, want):
-    """(lo, mid, lo's 9th bit at view +5 b0, flag byte) as RSS wrote them."""
-    assert uhf_encode_rx(f) == want
+    """(lo, mid, lo's 9th bit at view +5 b0, flag byte) as RSS wrote them;
+    view +5 also gets RSS's form bits (b5: 127/128, b1: X's bit 9)."""
+    lo, mid, hi, flag = uhf_encode_rx(f)
+    assert (lo, mid, hi & 1, flag) == want and hi & 0x22 == 0x22
     lo, mid, b9, flag = want
     assert uhf_decode_rx(lo, mid, flag, 0xA2 | b9) == f
 
@@ -76,5 +78,42 @@ def test_403_range_matches_rss(row):
     r = next(x for x in UHF_RANGES if x.name == "403-441")
     enc = (uhf_encode_rx(float(mhz), r.rx_split) if field == "rx"
            else uhf_encode_txta(float(mhz), r.tx_split))
-    got = (enc[0], enc[1], enc[2], enc[3] & 0x0D if field == "rx" else enc[3])
+    got = (enc[0], enc[1], enc[2] & 1 if field == "rx" else enc[2], enc[3] & 0x0D if field == "rx" else enc[3])
     assert got == (int(lo), int(mid), int(b9), int(fb, 16))
+
+
+# RSS's MODE SUMMARY of a UHF D44KXA7JA7BK archive (2026-10-31): records in
+# the 123/124 form (view +5 = 0x82) and on a 7.5 kHz reference (flag / band
+# byte b1). Only the bytes and RSS's frequencies, not the codeplug.
+@pytest.mark.parametrize("lo, mid, flag, hi, mhz", [
+    (104, 104, 0x08, 0x82, 444.5), (92, 123, 0x08, 0x82, 450.0), (150, 92, 0x0C, 0x82, 470.5625),
+    (142, 100, 0x0C, 0x82, 470.6125), (158, 84, 0x0C, 0x82, 470.5125),
+    (253, 78, 0x0A, 0xA1, 450.0525),                       # 7.5 kHz
+    (184, 9, 0x08, 0xA2, 450.0), (156, 30, 0x08, 0xA2, 444.575),
+])
+def test_rx_forms_match_rss(lo, mid, flag, hi, mhz):
+    assert uhf_decode_rx(lo, mid, flag, hi) == mhz
+
+
+def test_txta_7k5_matches_rss():
+    assert uhf_decode_txta(153, 63, 0xE9, 0x82) == 450.0525
+    assert uhf_encode_txta(450.0525) == (153, 63, 0, 0x82)
+
+
+def test_rx_7k5_encodes_as_rss_wrote_it():
+    lo, mid, hi, flag = uhf_encode_rx(450.0525)
+    assert (lo, mid, hi, flag) == (253, 78, 0x21, 0x0A)     # RSS: view +5 = 0xa1
+
+
+def test_round_trip_all_rasters():
+    for step in (0.00625, 0.005, 0.0075):
+        for k in range(0, 9000, 7):
+            f = round(440.0 + k * step, 5)
+            if f > 491.0:
+                break
+            if uhf_step(f) != step:
+                continue        # also on an earlier raster: stored on that one
+            lo, mid, hi, flag = uhf_encode_rx(f)
+            assert uhf_decode_rx(lo, mid, flag, hi | 0x80) == f
+            lo, mid, b9, band = uhf_encode_txta(f)
+            assert uhf_decode_txta(lo, mid, 0xE9 if not b9 else 0xEA, band) == f

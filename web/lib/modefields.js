@@ -184,7 +184,7 @@ export function setModeField(cp, n, key, text) {
 
     if (cp.band === "uhf" && f.kind === "mhz" && want[/** @type {"rx_mhz"} */ (key)] !== null
         && uhfStep(/** @type {number} */ (want[/** @type {"rx_mhz"} */ (key)])) === null) {
-        throw new InvalidValue(`${text} MHz isn't on a 6.25 or 5 kHz raster, which UHF frequencies use`);
+        throw new InvalidValue(`${text} MHz isn't on a 6.25, 5 or 7.5 kHz raster, which UHF frequencies use`);
     }
     if (cp.band === "vhf" && key === "rx_mhz" && want.rx_mhz !== null && vhfRxStep(/** @type {number} */ (want.rx_mhz)) === null) {
         throw new InvalidValue(`${text} MHz isn't on a 5 or 6.25 kHz raster, which VHF receive frequencies use`);

@@ -267,23 +267,33 @@ reference:
 
 | Field | MHz | flags |
 |---|---|---|
-| TX (+10/+11), T/A (+14/+15) | `step·(127·(lo + 256 + 256·tag.b1) + 128·mid)` | tag (+9/+13) b1 = lo's 9th bit, b0 its complement (E9/EA); band byte (+12/+16) = `0x80 \| b0 5 kHz \| b2 ≥ 467.000 MHz` |
-| RX (+6/+7) | `step·(127·(lo + 512 + 256·(+5).b0) + 128·mid) − 109.65` | +5 b0 = lo's 9th bit; flag byte +8 = `b0 5 kHz \| b2 ≥ 467.000 MHz \| b3` |
+| TX (+10/+11), T/A (+14/+15) | `step·(127·(lo + 256 + 256·tag.b1) + 128·mid)` | tag (+9/+13) b1 = lo's 9th bit, b0 its complement (E9/EA); band byte (+12/+16) = `0x80 \| b0 5 kHz \| b1 7.5 kHz \| b2 ≥ 467.000 MHz` |
+| RX (+6/+7) | `step·(P·X + (P+1)·mid) − 109.65`, `X = lo + 256·(+5).b0 + 512·(+5).b1`, `P = 127` if (+5).b5 else 123 | +5 = 0xa2/0xa3 in everything RSS writes; flag byte +8 = `b0 5 kHz \| b1 7.5 kHz \| b2 ≥ 467.000 MHz \| b3` |
 
 - 109.65 MHz is the first IF (the same as VHF and 900 MHz: the RX synthesizer
   runs that far above the receive frequency).
 - RSS uses the 6.25 kHz reference when the frequency is on that raster
   (460.000, 460.025 …), else 5 kHz (444.44); other values are mostly refused.
-  RSS sometimes writes a 2.5 kHz form (band byte b1) that isn't decoded —
-  motreader opens such a codeplug read-only.
+- **7.5 kHz reference and the 123/124 form** (2026-10-31, the UHF D44KXA7JA7BK
+  read from the radio: 128 modes, 8 KB). Band / flag byte **b1 = a 7.5 kHz
+  reference** (450.0525 MHz = 60007 × 7.5 kHz; earlier taken for "a 2.5 kHz
+  form" and opened read-only). RX: (+5) b1 is X's bit 9 (the old fixed +512)
+  and **b5 clear = a 123/124 divider** (+5 = 0x82: 9 modes, 444.5–470.6 MHz;
+  solved from three, the rest fit). RSS's MODE SUMMARY of that archive matches
+  motreader on all 384 RX/TX/TA fields, names and tones. motreader writes the
+  form RSS writes (+5 b5 and b1 set, 127/128) and stores 7.5 kHz-raster
+  frequencies too: an edit of an 0x82-form RX (450.0 → 451.0, 470.5625 →
+  470.575) and a 7.5 kHz-only TX (450.0675) GET in RSS showing exactly those
+  values, the rest of its summary unchanged.
 - RSS forces TX/T·A power **Low above 470.000 MHz** (tag b6 cleared); this
   radio accepted 440–490 MHz.
 - Band byte b2 / flag b2 switch exactly at 467.000 MHz (466.99375 still clear):
   two VCO ranges, not VHF's 6 MHz bands.
 - Flag b3: RSS sets it on every save (an unedited GET+SAVE sets it on all 19
   modes that had it clear); it doesn't change the frequency.
-- Detection: TX tag E9/EA, a TX band byte 0x80..0x87 (VHF's always has b3 or b5
-  set) and an RX that reads as UHF.
+- Detection: TX tag E9/EA (or 68: receive only, 88 of the D44's 128 modes), a
+  TX band byte 0x80..0x87 (VHF's always has b3 or b5 set) and an RX that reads
+  as UHF.
 - Entering some RX frequencies makes RSS change uP Xtal Shift (+3 b4) with a
   "Crystal Frequency Will Be Shifted" dialog; motreader leaves it as a setting.
 

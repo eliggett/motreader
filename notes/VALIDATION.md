@@ -68,7 +68,7 @@ motreader).
 | VHF TX/TA: on a 2.5 kHz raster. Other values are stored as the nearest the field holds (the web app says so). | n/a |
 | Some VHF models show Transmit Power / Talkaround Power (and on one, MPL Type) as "Not Avail" in RSS: the bits are still in the record but do nothing there. The web app doesn't know which models; a UI could hide them. | n/a |
 | 800 MHz: decoded only; such codeplugs open read-only. | read-only |
-| UHF: frequencies on a 6.25 or 5 kHz raster only (RSS refuses most others); the web app refuses them. | refused by the web app |
+| UHF: frequencies on a 6.25 or 5 kHz raster (RSS's choices), or else a 7.5 kHz one (the radio has a 7.5 kHz reference; a D44 archive holds such modes and RSS shows them); others are refused. | refused by motreader |
 | UHF: RSS forces Tx/T·A power Low above 470 MHz on the 440–491 MHz range; the encoder does the same and the web app refuses High there. The 403–441 MHz range (518ATN) has no such limit inside what RSS accepts. | side effect / refused |
 | UHF entry range per radio range (RSS's table in SPECTRA1.EXE): 440–491 MHz (the A9 radio), 403.000–441.000 MHz (518ATN, D44ZXA; 402.99375 and 441.05 refused). The web app stores a frequency outside it when the codec holds it, with a note that RSS would refuse it (the radio may need retuning). | note (web app) |
 | UHF and VHF: entering some Rx frequencies makes RSS change uP Xtal Shift ("Crystal Frequency Will Be Shifted", F2 to continue). The web app keeps it as a setting; a UI could warn. | side effect (RSS) |

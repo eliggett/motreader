@@ -554,8 +554,9 @@ keystrokes ~half the time.)
 6. **UHF / lowband / 800** — first UHF codeplug read 2026-10-31 from a
    D44KXA7JA7BK (serial field WA6VVCUHF1, 128 modes, the full 8 KB): codeplug,
    archive and full memory dump in notes/Firmware/UHF-D44KXA7JA7BK/ (local
-   only). motreader exports it, but the frequencies decode wrong (e.g. 8.61
-   MHz): the UHF codec isn't mapped for this radio yet; same inverse-oracle method when
+   only). Decoded 2026-10-31: band detection counts receive-only modes; the
+   codec gained the 7.5 kHz reference and the 123/124 RX form (FORMAT
+   §5a-UHF); RSS's MODE SUMMARY matches all 128 modes, and edits GET in RSS; same inverse-oracle method when
    the user has one.
 7. **Alignment** ✅ DONE (2026-10-31): RSS's SERVICE → ALIGNMENT screens
    (squelch, deviation, warp, high/low power, PA current limit) decoded and

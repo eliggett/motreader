@@ -34,8 +34,10 @@ test("UHF TX/T·A: the bytes RSS writes (lo, mid, lo's 9th bit, band byte)", () 
 test("UHF RX: the bytes RSS writes (lo, mid, lo's 9th bit at view +5, flag byte)", () => {
     for (const [f, ...want] of [[460.025, 116, 89, 0, 0x08], [470.0, 184, 34, 0, 0x0C], [455.005, 93, 28, 1, 0x09],
         [489.995, 135, 41, 1, 0x0D], [444.005, 245, 114, 0, 0x09], [440.205, 237, 116, 0, 0x09]]) {
-        const enc = uhfEncodeRx(/** @type {number} */ (f));
-        assert.deepEqual(enc, want, String(f));
+        const enc = /** @type {number[]} */ (uhfEncodeRx(/** @type {number} */ (f)));
+        // view +5 also gets RSS's form bits (b5: 127/128, b1: X's bit 9)
+        assert.deepEqual([enc[0], enc[1], /** @type {number} */ (enc[2]) & 1, enc[3]], want, String(f));
+        assert.equal(/** @type {number} */ (enc[2]) & 0x22, 0x22);
         const [lo, mid, b9, flag] = /** @type {number[]} */ (want);
         assert.equal(uhfDecodeRx(/** @type {number} */ (lo), /** @type {number} */ (mid), /** @type {number} */ (flag), 0xA2 | /** @type {number} */ (b9)), f);
     }
@@ -58,7 +60,8 @@ test("UHF 403-441 MHz: the bytes RSS writes, b2 from 418 (RX) and 421 MHz (TX / 
         const f = Number(mhz);
         const enc = field === "rx" ? uhfEncodeRx(f, r.rxSplit) : uhfEncodeTxTa(f, r.txSplit);
         assert.ok(enc, `${field} ${mhz}`);
-        assert.deepEqual([enc[0], enc[1], enc[2], field === "rx" ? enc[3] & 0x0D : enc[3]], [lo, mid, b9, fb].map(Number), `${field} ${mhz}`);
+        assert.deepEqual([enc[0], enc[1], field === "rx" ? enc[2] & 1 : enc[2], field === "rx" ? enc[3] & 0x0D : enc[3]],
+            [lo, mid, b9, fb].map(Number), `${field} ${mhz}`);
     }
 });
 
@@ -105,4 +108,32 @@ test("a 403-441 MHz radio writes its own band split", { skip: !existsSync(A518) 
     const r = /** @type {import("../../web/lib/codeplug.js").UhfRange} */ (cp.uhf_range);
     assert.deepEqual(uhfEncodeTxTa(449.1, r.txSplit, r.rss[1]), [m5.raw[10], m5.raw[11], ((m5.raw[9] ?? 0) >> 1) & 1, m5.raw[12]]);
     assert.equal((uhfEncodeRx(444.1, r.rxSplit, r.rss[1])?.[3] ?? 0) & 4, (m5.raw[8] ?? 0) & 4);
+});
+
+// RSS's MODE SUMMARY of a UHF D44KXA7JA7BK archive (2026-10-31): records in
+// the 123/124 form (view +5 = 0x82) and on a 7.5 kHz reference (flag / band
+// byte b1). Only the bytes and RSS's frequencies, not the codeplug.
+test("UHF RX forms: 123/124 divider and 7.5 kHz reference, as RSS shows them", () => {
+    for (const [lo, mid, flag, hi, mhz] of [[104, 104, 0x08, 0x82, 444.5], [92, 123, 0x08, 0x82, 450.0],
+        [150, 92, 0x0C, 0x82, 470.5625], [142, 100, 0x0C, 0x82, 470.6125], [158, 84, 0x0C, 0x82, 470.5125],
+        [253, 78, 0x0A, 0xA1, 450.0525], [184, 9, 0x08, 0xA2, 450.0], [156, 30, 0x08, 0xA2, 444.575]]) {
+        assert.equal(uhfDecodeRx(/** @type {number} */ (lo), /** @type {number} */ (mid), /** @type {number} */ (flag), /** @type {number} */ (hi)), mhz);
+    }
+    assert.equal(uhfDecodeTxTa(153, 63, 0xE9, 0x82), 450.0525);
+    assert.deepEqual(uhfEncodeTxTa(450.0525), [153, 63, 0, 0x82]);
+    assert.deepEqual(uhfEncodeRx(450.0525), [253, 78, 0x21, 0x0A]);      // RSS: view +5 = 0xa1
+});
+
+test("UHF round trip on all three rasters", () => {
+    for (const step of [0.00625, 0.005, 0.0075]) {
+        for (let k = 0; k < 9000; k += 7) {
+            const f = Math.round((440 + k * step) * 1e5) / 1e5;
+            if (f > 491) break;
+            if (uhfStep(f) !== step) continue;
+            const [lo, mid, hi, flag] = /** @type {number[]} */ (uhfEncodeRx(f));
+            assert.equal(uhfDecodeRx(/** @type {number} */ (lo), /** @type {number} */ (mid), /** @type {number} */ (flag), /** @type {number} */ (hi) | 0x80), f);
+            const [tlo, tmid, b9, band] = /** @type {number[]} */ (uhfEncodeTxTa(f));
+            assert.equal(uhfDecodeTxTa(/** @type {number} */ (tlo), /** @type {number} */ (tmid), b9 ? 0xEA : 0xE9, /** @type {number} */ (band)), f);
+        }
+    }
 });

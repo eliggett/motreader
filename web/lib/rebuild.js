@@ -245,8 +245,8 @@ function writeFieldUhf(cp, out, m, foff, freq) {
         if (!enc) throw new InvalidValue(`mode ${m.number}: UHF RX ${freq} MHz can't be stored`);
         out[a] = enc[0];
         out[a + 1] = enc[1];
-        out[a - 1] = (byteAt(out, a - 1) & (~0x01 & 0xFF)) | enc[2];
-        out[a + 2] = (byteAt(out, a + 2) & (~0x0D & 0xFF)) | enc[3];
+        out[a - 1] = (byteAt(out, a - 1) & (~0x23 & 0xFF)) | enc[2];
+        out[a + 2] = (byteAt(out, a + 2) & (~0x0F & 0xFF)) | enc[3];
         return;
     }
     const enc = uhfEncodeTxTa(freq, rng.txSplit, rng.rss[1]);

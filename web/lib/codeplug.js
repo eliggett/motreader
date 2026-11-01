@@ -565,23 +565,29 @@ export function vhfEncodeRx(/** @type {number} */ freq) {
 // UHF conventional (mapped with RSS on a 440-490 MHz A9 radio; FORMAT §5a).
 // The VHF record layout (same tags, tone slots, option bits) with its own
 // codec: the same 127/128 dual-modulus synthesizer, N = 127*Np + A, A = mid,
-// on a 6.25 kHz or 5 kHz reference:
+// on a 6.25, 5 or 7.5 kHz reference:
 //   TX / T/A: freq = step*(127*(lo + 256 + 256*tag.b1) + 128*mid); tag b1 =
-//     lo's 9th bit (b0 its complement); band byte 0x80 | b0 = 5 kHz | b2 =
-//     the upper half of the range (b1: a 2.5 kHz form RSS sometimes writes;
-//     not decoded)
-//   RX: freq = step*(127*(lo + 512 + 256*rec5.b0) + 128*mid) - 109.65 (first
-//     IF); view +5 b0 = lo's 9th bit; flag byte (+8) b0 = 5 kHz | b2 = the
-//     upper half | b3 (RSS sets it on save)
-// RSS uses 6.25 kHz when the frequency is on that raster, else 5 kHz. Where
-// b2 switches depends on the radio's range (UHF_RANGES). On the 440-491 MHz
-// range RSS forces TX / T/A power Low above 470 MHz.
+//     lo's 9th bit (b0 its complement); band byte 0x80 | b0 = 5 kHz | b1 =
+//     7.5 kHz | b2 = the upper half of the range
+//   RX: freq = step*(P*X + (P+1)*mid) - 109.65 (first IF), X = lo +
+//     256*rec5.b0 + 512*rec5.b1, P = 127 when rec5.b5 is set (every mode RSS
+//     writes: rec5 = 0xa2 / 0xa3), else 123; flag byte (+8) b0 = 5 kHz | b1
+//     = 7.5 kHz | b2 = the upper half | b3 (RSS sets it on save)
+// The 7.5 kHz step and the 123/124 form (rec5 = 0x82) are in the UHF
+// D44KXA7JA7BK's archive: RSS's MODE SUMMARY matches all 384 RX/TX/TA fields.
+// RSS uses 6.25 kHz when the frequency is on that raster, else 5 kHz;
+// motreader also stores 7.5 kHz-raster ones. Where b2 switches depends on the
+// radio's range (UHF_RANGES). On the 440-491 MHz range RSS forces TX / T/A
+// power Low above 470 MHz.
 export const UHF_RX_IF = 109.65;
 const UHF_BAND = /** @type {const} */ ([400.0, 520.0]);
 
-/** The reference RSS uses for `freq`: 6.25 kHz if on that raster, else 5 kHz, else null. */
+/** Flag / band byte bits (b0, b1) per reference step. */
+const UHF_STEP_BITS = new Map([[0.00625, 0], [0.005, 1], [0.0075, 2]]);
+
+/** The reference for `freq`: 6.25 kHz if on that raster, else 5 kHz (RSS's choices), else 7.5 kHz, else null. */
 export function uhfStep(/** @type {number} */ freq) {
-    for (const step of [0.00625, 0.005]) {
+    for (const step of UHF_STEP_BITS.keys()) {
         const n = freq / step;
         if (Math.abs(n - Math.round(n)) < 1e-6) return step;
     }
@@ -620,8 +626,8 @@ function uhfRangeFits(r, modes) {
         const v = m.raw;
         if (m.rx_mhz !== null && !!(at(v, 8) & 4) !== uhfB2(m.rx_mhz, r.rxSplit, top)) return false;
         for (const o of [VHF_TX_OFF, VHF_TA_OFF]) {
-            if (!(at(v, o) || at(v, o + 1)) || at(v, o + 2) & 2) continue;
-            const f = /** @type {number} */ (uhfDecodeTxTa(at(v, o), at(v, o + 1), at(v, o - 1), at(v, o + 2)));
+            if (!(at(v, o) || at(v, o + 1))) continue;
+            const f = uhfDecodeTxTa(at(v, o), at(v, o + 1), at(v, o - 1), at(v, o + 2));
             if (!!(at(v, o + 2) & 4) !== uhfB2(f, r.txSplit, top)) return false;
         }
     }
@@ -639,29 +645,39 @@ function uhfRangeFor(model, modes) {
     return order.find((r) => uhfRangeFits(r, modes)) ?? null;
 }
 
-/** A UHF RX field (lo, mid, flag byte, the byte at view +5 whose b0 is lo's 9th bit) -> MHz. */
+/** The reference step from a flag / band byte's b0 (5 kHz), b1 (7.5 kHz). */
+const uhfRef = (/** @type {number} */ bits) => (bits & 2 ? 0.0075 : bits & 1 ? 0.005 : 0.00625);
+
+/**
+ * A UHF RX field (lo, mid, flag byte, the byte at view +5: b0, b1 = bits 8, 9
+ * of X; b5 clear = the 123/124 divider) -> MHz.
+ */
 export function uhfDecodeRx(/** @type {number} */ lo, /** @type {number} */ mid, /** @type {number} */ flag, /** @type {number} */ hi) {
-    const step = flag & 1 ? 0.005 : 0.00625;
-    return pyRound(step * (127 * (lo + 512 + 256 * (hi & 1)) + 128 * mid) - UHF_RX_IF, 5);
+    const p = hi & 0x20 ? 127 : 123;
+    const x = lo + 256 * (hi & 1) + 512 * ((hi >> 1) & 1);
+    return pyRound(uhfRef(flag) * (p * x + (p + 1) * mid) - UHF_RX_IF, 5);
 }
 
-/** A UHF TX / T/A field -> MHz, or null for RSS's 2.5 kHz form (not decoded). */
+/** A UHF TX / T/A field -> MHz. */
 export function uhfDecodeTxTa(/** @type {number} */ lo, /** @type {number} */ mid, /** @type {number} */ tag, /** @type {number} */ band) {
-    if (band & 2) return null;
-    const step = band & 1 ? 0.005 : 0.00625;
-    return pyRound(step * (127 * (lo + 256 + 256 * ((tag >> 1) & 1)) + 128 * mid), 5);
+    return pyRound(uhfRef(band) * (127 * (lo + 256 + 256 * ((tag >> 1) & 1)) + 128 * mid), 5);
 }
 
-/** [lo, mid, lo's 9th bit, flag bits] for a UHF RX frequency, or null if it can't be stored; b2 from `split` to `top` MHz. */
+/**
+ * [lo, mid, view +5 bits, flag bits] for a UHF RX frequency in the form RSS
+ * writes (127/128: +5 b5 set; b0-b1 = bits 8-9 of X), or null if it can't be
+ * stored; b2 from `split` to `top` MHz.
+ */
 export function uhfEncodeRx(/** @type {number} */ freq, split = 467.0, top = 491.0) {
     const step = uhfStep(freq);
     if (step === null) return null;
     const n = pyRound((freq + UHF_RX_IF) / step);
     const np = Math.floor(n / 127);
     const a = n - 127 * np;
-    const x = np - a - 512;
-    if (x < 0 || x > 511) return null;
-    return /** @type {[number, number, number, number]} */ ([x & 0xFF, a, x >> 8, 0x08 | (step === 0.005 ? 1 : 0) | (uhfB2(freq, split, top) ? 4 : 0)]);
+    const x = np - a;
+    if (x < 0 || x > 1023) return null;
+    return /** @type {[number, number, number, number]} */ ([x & 0xFF, a, 0x20 | (x >> 8),
+        0x08 | /** @type {number} */ (UHF_STEP_BITS.get(step)) | (uhfB2(freq, split, top) ? 4 : 0)]);
 }
 
 /** [lo, mid, lo's 9th bit, band byte] for a UHF TX / T/A frequency, or null; b2 from `split` to `top` MHz. */
@@ -673,15 +689,16 @@ export function uhfEncodeTxTa(/** @type {number} */ freq, split = 467.0, top = 4
     const a = n - 127 * np;
     const x = np - a - 256;
     if (x < 0 || x > 511) return null;
-    return /** @type {[number, number, number, number]} */ ([x & 0xFF, a, x >> 8, 0x80 | (step === 0.005 ? 1 : 0) | (uhfB2(freq, split, top) ? 4 : 0)]);
+    return /** @type {[number, number, number, number]} */ ([x & 0xFF, a, x >> 8, 0x80 | /** @type {number} */ (UHF_STEP_BITS.get(step)) | (uhfB2(freq, split, top) ? 4 : 0)]);
 }
 
 /**
- * Is the record at true start t UHF? TX tag E9/EA, a TX band byte 0x80..0x87
- * (VHF's always has bit 3 or 5 set) and an RX that reads as UHF.
+ * Is the record at true start t UHF? TX tag E9/EA (or 68, receive only: 88
+ * of the UHF D44's 128 modes), a TX band byte 0x80..0x87 (VHF's always has
+ * bit 3 or 5 set) and an RX that reads as UHF.
  */
 function uhfRecord(/** @type {Uint8Array} */ body, /** @type {number} */ t) {
-    return [0xE9, 0xEA].includes(at(body, t + 6)) && (at(body, t + 9) & 0xF8) === 0x80
+    return [0xE9, 0xEA, 0x68].includes(at(body, t + 6)) && (at(body, t + 9) & 0xF8) === 0x80
         && (() => {
             const f = uhfDecodeRx(at(body, t + 3), at(body, t + 4), at(body, t + 5), at(body, t + 2));
             return f >= UHF_BAND[0] && f <= UHF_BAND[1];

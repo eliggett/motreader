@@ -56,9 +56,6 @@ export function assessSupport(cp) {
             : "no conventional modes were recognised: the band or the mode type (e.g. all trunked) isn't decoded yet");
     }
     if (cp.band === "800") reasons.push("800 MHz modes are shown, but motreader doesn't edit them yet");
-    if (cp.band === "uhf" && cp.modes.some((m) => (m.raw[12] ?? 0) & 2 || (m.raw[16] ?? 0) & 2)) {
-        reasons.push("some UHF frequencies are stored in a 2.5 kHz form motreader doesn't decode yet");
-    }
     // the band split bits (b2) must follow one of the UHF ranges mapped with RSS
     if (cp.band === "uhf" && cp.uhf_range === null) {
         reasons.push("its UHF band split isn't one motreader knows (a range not mapped yet)");
