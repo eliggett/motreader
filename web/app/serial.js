@@ -48,6 +48,17 @@ export function portName(/** @type {SerialPort} */ port) {
     return i.usbVendorId === undefined ? "serial port" : `USB ${h4(i.usbVendorId)}:${h4(i.usbProductId)}`;
 }
 
+/**
+ * The link that has each port open in this page. A port object is the same
+ * for every requestPort() of that device, and Chrome refuses to open it twice
+ * ("The port is already open"): open() closes a leftover link first.
+ * @type {WeakMap<SerialPort, WebSerialLink>}
+ */
+const openLinks = new WeakMap();
+
+/** Is the port open (in this page)? Its streams are null while it is closed. */
+const isOpen = (/** @type {SerialPort} */ port) => !!(/** @type {any} */ (port).readable || /** @type {any} */ (port).writable);
+
 export class WebSerialLink {
     /**
      * @param {SerialPort} port  not yet open
@@ -82,10 +93,24 @@ export class WebSerialLink {
 
     /** Open the port at 9600 8N1 with BUSY released. */
     async open() {
+        const prev = openLinks.get(this.port);
+        if (prev && prev !== this) {
+            this.log?.("closing the port left open by an earlier operation");
+            await prev.close();
+        }
+        if (isOpen(this.port)) {
+            throw new Error("this page still has the port open from an earlier operation: reload the page");
+        }
         await this.port.open({ baudRate: 9600, dataBits: 8, stopBits: 1, parity: "none", flowControl: "none", bufferSize: 4096 });
-        await this.port.setSignals({ dataTerminalReady: this.invertBusy, requestToSend: false });
-        this.writer = this.port.writable.getWriter();
-        this.pump = this.receive();
+        openLinks.set(this.port, this);
+        try {
+            await this.port.setSignals({ dataTerminalReady: this.invertBusy, requestToSend: false });
+            this.writer = this.port.writable.getWriter();
+            this.pump = this.receive();
+        } catch (e) {
+            await this.close();
+            throw e;
+        }
         return this;
     }
 
@@ -135,12 +160,24 @@ export class WebSerialLink {
             await this.port.setSignals({ dataTerminalReady: this.invertBusy });
         } catch { /* already gone */ }
         this.closing = true;
+        // each step on its own: a failed one must not leave a stream locked,
+        // or the port can't close and stays open in this page
         try {
             await this.reader?.cancel();
+        } catch { /* closing anyway */ }
+        try {
             await this.pump;
+        } catch { /* closing anyway */ }
+        try {
             this.writer?.releaseLock();
         } catch { /* closing anyway */ }
-        await this.port.close().catch(() => {});
+        this.writer = null;
+        try {
+            await this.port.close();
+        } catch (e) {
+            if (isOpen(this.port)) this.log?.(`the port did not close: ${e instanceof Error ? e.message : e}`);
+        }
+        if (openLinks.get(this.port) === this) openLinks.delete(this.port);
     }
 
     async setBusy(/** @type {boolean} */ on) {

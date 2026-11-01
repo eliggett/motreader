@@ -73,11 +73,18 @@ export function attach(link, name = "test link") {
 export async function disconnect() {
     const c = conn;
     if (!c) return;
-    conn = null;
-    await c.radio.finish();
-    await c.link.close();
-    log.info(`Radio: closed ${c.name}`);
+    // busy until the port is closed: an operation started meanwhile would
+    // open the same port again, and Chrome refuses ("already open")
+    c.busy = true;
     changed();
+    try {
+        await c.radio.finish();
+    } finally {
+        await c.link.close();
+        conn = null;
+        log.info(`Radio: closed ${c.name}`);
+        changed();
+    }
 }
 
 /**
