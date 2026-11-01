@@ -157,6 +157,8 @@ cd \MRSS\SPECTRA
 SPECTRA.EXE
 ```
 
+Optionally place this config in the default dosbox-x config file, which you must first create by launching dosbox-x and issuing the command `config -wcd`. Now find the config file, which will be in ~/.config/dosbox-x/dosbox-x-yyyy.mm.dd.conf, where the date is derived from the version of dosbox-x. 
+
 Notes on these settings:
 
 - `realport:ttyUSB0` is the device name without `/dev/`.
