@@ -65,5 +65,9 @@ done
 
 kill "$DB_PID" 2>/dev/null
 pkill -f "$CONF" 2>/dev/null
+# dosbox-x sometimes ignores SIGTERM (seen in RSS's GET screen): make sure
+for _ in 1 2 3 4 5; do kill -0 "$DB_PID" 2>/dev/null || break; sleep 1; done
+kill -9 "$DB_PID" 2>/dev/null
+pkill -9 -f "dosbox-x -conf $CONF" 2>/dev/null
 kill "$XVFB_PID" 2>/dev/null
 echo "done: $n shots in $SHOTDIR"
